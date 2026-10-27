@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.18</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.19</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -2772,10 +2772,15 @@ Object.assign(REG, {
   ]},
   acties:{ t:'actie', label:x=>x.titel, meta:x=>[x.bron, x.status, x.deadline].filter(Boolean).join(' · '), fields:[
     {k:'titel',l:'Actie',type:'text'},
-    {k:'bron',l:'Bron',type:'select',opts:['Directiebeoordeling','Interne audit','Externe audit','Incident / melding','Monitoring en meting','Zelfevaluatie ISO 55001','Overig']},
+    {k:'bron',l:'Bron',type:'select',opts:['Directiebeoordeling','Interne audit','Externe audit','Incident / melding','Monitoring en meting','Preventief signaal','Zelfevaluatie ISO 55001','Suggestie medewerker','Nieuwe kennis / benchmark','Overig']},
     {k:'soortAc',l:'Soort maatregel',type:'select',opts:['Corrigerend','Preventief','Verbetering']},
     {k:'bevinding',l:'Naar aanleiding van bevinding',type:'refsel',ref:'bevindingen'},
     {k:'db',l:'Naar aanleiding van directiebeoordeling',type:'refsel',ref:'dbs'},
+    {k:'incident',l:'Naar aanleiding van afwijking / incident',type:'refsel',ref:'incidenten'},
+    {k:'termijn',l:'Termijn (55002 §10.1.1 a)',type:'select',opts:['Korte termijn','Lange termijn']},
+    {k:'opties',l:'Afgewogen opties en financiële / niet-financiële gevolgen (55002 §10.3.4)',type:'textarea',if:x=>x.soortAc==='Verbetering'||x.soortAc==='Preventief'},
+    {k:'criteria',l:'Toegepaste beslissingscriteria',type:'ref',ref:'criteria',if:x=>x.soortAc==='Verbetering'},
+    {k:'wijziging',l:'Leidt tot wijziging (8.2)',type:'refsel',ref:'wijzigingen'},
     {k:'eigenaar',l:'Eigenaar',type:'refsel',ref:'personen'},
     {k:'deadline',l:'Deadline',type:'date'},
     {k:'status',l:'Status',type:'select',opts:['Open','In uitvoering','Gereed','Vervallen']},
@@ -2880,6 +2885,91 @@ const H9 = {h:'9', t:'Evaluatie van de prestaties', art:[
       ['b','In de beoordeling zijn de status van acties, wijzigingen in context, AM-prestaties en trends (afwijkingen, monitoring, audits), AM-activiteiten, verbeterkansen en het risicoprofiel meegenomen.', ()=>ev(nI('dbs')>0, nI('dbs')?'input a–g wordt automatisch samengesteld bij elke directiebeoordeling':'nog geen directiebeoordeling', ['iso','i9:dbs'])],
       ['c','De resultaten bevatten besluiten over verbeterkansen en noodzakelijke wijzigingen in het AM-systeem.', ()=>{ const k = items('dbs').filter(d=>['o_scope','o_crit','o_eisen','o_middelen','o_beheers','o_wijz'].some(f=>(d[f]||'').trim())).length; return ev(k>0, `${k} beoordeling(en) met besluiten · ${items('acties').filter(a=>a.bron==='Directiebeoordeling').length} actie(s) uit directiebeoordelingen`, ['iso','i9:dbs']); }],
       ['d','Gedocumenteerd bewijs van de resultaten wordt bewaard.', ()=>{ const k = items('dbs').filter(d=>(d.vindplaats||'').trim()).length; return ev(k>0, `${k} beoordeling(en) met verslag/vindplaats`, ['iso','i9:dbs']); }]]},
+]};
+
+/* ---------- ISO 55001 H10 Verbetering ---------- */
+Object.assign(REG, {
+  incidenten:{ t:'afwijking of incident', label:x=>x.titel, meta:x=>[x.soortI, x.datum, x.gesloten?'gesloten':'open'].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Afwijking / incident',type:'text',ph:'bijv. uitval gemaal tijdens storm, lekkage dak lokaal 2.14, audit-afwijking'},
+    {k:'soortI',l:'Soort',type:'select',opts:['Functionele storing asset','Incident (letsel, schade, milieu)','Bijna-ongeluk','Afwijking van een eis (asset)','Afwijking in het AM-systeem of -proces','Vals alarm']},
+    {k:'datum',l:'Datum',type:'date'},
+    {k:'assets',l:'Betrokken objecten',type:'assets'},
+    {k:'melding',l:'Komt voort uit melding (operationeel niveau)',type:'refsel',ref:'meldingen'},
+    {k:'reactie',l:'a. Directe reactie: beheersen, corrigeren, gevolgen aanpakken',type:'textarea'},
+    {k:'beoord',l:'b. Beoordeling van de afwijking (ernst, gevolgen)',type:'textarea'},
+    {k:'oorzaak',l:'b. Oorzaak / grondoorzaak',type:'textarea',hint:'Bijv. met 5× waarom, visgraatdiagram of foutenboomanalyse. Pak de oorzaak aan, niet alleen het symptoom.'},
+    {k:'elders',l:'b. Komen gelijksoortige afwijkingen (mogelijk) elders voor?',type:'select',opts:['Nee','Ja — elders ook mogelijk','Ja — elders al opgetreden']},
+    {k:'eldersObj',l:'Waar elders',type:'assets',if:x=>(x.elders||'').startsWith('Ja')},
+    {k:'risicos',l:'Bijgewerkte risico\'s (55002 §10.1.1 b)',type:'ref',ref:'risicos'},
+    {k:'wijziging',l:'e. Benodigde wijziging in het AM-systeem (→ 8.2)',type:'refsel',ref:'wijzigingen'},
+    {k:'gesloten',l:'Afgesloten op',type:'date'},
+  ]},
+  kennis:{ t:'kennisbron', label:x=>x.onderwerp, meta:x=>[x.bronK, x.besluit].filter(Boolean).join(' · '), fields:[
+    {k:'onderwerp',l:'Nieuwe technologie of praktijk',type:'text',ph:'bijv. sensoren voor predictief onderhoud, digitale tweeling, drone-inspectie'},
+    {k:'bronK',l:'Bron (55002 §10.3.3)',type:'select',opts:['Beroepsorganisatie / branchevereniging','Conferentie, seminar, publicatie, forum','Benchmarking, technologieoverdracht','Inhuur gespecialiseerde organisatie','Onderzoek en ontwikkeling','Raadplegen leveranciers en klanten']},
+    {k:'datum',l:'Datum',type:'date'},
+    {k:'voordeel',l:'Beoordeling van het mogelijke voordeel',type:'textarea'},
+    {k:'besluit',l:'Besluit',type:'select',opts:['Nader onderzoeken','Pilot','Opnemen in het AM-systeem','Niet opvolgen']},
+  ]},
+});
+Object.assign(MV, {incidenten:'afwijkingen of incidenten', kennis:'kennisbronnen'});
+function preventieveSignalen(){
+  const out = []; const ja = new Date().getFullYear();
+  items('risicos').forEach(r=>{ const e = risicoEval(r); if(e && !e.ok) out.push(['Risico niet acceptabel', r.titel, 'risico:'+r.id]); else if(r.trend==='Neemt toe') out.push(['Risico neemt toe', r.titel, 'risico:'+r.id]); });
+  items('kpis').forEach(k=>{ const v = kpiReeks(k).map(x=>x[1]); if(v.length>=2){ const slechter = k.richting==='Lager is beter' ? v.at(-1)>v.at(-2) : v.at(-1)<v.at(-2); if(slechter) out.push(['Indicator verslechtert', k.naam, 'kpi:'+k.id]); } });
+  state.data.assets.filter(a=>a.niveau===4).forEach(b=>{
+    if(num(b.bouwjaar)&&num(b.levensduur)&&num(b.bouwjaar)+num(b.levensduur)<=ja) out.push(['Theoretische levensduur verstreken', b.naam, 'bd:'+b.id]);
+    if(tabellenCompleet()){ const c = bdConditie(b), m = eisMaxVoor(b); if(c && m && c.res.cond===m) out.push(['Conditie op de grens van de eis (nog net voldoende)', `${b.naam} (conditie ${c.res.cond}, eis ≤ ${m})`, 'bd:'+b.id]); } });
+  items('observaties').filter(o=>o.voldoet==='Nee').forEach(o=>out.push(['Observatie voldoet niet aan eis', o.titel||o.soort, 'obs:'+o.id]));
+  items('meldingen').filter(m=>!items('incidenten').some(i=>i.melding===m.id)).forEach(m=>out.push(['Melding van serviceprovider', m.titel, 'mel:'+m.id]));
+  return out.filter(x=>!items('acties').some(a=>a.signaal===x[2]) && !(x[2].startsWith('mel:') && false));
+}
+const OTABS10 = [['incidenten','Afwijkingen & incidenten','§10.1'],['preventief','Preventieve signalen','§10.2'],['verbeter','Verbeteroverzicht','§10.3'],['kennis','Nieuwe kennis','§10.3.3']];
+function tIsoVerbetering(){
+  const t = ui.i10||'incidenten';
+  if(t==='preventief'){ const S = preventieveSignalen();
+    return tabs10(t) + `<div class="note small">ISO 55001 §10.2: proactief mogelijke tekortkomingen in assetprestaties vinden en de noodzaak van preventieve (of predictieve) maatregelen beoordelen. De tool zoekt zelf naar signalen in risico's, indicatoren, levensduur, condities, observaties en meldingen. Maak er een preventieve actie van, of laat het signaal staan als er geen maatregel nodig is.</div>
+      <div class="panel" style="overflow:auto">${S.length?`<table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Signaal</th><th>Betreft</th><th></th></tr>
+        ${S.map(([s,w,key])=>`<tr style="border-top:1px solid var(--line)"><td style="padding:6px"><b>${esc(s)}</b></td><td>${esc(w||'')}</td><td style="text-align:right">${key.startsWith('mel:')?`<button data-mkinc="${key.slice(4)}" style="font-size:12px;padding:3px 8px">→ incident</button> `:''}<button data-prevactie="${esc(key)}" data-prevtxt="${esc(s+': '+(w||''))}" style="font-size:12px;padding:3px 8px">→ preventieve actie</button></td></tr>`).join('')}</table>`:'<p class="muted small" style="margin:0">Geen open signalen.</p>'}</div>
+      <p class="small muted">Preventieve acties komen in de actielijst (Evaluatie › Acties). ${items('acties').filter(a=>a.soortAc==='Preventief').length} preventieve actie(s) vastgelegd.</p>`; }
+  if(t==='verbeter'){
+    const A = items('acties'); const st = s => A.filter(a=>(a.status||'Open')===s).length;
+    const bronnen = [['a. Afwijkingen en incidenten (10.1)', nI('incidenten'), 'i10:incidenten'],['b. Preventieve maatregelen (10.2)', A.filter(a=>a.soortAc==='Preventief').length, 'i10:preventief'],['c. Trends in prestaties (9.1)', items('kpis').filter(k=>kpiReeks(k).length>=2).length, 'i9:kpis'],['d. Evaluatie van naleving (9.1)', nI('compliance'), null],['e. Interne en externe audits (9.2)', nI('audits'), 'i9:audits'],['f. Directiebeoordeling (9.3)', nI('dbs'), 'i9:dbs'],['g. Suggesties van medewerkers', A.filter(a=>a.bron==='Suggestie medewerker').length, 'i9:acties'],['h. Management van wijzigingen (8.2)', nI('wijzigingen'), 'i8:wijzigingen']];
+    const gs = ISO_HFST.map(h=>{ const arts = h.art.filter(a=>!a.todo); const vals = arts.flatMap(a=>a.e.map(([k])=>ISO().eval[isoKey(a.a,k)]?.st)).filter(Boolean); return [h.h, h.t, vals.filter(v=>v==='ja').length, vals.length, arts.reduce((s,a)=>s+a.e.length,0)]; });
+    return tabs10(t) + `<div class="note small">Continue verbetering is een doorlopende, iteratieve activiteit gericht op de organisatiedoelstellingen — niet het jaarlijks bijstellen van parameters omdat die toevallig gehaald worden (55002 §10.3.1). Hieronder alle bronnen uit §10.3.2 en de voortgang van de acties.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+        <div class="panel"><h3>Bronnen van verbetering</h3><table style="width:100%;border-collapse:collapse;font-size:13px">${bronnen.map(([n,c,l])=>`<tr style="border-top:1px solid var(--line)"><td style="padding:5px">${n}</td><td style="text-align:right"><b>${c}</b> ${l?isoLink(['iso',l]):''}</td></tr>`).join('')}</table></div>
+        <div class="panel"><h3>Acties</h3>${A.length?`<div style="display:flex;height:28px;border-radius:6px;overflow:hidden">${[['Open','#c9cfcc'],['In uitvoering','#e6a23c'],['Gereed','#2e7d32'],['Vervallen','#9aa5a0']].map(([s,c])=>st(s)?`<div style="flex:${st(s)};background:${c};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center" title="${s}">${st(s)}</div>`:'').join('')}</div>
+          <div class="small" style="margin-top:6px">open ${st('Open')} · in uitvoering ${st('In uitvoering')} · gereed ${st('Gereed')} · vervallen ${st('Vervallen')}</div>
+          <div class="small" style="margin-top:6px">${['Corrigerend','Preventief','Verbetering'].map(s=>`${s}: ${A.filter(a=>a.soortAc===s).length}`).join(' · ')}</div>
+          <div class="small" style="margin-top:6px">Gereed maar nog niet op doeltreffendheid beoordeeld: <b>${A.filter(a=>a.status==='Gereed' && !(a.effect||'').trim()).length}</b></div>`:'<p class="small muted">Nog geen acties.</p>'}
+          <div style="margin-top:8px"><button data-isogo="iso|i9:acties">Naar de actielijst →</button></div></div>
+        <div class="panel"><h3>Voortgang zelfevaluatie per hoofdstuk</h3>${gs.map(([h,tt,ok,b,tot])=>`<div class="small" style="margin:5px 0"><b>${h}</b> ${tt}<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:#eef1ef;margin-top:2px"><div style="width:${tot?ok/tot*100:0}%;background:#2e7d32"></div><div style="width:${tot?(b-ok)/tot*100:0}%;background:#e6a23c"></div></div><span class="muted">${ok} voldoet · ${b} beoordeeld · ${tot} eisen</span></div>`).join('')}</div>
+      </div>`; }
+  const intro = {
+    incidenten:'Reageer op afwijkingen en incidenten (beheersen, corrigeren, gevolgen aanpakken), beoordeel ze, stel de oorzaak vast en kijk of het elders ook kan optreden. Implementeer passende corrigerende maatregelen (in de actielijst), beoordeel hun doeltreffendheid en voer zo nodig wijzigingen door (8.2). Werk ook het risicoregister bij.',
+    kennis:'Zoek actief naar nieuwe AM-technologie en praktijken en beoordeel het mogelijke voordeel voor de organisatie (55002 §10.3.3).',
+  };
+  let pre = '';
+  if(t==='incidenten'){ const open = items('incidenten').filter(i=>!i.gesloten); const zonder = items('incidenten').filter(i=>!items('acties').some(a=>a.incident===i.id));
+    pre = (zonder.length?`<div class="warn small">${zonder.length} afwijking(en) zonder corrigerende actie. <button data-incactie="1">Maak acties aan</button></div>`:'') + (open.filter(i=>!(i.oorzaak||'').trim()).length?`<div class="warn small">${open.filter(i=>!(i.oorzaak||'').trim()).length} open afwijking(en) zonder vastgestelde oorzaak.</div>`:''); }
+  return tabs10(t) + `<div class="note small">${intro[t]}</div>${pre}${renderRegister(t)}`;
+}
+const tabs10 = t => `<div class="tabs" style="margin-top:0">${OTABS10.map(([id,n,r])=>`<button data-i10="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>`;
+const H10 = {h:'10', t:'Verbetering', art:[
+  {a:'10.1', t:'Afwijkingen en corrigerende maatregelen', g:'Wees erop voorbereid dat afwijkingen (ook storingen) optreden in assets, AM-activiteiten en het AM-systeem. Richt processen in om ze te beheersen en de gevolgen te beperken: documenteer en beoordeel afwijkingen uit het verleden en hoe met de gevolgen is omgegaan. Corrigerende maatregelen pakken de onderliggende oorzaak aan, voor korte én lange termijn. Werk risicobeoordelingen bij en registreer benodigde wijzigingen in processen. Leg criteria, verantwoordelijkheden en bevoegdheden voor onderzoek vast. Stem maatregelen en planning af op het risico; beoordeel nieuwe risico\'s vóór implementatie (8.2). Monitor tijdige afronding en doeltreffendheid.',
+   e:[['a','Er wordt gereageerd op afwijkingen en incidenten: beheersen, corrigeren en gevolgen aanpakken.', ()=>{ const t = nI('incidenten'), k = items('incidenten').filter(i=>(i.reactie||'').trim()).length; return ev(t&&k===t, `${k} van ${t} afwijkingen/incidenten met directe reactie · ${nI('meldingen')} melding(en)`, ['iso','i10:incidenten']); }],
+      ['b','De noodzaak van maatregelen tegen de oorzaak wordt geëvalueerd: beoordelen, oorzaak vaststellen, nagaan of het elders kan voorkomen.', ()=>{ const t = nI('incidenten'), k = items('incidenten').filter(i=>(i.oorzaak||'').trim()&&i.elders).length; return ev(t&&k===t, `${k} van ${t} met oorzaak én beoordeling 'elders'`, ['iso','i10:incidenten']); }],
+      ['c','De benodigde maatregelen worden geïmplementeerd.', ()=>{ const c = items('acties').filter(a=>a.soortAc==='Corrigerend'); return ev(c.length && c.every(a=>['Gereed','In uitvoering'].includes(a.status)), `${c.length} corrigerende actie(s): ${c.filter(a=>a.status==='Gereed').length} gereed, ${c.filter(a=>a.status==='In uitvoering').length} in uitvoering`, ['iso','i9:acties']); }],
+      ['d','De doeltreffendheid van corrigerende maatregelen wordt beoordeeld.', ()=>{ const g = items('acties').filter(a=>a.soortAc==='Corrigerend'&&a.status==='Gereed'), k = g.filter(a=>(a.effect||'').trim()).length; return ev(g.length&&k===g.length, `${k} van ${g.length} gereedgemelde corrigerende acties beoordeeld`, ['iso','i9:acties']); }],
+      ['e','Zo nodig worden wijzigingen in het AM-systeem doorgevoerd (8.2).', ()=>{ const k = items('incidenten').filter(i=>i.wijziging).length; return ev(k>0, `${k} afwijking(en) gekoppeld aan een wijziging`, ['iso','i8:wijzigingen']); }],
+      ['f','Corrigerende maatregelen passen bij de effecten van de afwijking.', ()=>ev(null, 'beoordeel per actie; koppel waar mogelijk aan het risicoregister', ['iso','i10:incidenten'])],
+      ['g','Er is gedocumenteerd bewijs van de aard van afwijkingen, de genomen maatregelen en hun resultaten.', ()=>ev(nI('incidenten')>0 || nI('bevindingen')>0, `${nI('incidenten')} afwijking(en)/incident(en) · ${nI('bevindingen')} auditbevinding(en) · ${items('acties').filter(a=>a.soortAc==='Corrigerend').length} corrigerende actie(s)`, ['iso','i10:incidenten'])]]},
+  {a:'10.2', t:'Preventieve maatregelen', g:'Preventieve (ook predictieve) maatregelen pakken de oorzaak van mogelijke storingen aan vóórdat ze optreden. Gebruik geschikte informatiebronnen, identificeer mogelijke storingen met een passende methode, initieer en implementeer maatregelen, registreer wijzigingen in processen, beoordeel de maatregelen, voed de AM-plannen en documenteer alles.',
+   e:[['a','Er zijn processen om mogelijke tekortkomingen in assetprestaties proactief te identificeren en de noodzaak van preventieve maatregelen te evalueren.', ()=>ev(nI('kpis')>0 || nI('inspecties')>0 || nI('risicos')>0, `bronnen: ${nI('risicos')} risico's, ${nI('kpis')} indicatoren, ${nI('inspecties')} conditiemeting(en) · ${preventieveSignalen().length} open signaal/signalen`, ['iso','i10:preventief'])],
+      ['b','Bij een mogelijke tekortkoming worden de eisen van 10.1 toegepast.', ()=>{ const p = items('acties').filter(a=>a.soortAc==='Preventief'), k = p.filter(a=>(a.oorzaak||'').trim()).length; return ev(p.length&&k===p.length, `${p.length} preventieve actie(s), ${k} met oorzaakanalyse`, ['iso','i9:acties']); }]]},
+  {a:'10.3', t:'Continue verbetering', g:'Identificeer, beoordeel en implementeer overal in de organisatie verbetermogelijkheden — top-down, bottom-up of beide. Bronnen: afwijkingen en incidenten, preventieve maatregelen, prestatietrends, naleving, audits, directiebeoordeling, suggesties van medewerkers en wijzigingen. Zoek actief naar nieuwe technologie en praktijken (beroepsorganisaties, conferenties, benchmarking, specialisten, R&D, leveranciers en klanten). Aanpak: behoefte en potentieel bepalen, opties evalueren, financiële en niet-financiële gevolgen inschatten, risico\'s en wijzigingen beoordelen, koppelen aan beslissingscriteria, selecteren en uitvoeren, resultaten bijhouden en beoordelen.',
+   e:[['a','De geschiktheid, adequaatheid en doeltreffendheid van het assetmanagement en het AM-systeem worden continu verbeterd.', ()=>{ const v = items('acties').filter(a=>a.soortAc==='Verbetering'); const n = ['sassessments','tassessments','oassessments','assessments'].reduce((s,k)=>s+nI(k),0); return ev(v.length>0 && nI('dbs')>0, `${v.length} verbeteractie(s) · ${nI('dbs')} directiebeoordeling(en) · ${n} assessment(s) NEN 8026 · ${nI('kennis')} kennisbron(nen)`, ['iso','i10:verbeter']); }]]},
 ]};
 
 const ISO_HFST = [
@@ -3002,7 +3092,7 @@ const ISO_HFST = [
   H7,
   H8,
   H9,
-  {h:'10', t:'Verbetering', art:[{a:'10.1',t:'Afwijkingen en corrigerende maatregelen',todo:1},{a:'10.2',t:'Preventieve maatregelen',todo:1},{a:'10.3',t:'Continue verbetering',todo:1}]},
+  H10,
 ];
 const ISTAT = [['','— niet beoordeeld —','#ccd3cf',null],['ja','Voldoet','#2e7d32',2],['deels','Deels','#e6a23c',1],['nee','Voldoet niet','#c0392b',0],['nvt','N.v.t.','#9aa5a0',null]];
 const isoKey = (a,k) => `2014|${a}|${k}`;
@@ -3016,12 +3106,13 @@ function tIsoOverzicht(){
   const arts = isoArts(); const sc = arts.map(artScore);
   const alle = arts.flatMap(a=>a.e.map(([k])=>ISO().eval[isoKey(a.a,k)]?.st||''));
   const tel = s => alle.filter(x=>x===s).length;
-  const KORT = {'4.1':'Context','4.2':'Stakeholders','4.3':'Toepassingsgebied','4.4':'AM-systeem','5.1':'Leiderschap','5.2':'Beleid','5.3':'Rollen','6.1':'Risico AM-syst.','6.2.1':'AM-doelen','6.2.2':'Planning','7.1':'Middelen','7.2':'Competentie','7.3':'Bewustzijn','7.4':'Communicatie','7.5':'Informatie','7.6':'Documentatie','8.1':'Operationeel','8.2':'Wijzigingen','8.3':'Uitbesteden','9.1':'Monitoren','9.2':'Interne audit','9.3':'Directiebeoord.'}; const axes = arts.map(a=>a.a+' '+(KORT[a.a]||a.t.split(' ')[0]));
-  const vals = sc.map(s=>s.pct===null?0:s.pct*3);
+  const HK = {'4':'4 Context','5':'5 Leiderschap','6':'6 Planning','7':'7 Ondersteuning','8':'8 Uitvoering','9':'9 Evaluatie','10':'10 Verbetering'};
+  const hs = ISO_HFST.filter(h=>h.art.some(a=>!a.todo)); const axes = hs.map(h=>HK[h.h]);
+  const vals = hs.map(h=>{ const ps = h.art.filter(a=>!a.todo).map(artScore).map(x=>x.pct).filter(x=>x!==null); return ps.length ? ps.reduce((a,b)=>a+b,0)/ps.length*3 : 0; });
   const ev0 = arts.flatMap(a=>a.e.map(e=>e[2]())); const evOk = ev0.filter(x=>x.ok).length;
   return `<div class="note small">ISO 55000 geeft overzicht, principes en begrippen; <b>ISO 55001</b> bevat de eisen aan het assetmanagementsysteem; <b>ISO 55002</b> geeft toelichting. In deze tool: per eis een <b>eigen samenvatting</b> met artikelnummer, de toelichting uit 55002 in eigen woorden, het <b>bewijs dat al in de tool ligt</b> (NEN 8026, NEN 2767) en jouw zelfevaluatie. Versie: NEN-ISO 55001:2014 en 55002:2014 — de 2014-edities zijn inmiddels vervangen door ISO 55001:2024; eisen dragen een versielabel zodat 2024 later kan worden toegevoegd.</div>
     <div style="display:grid;grid-template-columns:minmax(320px,1fr) minmax(280px,1fr);gap:16px;align-items:start">
-      <div class="panel" style="text-align:center"><h3 style="text-align:left">Volwassenheid per artikel</h3>${radar(axes, [{vals, color:'#1f6f5c', fill:'rgba(31,111,92,.15)'}], 360)}
+      <div class="panel" style="text-align:center"><h3 style="text-align:left">Volwassenheid per hoofdstuk</h3>${radar(axes, [{vals, color:'#1f6f5c', fill:'rgba(31,111,92,.15)'}], 360)}
         <p class="small muted" style="margin:0">0 = niets voldoet · 3 = alles voldoet (voldoet = 1, deels = ½, n.v.t. telt niet mee)</p></div>
       <div class="panel"><h3>Stand van de zelfevaluatie</h3>
         <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;margin-bottom:6px">${ISTAT.map(s=>{ const n = tel(s[0]); return n?`<div style="flex:${n};background:${s[2]};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center" title="${s[1]}: ${n}">${n}</div>`:''; }).join('')}</div>
@@ -3081,12 +3172,12 @@ function tIsoGap(){
   const rows = isoArts().flatMap(a=>a.e.map(([k,t])=>[a,k,t,ISO().eval[isoKey(a.a,k)]||{}])).filter(r=>['deels','nee'].includes(r[3].st));
   const open = isoArts().flatMap(a=>a.e.map(([k])=>ISO().eval[isoKey(a.a,k)]?.st)).filter(x=>!x).length;
   return `<div class="note small noprint">Gap-analyse: alle eisen die deels of niet voldoen, met verbeteractie, eigenaar en deadline — bruikbaar als verbeterplan en ter voorbereiding op een (interne) audit. ${open?`<b>${open} eis(en) nog niet beoordeeld.</b>`:''} <button data-print="1" style="margin-left:8px">Afdrukken / PDF</button></div>
-    <div class="panel printdoc" style="overflow:auto"><h2 style="margin-bottom:2px">Gap-analyse ISO 55001</h2><div class="small muted">${new Date().toLocaleDateString('nl-NL')} · versie 2014 · verwerkte hoofdstukken: ${ISO_HFST.filter(h=>h.art.some(a=>!a.todo)).map(h=>h.h).join(', ')}</div>
+    <div class="panel printdoc" style="overflow:auto"><h2 style="margin-bottom:2px">Gap-analyse ISO 55001</h2><div class="small muted">${new Date().toLocaleDateString('nl-NL')} · versie 2014 · hoofdstukken: ${ISO_HFST.filter(h=>h.art.some(a=>!a.todo)).map(h=>h.h).join(', ')}</div>
     ${rows.length?`<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Eis</th><th>Status</th><th>Verbeteractie</th><th>Eigenaar</th><th>Deadline</th></tr>
       ${rows.map(([a,k,t,E])=>{ const st = ISTAT.find(z=>z[0]===E.st); const late = E.dl && E.dl < new Date().toISOString().slice(0,10);
         return `<tr style="border-top:1px solid var(--line);vertical-align:top"><td style="padding:6px"><b>${a.a}${k!=='0'?' '+k:''}</b> <span class="small">${t}</span></td><td><span class="cb" style="background:${st[2]}">${st[1]}</span></td><td class="small">${esc(E.actie)||'<span style="color:#b5651d">geen actie</span>'}</td><td class="small">${esc(items('personen').find(p=>p.id===E.eig)?.naam||'–')}</td><td class="small" style="${late?'color:#c0392b;font-weight:600':''}">${esc(E.dl||'–')}</td></tr>`; }).join('')}</table>`:'<p class="muted">Geen openstaande gaps.</p>'}</div>`;
 }
-const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['uitv','Uitvoering','§8'],['evalu','Evaluatie','§9'],['gap','Gap-analyse','']];
+const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['uitv','Uitvoering','§8'],['evalu','Evaluatie','§9'],['verb','Verbetering','§10'],['gap','Gap-analyse','']];
 function tIsoRisico(){
   const R = items('risicos'); const ev2 = R.map(risicoEval);
   const ams = R.filter(r=>r.niveauR==='Assetmanagementsysteem'), kans = R.filter(r=>r.soortR==='Kans');
@@ -3116,7 +3207,7 @@ function tIsoRisico(){
 }
 function renderIso(){
   const t = ui.itab||'overzicht'; let body;
-  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='uitv') body = tIsoUitvoering(); else if(t==='evalu') body = tIsoEvaluatie(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
+  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='uitv') body = tIsoUitvoering(); else if(t==='evalu') body = tIsoEvaluatie(); else if(t==='verb') body = tIsoVerbetering(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
   else body = `<div class="note small">ISO 55001 §4.1 met toelichting 55002 §4.1.2: externe en interne onderwerpen die het vermogen beïnvloeden om de beoogde resultaten te behalen. Gebruik de categorieën als checklist; koppel onderwerpen aan waardeaspecten zodat ze doorwerken in doelstellingen en waardekompassen.</div>
     <div class="small muted" style="margin-bottom:8px">Nog niet behandelde categorieën: ${[...CTX_EXT,...CTX_INT].filter(c=>!items('context').some(x=>x.cat===c)).map(esc).join(' · ')||'geen'}</div>${renderRegister('context')}`;
   return `<h2>Assetmanagementsysteem — ISO 55001</h2><div class="ref">NEN-ISO 55000/55001/55002:2014 · eigen samenvattingen met artikelnummer, geen normtekst</div>
@@ -3144,9 +3235,13 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.i10){ ui.i10 = d.i10; rerender(); return; }
+    if(d.prevactie){ const a = {id:uid(), _t:Date.now(), titel:'Preventief: '+d.prevtxt.slice(0,80), bron:'Preventief signaal', soortAc:'Preventief', signaal:d.prevactie, status:'Open'}; items('acties').push(a); save(); rerender(); return; }
+    if(d.mkinc){ const m = items('meldingen').find(x=>x.id===d.mkinc); const i = {id:uid(), _t:Date.now(), titel:m.titel, soortI:'Functionele storing asset', datum:m.datum||'', assets:m.assets||[], melding:m.id, reactie:m.opvolging||''}; items('incidenten').push(i); ui.sel.incidenten = i.id; ui.i10='incidenten'; save(); rerender(); return; }
+    if(d.incactie){ items('incidenten').filter(i=>!items('acties').some(a=>a.incident===i.id)).forEach(i=>items('acties').push({id:uid(), _t:Date.now(), titel:'Corrigeren: '+(i.titel||'').slice(0,60), bron:'Incident / melding', soortAc:'Corrigerend', incident:i.id, oorzaak:i.oorzaak||'', status:'Open'})); save(); rerender(); return; }
     if(d.i9){ ui.i9 = d.i9; rerender(); return; }
     if(d.dbactie){ const a = {id:uid(), _t:Date.now(), bron:'Directiebeoordeling', db:d.dbactie, soortAc:'Verbetering', status:'Open'}; items('acties').push(a); ui.sel.acties = a.id; ui.i9 = 'acties'; save(); rerender(); return; }
     if(d.bevactie){ items('bevindingen').filter(b=>/Afwijking/.test(b.soortB||'') && !items('acties').some(a=>a.bevinding===b.id)).forEach(b=>items('acties').push({id:uid(), _t:Date.now(), titel:'Corrigeren: '+(b.oms||'').slice(0,60), bron:'Interne audit', soortAc:'Corrigerend', bevinding:b.id, status:'Open'})); ui.i9='acties'; save(); rerender(); return; }
@@ -3158,7 +3253,7 @@ main.addEventListener('click', e=>{
     if(d.itab){ ui.itab = d.itab; window.scrollTo(0,0); route(); return; }
     if(d.isof!==undefined){ ui.isof = d.isof; rerender(); return; }
     if(d.isoopen){ ui.isoopen = ui.isoopen===d.isoopen ? null : d.isoopen; rerender(); return; }
-    if(d.isogo){ const [h,tb] = d.isogo.split('|'); if(tb){ if(h==='iso'){ if(tb.startsWith('i7:')){ ui.itab='onderst'; ui.i7 = tb.slice(3); } else if(tb.startsWith('i8:')){ ui.itab='uitv'; ui.i8 = tb.slice(3); } else if(tb.startsWith('i9:')){ ui.itab='evalu'; ui.i9 = tb.slice(3); } else ui.itab = tb; } if(h==='bestuurlijk') ui.btab = tb; if(h==='strategisch') ui.stab = tb; if(h==='tactisch') ui.ttab = tb; } location.hash = h; route(); window.scrollTo(0,0); return; }
+    if(d.isogo){ const [h,tb] = d.isogo.split('|'); if(tb){ if(h==='iso'){ if(tb.startsWith('i7:')){ ui.itab='onderst'; ui.i7 = tb.slice(3); } else if(tb.startsWith('i8:')){ ui.itab='uitv'; ui.i8 = tb.slice(3); } else if(tb.startsWith('i9:')){ ui.itab='evalu'; ui.i9 = tb.slice(3); } else if(tb.startsWith('i10:')){ ui.itab='verb'; ui.i10 = tb.slice(4); } else ui.itab = tb; } if(h==='bestuurlijk') ui.btab = tb; if(h==='strategisch') ui.stab = tb; if(h==='tactisch') ui.ttab = tb; } location.hash = h; route(); window.scrollTo(0,0); return; }
     if(d.e1){ ui.e1 = d.e1; rerender(); return; }
     if(d.e1go!==undefined){ const [h,tb] = d.e1go.split('|'); if(h==='conditie'&&tb) ui.ctab = tb; if(h==='tactisch'&&tb) ui.ttab = tb; location.hash = h; route(); window.scrollTo(0,0); return; }
     if(d.mjover){ const n = mjopOvernemen(); r.textContent = `✓ ${n} nieuwe activiteit(en) overgenomen`; return; }

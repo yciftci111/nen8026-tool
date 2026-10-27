@@ -135,6 +135,7 @@
     .layout{display:block} main{padding:0;max-width:none} body{background:#fff}
     #samp,.printdoc{border:none;padding:0}
   }
+  main{min-width:0;overflow-x:hidden}
   .cb{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;padding:0 6px;border-radius:5px;color:#fff;font-weight:700;font-size:12px;text-decoration:none}
   footer{color:var(--muted);font-size:12px;padding:30px 0 10px}
 
@@ -149,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.9</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.10</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -545,7 +546,7 @@ function renderAssets(){
       ${a.niveau>=4?`<div class="panel small" style="background:var(--l4s);border-color:transparent;display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div style="grid-column:1/-1"><b>${a.niveau===4?'Bouwdeel':'Component'} — gegevens voor de conditiemeting (NEN 2767)</b></div>
         <div><label>Materiaalsoort</label><input data-f="materiaal" value="${esc(a.materiaal||'')}" placeholder="bijv. bitumineus, metselwerk, staal"></div>
-        <div><label>Code uit de dataset (optioneel)</label><input data-f="code" value="${esc(a.code||'')}"></div>
+        <div><label>Elementcode uit de gebrekenbibliotheek</label><input data-f="code" value="${esc(a.code||'')}" placeholder="koppel via NEN 2767 › Decompositie"><div class="small muted">${esc(bibElement(a.code)?.oms||'')}</div></div>
         <div><label>Hoeveelheid</label><input data-f="hoeveelheid" value="${esc(a.hoeveelheid||'')}" placeholder="bijv. 450"></div>
         <div><label>Eenheid</label><input data-f="eenheid" value="${esc(a.eenheid||'')}" placeholder="m², m¹, st"></div>
         <div><label>Vervangingswaarde (€)</label><input data-f="vervangingswaarde" value="${esc(a.vervangingswaarde||'')}"></div>
@@ -1627,7 +1628,7 @@ Object.assign(REG, {
   ]},
 });
 Object.assign(MV, {inspecties:'inspecties', datasets:'gebrekendatasets'});
-const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekendatasets','H2'],['tabellen','⚙ Rekentabellen','']];
+const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['tabellen','⚙ Rekentabellen','']];
 const lvName = a => sector().niveaus[Math.min(a.niveau,5)];
 
 function renderConditie(){
@@ -1665,9 +1666,10 @@ function renderConditie(){
     const jaar = new Date().getFullYear();
     body = `<div class="note small">Per bouwdeel (en component) de gegevens die de conditiemeting en de aggregatie straks nodig hebben. Gebreken zijn uitgewerkt per <b>materiaalsoort</b>; de <b>vervangingswaarde</b> wordt gebruikt bij de omvang (ongelijksoortige eenheden) en bij de aggregatie. Nieuwe bouwdelen voeg je toe in de <a href="#assets">Assetstructuur</a> onder een element.</div>
       <div class="panel" style="overflow:auto">${rows.length?`<table style="width:100%;border-collapse:collapse;font-size:13px">
-      <tr class="small muted" style="text-align:left"><th style="padding:6px">Bouwdeel / component</th><th>Materiaalsoort</th><th>Hoeveelheid</th><th>Eenheid</th><th>Vervangingswaarde €</th><th>Bouwjaar</th><th>Levensduur</th><th>Rest</th></tr>
+      <tr class="small muted" style="text-align:left"><th style="padding:6px">Bouwdeel / component</th><th>Elementcode (bibliotheek)</th><th>Materiaalsoort</th><th>Hoeveelheid</th><th>Eenheid</th><th>Vervangingswaarde €</th><th>Bouwjaar</th><th>Levensduur</th><th>Rest</th></tr>
       ${rows.map(([a,path])=>{ const rest = a.bouwjaar&&a.levensduur ? (+a.bouwjaar + +a.levensduur - jaar) : null;
         return `<tr style="border-top:1px solid var(--line)"><td style="padding:6px"><b>${esc(a.naam)||'(naamloos)'}</b>${a.niveau===5?' <span class="small muted">(component)</span>':''}<div class="small muted">${esc(path.join(' › '))}</div></td>
+        <td><input data-af="${a.id}" data-ak="code" list="bibel" value="${esc(a.code)}" style="width:110px" title="${esc(bibElement(a.code)?.oms||'')}" placeholder="${bib().secties?'zoek…':''}">${a.code&&bib().secties?`<div class="small ${bibElement(a.code)?'muted':''}" style="${bibElement(a.code)?'':'color:#b5651d'};max-width:200px">${bibElement(a.code)?esc(bibSectie(a.code).code+' '+bibSectie(a.code).titel):'onbekende code'}</div>`:''}</td>
         <td><input data-af="${a.id}" data-ak="materiaal" value="${esc(a.materiaal)}" style="width:120px"></td>
         <td><input data-af="${a.id}" data-ak="hoeveelheid" value="${esc(a.hoeveelheid)}" style="width:70px"></td>
         <td><input data-af="${a.id}" data-ak="eenheid" value="${esc(a.eenheid)}" style="width:50px"></td>
@@ -1675,6 +1677,7 @@ function renderConditie(){
         <td><input data-af="${a.id}" data-ak="bouwjaar" value="${esc(a.bouwjaar)}" style="width:60px"></td>
         <td><input data-af="${a.id}" data-ak="levensduur" value="${esc(a.levensduur)}" style="width:50px"></td>
         <td class="small" style="${rest!==null&&rest<=0?'color:#c0392b;font-weight:600':''}">${rest===null?'—':rest+' jr'}</td></tr>`; }).join('')}</table>`
+      + (bib().secties?`<datalist id="bibel">${bib().secties.flatMap(s=>s.elementen).map(e=>`<option value="${e.code}">${esc(e.oms)}</option>`).join('')}</datalist>`:'')
       :`<p class="muted" style="margin:0">Nog geen bouwdelen. Ga naar de <a href="#assets">Assetstructuur</a>, selecteer een element en klik op <i>+ Bouwdeel toevoegen</i>.</p>`}</div>
       <p class="small muted">Restlevensduur = bouwjaar + technische levensduur − huidig jaar (rekenhulp van de tool). De vangnetconstructie van §5.4 volgt na hoofdstuk 5.</p>`;
   }
@@ -1684,7 +1687,7 @@ function renderConditie(){
       <p style="margin-top:8px;color:var(--ink)">${o}</p></div>`).join('')}</div>
     <p class="small muted">Koppeling met NEN 8026: in de <a href="#tactisch" data-ttab="instellingen">niveautabel</a> stelt de tool per bijdrage een maximaal toegestane conditiescore voor (standaard 4 / 3 / 2 bij bijdrage 1 / 2 / 3).</p>`;
   else if(t==='inspecties') body = `<div class="note small">Leg per inspectie vast wie, wanneer, wat en met welke gebrekendataset is geïnspecteerd. De inspecteur kan gebruikmaken van klachten, storingen, onderhoudshistorie en logboeken (§1.3). De gebrekenregistratie per bouwdeel volgt na hoofdstuk 5.</div>${renderRegister('inspecties')}`;
-  else if(t==='datasets') body = `<div class="note small">NEN 2767-1 werkt alleen samen met een gebrekendataset: NEN 2767-2 (gebouwen) of de webapplicatie NEN 2767-4-2 (infra), aangevuld met referentiebeelden uit NPR 4768. Leg hier vast welke versie(s) jullie gebruiken.</div>${renderRegister('datasets')}`;
+  else if(t==='datasets') body = tBibliotheek();
   else if(t==='gebreken') body = tGebreken();
   else if(t==='condities') body = tCondities();
   else if(t==='kromme') body = tKromme();
@@ -1877,6 +1880,100 @@ function tRekentabellen(){
       <div><label>Vangnet: het gebrek "verval" mag worden toegepast tot conditie (Bijlage F, opm. 1)</label><select data-t27="vervalMax">${['2','3','4'].map(v=>`<option value="${v}" ${t.vervalMax===v?'selected':''}>${v} (levensduur > ${{2:'50',3:'75',4:'87,5'}[v]} %)</option>`).join('')}</select></div></div>`;
 }
 
+/* ---------- Gebrekenbibliotheek (NEN 2767-2) en raamwerk (NEN 2767-1 Bijlage A) ---------- */
+const RAAMWERK = [
+  ['ernstig','Werking primair','Het bouwdeel functioneert niet meer naar behoren.'],
+  ['ernstig','Constructief primair','Aantasting van stabiliteit en vormvastheid.'],
+  ['ernstig','Materiaalintrinsiek','Degradatie van het materiaal zelf.'],
+  ['ernstig','Basiskwaliteit','Oorspronkelijke situatie die functie of werking aantast.'],
+  ['serieus','Werking secundair','Functioneert niet voldoende, bijv. verlies van medium.'],
+  ['serieus','Constructief secundair','Stabiliteit of vormvastheid aangetast, functie nog intact.'],
+  ['serieus','Materiaaloppervlak','Gebreken aan het oppervlak van het materiaal.'],
+  ['serieus','Basiskwaliteit en veroudering componenten','Gebreken aan componenten zonder directe aantasting van de functie.'],
+  ['gering','Onderhoud','Onderhoudswerk niet uitgevoerd, bijv. smering.'],
+  ['gering','Afwerking','Uitstraling aangetast, bijv. beschadiging of verkleuring.'],
+  ['gering','Basiskwaliteit en veroudering onderdelen van componenten','Onderdelen van componenten, zonder afbreuk aan het functioneren.'],
+  ['gering','Verval','Conditie op basis van theoretische levensduur (vangnet).'],
+];
+const bib = () => state.data.bib || {};
+let bibIndex = null;
+function bibSectie(code){ if(!code || !bib().secties) return null;
+  if(!bibIndex){ bibIndex = new Map(); bib().secties.forEach(s=>s.elementen.forEach(e=>bibIndex.set(e.code, s))); }
+  return bibIndex.get(String(code).trim().slice(0,6)) || null; }
+function bibElement(code){ const s = bibSectie(code); return s?.elementen.find(e=>e.code===String(code).trim().slice(0,6)); }
+function gebrekKaart(g, i, gs, comps, sec){
+  const needPct = g.comp && !num(comps.find(c=>c.id===g.comp)?.vervangingswaarde);
+  const uitLijst = sec && g.code ? sec.gebreken.find(x=>x.code===g.code && x.naam===g.oms) : null;
+  const lockErnst = !!(uitLijst || g.soort);
+  const groups = sec ? ['ernstig','serieus','gering'].map(e=>{ const soorten = [...new Set(sec.gebreken.filter(x=>x.ernst===e).map(x=>x.soort))];
+      return soorten.map(so=>`<optgroup label="${ERNST.find(x=>x[0]===e)[1]} — ${esc(so)}">${sec.gebreken.map((x,k)=>[x,k]).filter(([x])=>x.ernst===e&&x.soort===so).map(([x,k])=>`<option value="${k}" ${uitLijst===x?'selected':''}>${esc(x.code)} ${esc(x.naam)}${x.int?' ['+INTENS[x.int].toLowerCase()+']':''}</option>`).join('')}</optgroup>`).join(''); }).join('') : '';
+  const intAfw = uitLijst?.int && +g.int!==+uitLijst.int;
+  return `<div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px;background:#fff">
+    <div style="display:flex;gap:8px;align-items:center"><b class="small" style="min-width:18px">${i+1}.</b>
+      ${sec?`<select data-gpick="${g.id}" style="flex:1;min-width:0;width:100%;text-overflow:ellipsis"><option value="">— kies uit de gebrekenlijst (of vul hieronder vrij in) —</option>${groups}</select>`:'<span style="flex:1"></span>'}
+      <button class="danger" data-gdel="${g.id}" title="Verwijderen">×</button></div>
+    <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px">
+      <label class="small muted">Gebrek<input data-gr="oms" data-gid="${g.id}" value="${esc(g.oms)}" placeholder="omschrijving" style="width:100%"></label>
+      <label class="small muted">Soort (raamwerk)<select data-gr="soort" data-gid="${g.id}" style="width:100%" ${uitLijst?'disabled':''}><option value="">— kies —</option>${ERNST.map(([e,n])=>`<optgroup label="${n}">${RAAMWERK.filter(r=>r[0]===e).map(r=>`<option ${g.soort===r[1]?'selected':''}>${r[1]}</option>`).join('')}</optgroup>`).join('')}${g.soort&&!RAAMWERK.some(r=>r[1]===g.soort)?`<option selected>${esc(g.soort)}</option>`:''}</select></label>
+      <label class="small muted">Ernst<select data-gr="ernst" data-gid="${g.id}" style="width:100%" ${lockErnst?'disabled title="Volgt uit de gebrekenlijst / het raamwerk"':''}><option value=""></option>${ERNST.map(([k,n])=>`<option value="${k}" ${g.ernst===k?'selected':''}>${n}</option>`).join('')}</select></label>
+      <label class="small muted">Intensiteit<select data-gr="int" data-gid="${g.id}" style="width:100%;${intAfw?'border-color:#e0a95c':''}"><option value=""></option>${[1,2,3].map(k=>`<option value="${k}" ${+g.int===k?'selected':''}>${INTENS[k]}</option>`).join('')}</select></label>
+      <label class="small muted">Component<select data-gr="comp" data-gid="${g.id}" style="width:100%"><option value="">hele bouwdeel</option>${comps.map(c=>`<option value="${c.id}" ${g.comp===c.id?'selected':''}>${esc(c.naam)}</option>`).join('')}</select></label>
+      <label class="small muted">Omvang %${g.comp?' (op component)':''}<input data-gr="omv" data-gid="${g.id}" value="${esc(g.omv)}" style="width:100%"></label>
+      ${needPct?`<label class="small muted">% component in bouwdeel<input data-gr="cpct" data-gid="${g.id}" value="${esc(g.cpct)}" style="width:100%"></label>`:'<span></span>'}
+      <label class="small muted">Zelfde gedeelte als<select data-gr="stapel" data-gid="${g.id}" style="width:100%"><option value="">— eigen gedeelte —</option>${gs.slice(0,i).map((x,j)=>`<option value="${x.id}" ${g.stapel===x.id?'selected':''}>${j+1}. ${esc(x.oms||'gebrek')}</option>`).join('')}</select></label>
+    </div>
+    ${uitLijst?`<div class="small muted" style="margin-top:6px">Uit lijst ${esc(uitLijst.code)} · ${esc(uitLijst.soort)}${uitLijst.int?` · intensiteit voorgeschreven: <b>${INTENS[uitLijst.int].toLowerCase()}</b>`:''}${uitLijst.omvang?` · omvang: <b>${esc(uitLijst.omvang)}</b>`:''}${intAfw?' <span style="color:#b5651d">— afwijkende intensiteit gekozen</span>':''}</div>`:''}
+  </div>`;
+}
+function tBibliotheek(){
+  const B = bib(); const q = (ui.bq||'').toLowerCase();
+  const head = `<div class="note small">NEN 2767-1 werkt alleen met een gebrekendataset (NEN 2767-2 voor gebouwen, NEN 2767-4-2 voor infra). De gebrekenlijsten zijn auteursrechtelijk beschermd en staan daarom <b>niet</b> in de tool: importeer je eigen bibliotheekbestand (JSON of CSV). Het wordt in je browser bewaard.</div>
+    <div class="${B.secties?'note':'warn'} small" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${B.secties?`✓ Geladen: ${esc(B.dataset||'bibliotheek')} — ${B.secties.length} groepen, ${B.secties.reduce((s,x)=>s+x.elementen.length,0)} elementcodes, ${B.secties.reduce((s,x)=>s+x.gebreken.length,0)} gebreken`:'Nog geen gebrekenbibliotheek geladen.'}</b><span style="flex:1"></span>
+      <button data-bibimp="1">Bibliotheek importeren (JSON / CSV)</button>${B.secties?'<button data-bibcsv="1">Exporteren als CSV (Excel)</button><button class="danger" data-bibdel="1">Verwijderen</button>':''}<input type="file" id="bibfile" accept=".json,.csv,.txt" hidden></div>`;
+  const raam = `<div class="panel"><h3>Raamwerk gebrekenlijsten (NEN 2767-1 Bijlage A)</h3><p class="small muted" style="margin-top:0">Elk gebrek hoort bij een soort; de soort bepaalt de ernst. Gebruik dit voor gebreken die niet in de lijst staan. Storingen horen niet in de gebrekenlijsten. Omschrijvingen in eigen woorden.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">${ERNST.slice().reverse().map(([e,n])=>`<div style="border-top:4px solid ${ckleur(e==='ernstig'?6:e==='serieus'?4:2)};padding-top:6px"><b>${n}e gebreken</b>${RAAMWERK.filter(r=>r[0]===e).map(r=>`<div class="small" style="margin-top:6px"><b>${r[1]}</b><div class="muted">${r[2]}</div></div>`).join('')}</div>`).join('')}</div></div>`;
+  if(!B.secties) return head + raam + `<h3 style="margin-top:16px">Datasetversies</h3>${renderRegister('datasets')}`;
+  const disc = ui.bdisc||''; const secs = B.secties.filter(s=>!disc||s.disc===disc);
+  const filt = g => !q || (g.naam+' '+g.code+' '+g.soort).toLowerCase().includes(q);
+  const sec = secs.find(s=>s.code===ui.bsec && (!q || s.gebreken.some(filt))) || secs.find(s=>!q || s.gebreken.some(filt)); ui.bsec = sec?.code;
+  const view = sec ? `<div style="display:grid;grid-template-columns:minmax(220px,280px) 1fr;gap:14px;align-items:start">
+      <div class="tree" style="max-height:640px;overflow:auto">${secs.map(s=>{ const n = q ? s.gebreken.filter(filt).length : s.gebreken.length; return (!q||n) ? `<div class="node ${s===sec?'sel':''}" data-bsec="${s.code}"><span class="small muted" style="width:38px">${s.code}</span><span style="flex:1">${esc(s.titel)}</span><span class="small muted">${n}</span></div>` : ''; }).join('')}</div>
+      <div><div class="panel"><h3>${esc(sec.code)} ${esc(sec.titel)} <span class="small muted">· ${esc(sec.disc)}</span></h3>
+        <details class="small"><summary>${sec.elementen.length} elementcodes${sec.levensduur.length?` · ${sec.levensduur.length} indicatieve levensduren`:''}</summary><div style="columns:2;margin-top:6px">${sec.elementen.map(e=>`<div><b>${e.code}</b> ${esc(e.oms)}</div>`).join('')}</div>${sec.levensduur.length?`<div style="margin-top:8px"><b>Indicatieve levensduur</b>${sec.levensduur.map(v=>`<div>${esc(v.oms)}: ${v.jaren} jaar</div>`).join('')}</div>`:''}</details></div>
+        ${['ernstig','serieus','gering'].map(e=>{ const gg = sec.gebreken.filter(g=>g.ernst===e && filt(g)); if(!gg.length) return '';
+          return `<div class="panel" style="margin-top:10px;border-left:5px solid ${ckleur(e==='ernstig'?6:e==='serieus'?4:2)}"><h3>${ERNST.find(x=>x[0]===e)[1]}e gebreken</h3>
+          ${[...new Set(gg.map(g=>g.soort))].map(so=>`<div class="small" style="margin-top:6px;font-weight:600">${esc(so)}</div><table style="width:100%;border-collapse:collapse;font-size:13px">${gg.filter(g=>g.soort===so).map(g=>`<tr style="border-top:1px solid var(--line)"><td style="padding:3px;width:80px" class="muted">${esc(g.code)}</td><td>${esc(g.naam)}</td><td style="width:220px" class="small">${g.int?'<span class="badge">'+INTENS[g.int].toLowerCase()+'</span> ':''}${g.omvang?'<span class="badge">omvang: '+esc(g.omvang)+'</span>':''}</td></tr>`).join('')}</table>`).join('')}</div>`; }).join('')}
+      </div></div>` : '<p class="muted">Niets gevonden.</p>';
+  return head + `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><input id="bq" placeholder="Zoek een gebrek…" value="${esc(ui.bq||'')}" style="flex:1;min-width:220px">
+    ${['','Bouwkunde','Elektrotechniek','Klimaattechniek','Transporttechniek'].map(d=>`<button class="chip ${disc===d?'on':''}" data-bdisc="${d}">${d||'Alle'}</button>`).join('')}</div>` + view
+    + `<div style="margin-top:16px">${raam}</div><h3 style="margin-top:16px">Datasetversies</h3>${renderRegister('datasets')}`;
+}
+function parseCSV(txt){
+  const lines = txt.replace(/^﻿/,'').split(/\r?\n/).filter(l=>l.trim()); const sep = (lines[0].match(/;/g)||[]).length >= (lines[0].match(/,/g)||[]).length ? ';' : ',';
+  const split = l => { const out = []; let cur = '', q = false; for(const ch of l){ if(ch==='"'){ q = !q; continue; } if(ch===sep && !q){ out.push(cur); cur=''; } else cur += ch; } out.push(cur); return out.map(x=>x.trim()); };
+  const h = split(lines[0]).map(x=>x.toLowerCase()); return lines.slice(1).map(l=>{ const v = split(l); const o = {}; h.forEach((k,i)=>o[k]=v[i]||''); return o; });
+}
+function importBib(txt, naam){
+  let B;
+  if(/^\s*[\[{]/.test(txt)){ B = JSON.parse(txt); if(B.type!=='nen2767-gebrekenbibliotheek') throw new Error('type'); }
+  else { const rows = parseCSV(txt);
+    B = bib().secties ? JSON.parse(JSON.stringify(bib())) : {type:'nen2767-gebrekenbibliotheek', dataset:naam.replace(/\.(csv|txt)$/i,''), secties:[]};
+    const get = r => { let s = B.secties.find(x=>x.code===r.sectie); if(!s){ s = {code:r.sectie||'?', disc:r.discipline||'', titel:r.sectietitel||r.sectie||'', elementen:[], levensduur:[], gebreken:[]}; B.secties.push(s); } return s; };
+    if(rows[0] && 'element_code' in rows[0]) rows.forEach(r=>{ const s = get(r); if(!s.elementen.some(e=>e.code===r.element_code)) s.elementen.push({code:r.element_code, oms:r.omschrijving||'', materiaal:r.materiaal||''}); });
+    else { const nieuw = new Set();
+      rows.forEach(r=>{ const s = get(r); if(!nieuw.has(s.code)){ s.gebreken = []; nieuw.add(s.code); } const e = (r.ernst||'').toLowerCase();
+        s.gebreken.push({code:r.gebrek_code||'', ernst:e.startsWith('ern')?'ernstig':e.startsWith('ser')?'serieus':'gering', soort:r.soort||'', naam:r.gebrek||r.volledige_tekst||'', oms:r.volledige_tekst||r.gebrek||'', int:+r.intensiteit_vast||'', omvang:r.omvang_aanwijzing||''}); }); } }
+  state.data.bib = B; bibIndex = null;
+  if(!items('datasets').some(d=>d.naam===B.dataset)){ items('datasets').forEach(d=>d.actief='Nee'); items('datasets').push({id:uid(), naam:B.dataset, actief:'Ja', toelichting:'Geïmporteerd als gebrekenbibliotheek.'}); }
+  save();
+}
+function exportBibCSV(){
+  const rows = [['sectie','discipline','sectietitel','gebrek_code','ernst','soort','gebrek','intensiteit_vast','omvang_aanwijzing','volledige_tekst']];
+  bib().secties.forEach(s=>s.gebreken.forEach(g=>rows.push([s.code,s.disc,s.titel,g.code,g.ernst,g.soort,g.naam,g.int,g.omvang,g.oms])));
+  const csv = '﻿'+rows.map(r=>r.map(v=>/[;"\n]/.test(String(v))?'"'+String(v).replace(/"/g,'')+'"':v).join(';')).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download = 'gebrekenbibliotheek.csv'; a.click();
+}
+
 /* ---------- Tab: gebrekenregistratie ---------- */
 function tGebreken(){
   const ins = items('inspecties');
@@ -1905,23 +2002,16 @@ function tGebreken(){
       ${v?`<div class="note small" style="margin:0">${v.msg}${v.int?`<div style="margin-top:6px">Omvang van het gedeelte met verval: <input data-ovo="1" value="${esc(op.vervalOmv??'')}" placeholder="${vervalStandaard(bd, bdInput(bd,{...op,status:''},insp).gebreken)}" style="width:60px"> % <span class="muted">(leeg = het gedeelte zonder andere gebreken)</span> <span class="muted">(overige gebreken hieronder tellen mee volgens §5.3 situatie 3)</span></div>`:''}<div class="muted" style="margin-top:4px">Vooraf vastleggen of en hoe het vangnet mag worden toegepast; onjuist gebruik leidt tot ingrepen op basis van veronderstellingen.</div></div>`:''}
     </div>
     ${op.status&&op.status!=='niet'?`<div class="panel" style="margin-top:12px;overflow:auto"><h3>Geconstateerde gebreken</h3>
-      ${gs.length?`<table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th>Gebrek</th><th>Component</th>${gs.some(g=>g.comp&&!num(comps.find(c=>c.id===g.comp)?.vervangingswaarde))?'<th>% comp.</th>':''}<th>Ernst</th><th>Intensiteit</th><th>Omvang %</th><th>Zelfde gedeelte als</th><th></th></tr>
-        ${gs.map((g,i)=>{ const needPct = g.comp && !num(comps.find(c=>c.id===g.comp)?.vervangingswaarde); const anyPct = gs.some(x=>x.comp&&!num(comps.find(c=>c.id===x.comp)?.vervangingswaarde));
-          return `<tr style="border-top:1px solid var(--line)"><td><input data-gr="oms" data-gid="${g.id}" value="${esc(g.oms)}" placeholder="bijv. losse naden" style="width:100%;min-width:140px"></td>
-          <td><select data-gr="comp" data-gid="${g.id}"><option value="">hele bouwdeel</option>${comps.map(c=>`<option value="${c.id}" ${g.comp===c.id?'selected':''}>${esc(c.naam)}</option>`).join('')}</select></td>
-          ${anyPct?`<td>${needPct?`<input data-gr="cpct" data-gid="${g.id}" value="${esc(g.cpct)}" style="width:55px" title="Aandeel van de component in het bouwdeel (geen vervangingswaarde bekend)">`:''}</td>`:''}
-          <td><select data-gr="ernst" data-gid="${g.id}"><option value=""></option>${ERNST.map(([k,n])=>`<option value="${k}" ${g.ernst===k?'selected':''}>${n}</option>`).join('')}</select></td>
-          <td><select data-gr="int" data-gid="${g.id}"><option value=""></option>${[1,2,3].map(k=>`<option value="${k}" ${+g.int===k?'selected':''}>${INTENS[k]}</option>`).join('')}</select></td>
-          <td><input data-gr="omv" data-gid="${g.id}" value="${esc(g.omv)}" style="width:60px" title="${g.comp?'Omvang van het gebrek op de component (stap 3c)':'Omvang t.o.v. het hele bouwdeel'}"></td>
-          <td><select data-gr="stapel" data-gid="${g.id}"><option value="">— eigen gedeelte —</option>${gs.slice(0,i).map((x,j)=>`<option value="${x.id}" ${g.stapel===x.id?'selected':''}>${j+1}. ${esc(x.oms||'gebrek')}</option>`).join('')}</select></td>
-          <td><button class="danger" data-gdel="${g.id}">×</button></td></tr>`; }).join('')}</table>`:'<p class="small muted" style="margin:0">Geen gebreken vastgelegd — het bouwdeel krijgt conditie 1.</p>'}
+      ${(()=>{ const sec = bibSectie(bd.code); return sec ? `<div class="note small" style="margin:0 0 10px">Gebrekenlijst: <b>${esc(sec.code)} ${esc(sec.titel)}</b> (${esc(bib().dataset)}) · element ${esc(bd.code)}. Kies een gebrek uit de lijst: ernst, soort en — waar voorgeschreven — intensiteit worden overgenomen.</div>`
+        : `<div class="warn small" style="margin:0 0 10px">${bib().secties?`Dit bouwdeel heeft nog geen elementcode uit de bibliotheek. Koppel er een in <a href="#conditie" data-ctab="decompositie">Decompositie</a>, of leg het gebrek vrij vast: kies dan de soort volgens het raamwerk, de ernst volgt daaruit (Bijlage A).`:`Nog geen gebrekenbibliotheek geladen (tab <a href="#conditie" data-ctab="datasets">Gebrekenbibliotheek</a>). Leg gebreken vrij vast: kies de soort volgens het raamwerk, de ernst volgt daaruit.`}</div>`; })()}
+      ${gs.map((g,i)=>gebrekKaart(g, i, gs, comps, bibSectie(bd.code))).join('') || '<p class="small muted" style="margin:0">Geen gebreken vastgelegd — het bouwdeel krijgt conditie 1.</p>'}
       <button data-gadd="1" style="margin-top:8px">+ gebrek</button>
       <p class="small muted" style="margin:8px 0 0">Bij een component is de omvang die op de component (stap 3c); de tool rekent hem om naar het bouwdeel via de vervangingswaarden (stap 3a–3d). "Zelfde gedeelte als" = gestapeld gebrek (§5.3 situatie 1): alleen het gebrek met de slechtste conditie telt.</p></div>
       <div id="calcout" style="margin-top:12px">${calcPanel(berekenBouwdeel(bdInput(bd, op, insp)))}</div>`:''}`;
   }
   return `<div style="display:flex;gap:10px;align-items:end;margin-bottom:12px;flex-wrap:wrap"><div class="ctl"><label>Inspectie</label><select data-oinsp="1">${ins.map(i=>`<option value="${i.id}" ${i.id===insp.id?'selected':''}>${esc(i.titel||'(naamloos)')}${i.datum?' · '+i.datum:''}</option>`).join('')}</select></div>
     ${tabellenCompleet()?'':'<div class="warn small" style="margin:0">Rekentabellen nog niet compleet — <a href="#conditie" data-ctab="tabellen">vul ze in</a>.</div>'}</div>
-    <div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:16px;align-items:start">${left}<div>${right}</div></div>`;
+    <div style="display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:16px;align-items:start">${left}<div style="min-width:0">${right}</div></div>`;
 }
 
 /* ---------- Tab: condities (aggregatie §5.5) ---------- */
@@ -2040,9 +2130,14 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.bibimp){ const f = document.getElementById('bibfile'); f.onchange = async ()=>{ try{ importBib(await f.files[0].text(), f.files[0].name); rerender(); }catch(err){ console.log('Ongeldig bibliotheekbestand', err); } }; f.click(); return; }
+    if(d.bibcsv){ exportBibCSV(); return; }
+    if(d.bibdel){ if(ui.bibarmed){ delete state.data.bib; bibIndex = null; ui.bibarmed = false; save(); } else { ui.bibarmed = true; r.textContent = 'Klik nogmaals om te verwijderen'; return; } rerender(); return; }
+    if(d.bsec){ ui.bsec = d.bsec; rerender(); return; }
+    if(d.bdisc!==undefined){ ui.bdisc = d.bdisc; ui.bsec = null; rerender(); return; }
     if(d.obd){ ui.obd = d.obd; rerender(); return; }
     if(d.gadd){ const op = opnames()[ui.oinsp][ui.obd]; op.gebreken.push({id:uid(), oms:'', ernst:'', int:'', omv:'', comp:'', stapel:''}); save(); rerender(); return; }
     if(d.gdel){ const op = opnames()[ui.oinsp][ui.obd]; op.gebreken = op.gebreken.filter(g=>g.id!==d.gdel); op.gebreken.forEach(g=>{ if(g.stapel===d.gdel) g.stapel=''; }); save(); rerender(); return; }
@@ -2130,6 +2225,12 @@ main.addEventListener('input', e=>{
   if(d.oinsp){ ui.oinsp = el.value; ui.obd = null; rerender(); return; }
   if(d.ost){ opnames()[ui.oinsp][ui.obd].status = el.value; save(); rerender(); return; }
   if(d.ovo){ opnames()[ui.oinsp][ui.obd].vervalOmv = el.value; save(); refreshCalc(); return; }
+  if(el.id==='bq'){ ui.bq = el.value; const pos = el.selectionStart; rerender(); const i2 = document.getElementById('bq'); i2.focus(); i2.setSelectionRange(pos,pos); return; }
+  if(d.gpick){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gpick); const bd = state.data.assets.find(a=>a.id===ui.obd); const sec = bibSectie(bd.code);
+    const x = el.value===''?null:sec.gebreken[+el.value];
+    if(x){ Object.assign(g, {code:x.code, oms:x.naam, ernst:x.ernst, soort:x.soort}); if(x.int) g.int = String(x.int); } else { g.code = ''; }
+    save(); rerender(); return; }
+  if(d.gr==='soort'){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gid); g.soort = el.value; const r = RAAMWERK.find(x=>x[1]===el.value); if(r) g.ernst = r[0]; save(); rerender(); return; }
   if(d.gr){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gid); g[d.gr] = el.value; save(); if(d.gr==='comp'||d.gr==='oms') { if(d.gr==='comp') { rerender(); return; } } refreshCalc(); return; }
   if(d.sbvw){ state.data.sandbox.vw = el.value; save(); refreshCalc(); return; }
   if(d.sb){ const r = state.data.sandbox.rows.find(x=>x.id===d.sid); r[d.sb] = el.value; save(); refreshCalc(); return; }
@@ -2163,6 +2264,7 @@ main.addEventListener('input', e=>{
     if(el.type==='checkbox'){ const s = new Set(a[d.ak]||[]); el.checked?s.add(d.rv):s.delete(d.rv); a[d.ak]=[...s]; }
     else a[d.ak] = el.value;
     if(d.ak==='fase') a._ft = Date.now();
+    if(d.ak==='code'){ const e = bibElement(el.value); if(e){ if(!a.materiaal && e.materiaal) a.materiaal = e.materiaal; save(); rerender(); return; } }
     save(); if(d.ak==='fase'||d.ak==='transEind') rerender(); return;
   }
   if(d.best){ state.data.best[d.best] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }

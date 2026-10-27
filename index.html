@@ -135,6 +135,7 @@
     .layout{display:block} main{padding:0;max-width:none} body{background:#fff}
     #samp,.printdoc{border:none;padding:0}
   }
+  .cb{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;padding:0 6px;border-radius:5px;color:#fff;font-weight:700;font-size:12px;text-decoration:none}
   footer{color:var(--muted);font-size:12px;padding:30px 0 10px}
 
   @media (max-width:860px){
@@ -148,7 +149,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.8</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.9</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -1186,8 +1187,8 @@ function tOverzicht(){
       <div class="col"><div class="colh">Gebruiksfase</div>${['Opstellen waardekompassen|kompas','Formuleren instandhoudingseisen|eisen','Uitvoeren risicoanalyse ↺ eisen|risicos','Opstellen instandhoudingsconcepten|concepten','Formuleren uitvoeringseisen|uitvoeringseisen','Opstellen plannen en begroting|maatregelen'].map(x=>{const[t,b]=x.split('|');return `<button class="step" data-ttab="${b}"><span>${t}</span></button>`;}).join('')}</div>
       <div class="col"><div class="colh">Transitiefase</div>${['Aanpassen waardekompas|kompas','Aanpassen instandhoudingseisen|eisen','Actualiseren risicoanalyse|risicos','Bijstellen instandhoudingsconcepten|concepten','Bijstellen uitvoeringseisen|uitvoeringseisen','Bijstellen plannen en begroting|maatregelen'].map(x=>{const[t,b]=x.split('|');return `<button class="step" data-ttab="${b}"><span>${t}</span></button>`;}).join('')}</div>
     </div><p class="small muted" style="text-align:center;margin:8px 0 0">Eigen weergave, zie §7.1. Na de transitie keert het object terug naar de gebruiksfase en gelden weer de bijbehorende eisen en concepten.</p></div>
-  ${(()=>{ const cs = items('concepten').filter(conceptSignaal).length; const nv = items('observaties').filter(o=>o.voldoet==='Nee').length; const nr = items('risicos').map(risicoEval).filter(r=>r&&!r.ok).length;
-     return (cs||nv||nr)?`<div class="warn small" style="margin-top:14px">${cs?`<div data-ttab="concepten" style="cursor:pointer">⚠ ${cs} instandhoudingsconcept(en) moeten worden bijgesteld (§7.3.6)</div>`:''}${nr?`<div data-ttab="risicos" style="cursor:pointer">⚠ ${nr} risico('s) niet acceptabel</div>`:''}${nv?`<div><a href="#operationeel">⚠ ${nv} observatie(s) voldoen niet aan de instandhoudingseis</a></div>`:''}</div>`:''; })()}
+  ${(()=>{ const cs = items('concepten').filter(conceptSignaal).length; const nv = items('observaties').filter(o=>o.voldoet==='Nee').length; const nr = items('risicos').map(risicoEval).filter(r=>r&&!r.ok).length; const nc = items('eisen').map(eisVerificatie2767).filter(v=>v&&!v.geen&&!v.ok).length;
+     return (cs||nv||nr||nc)?`<div class="warn small" style="margin-top:14px">${cs?`<div data-ttab="concepten" style="cursor:pointer">⚠ ${cs} instandhoudingsconcept(en) moeten worden bijgesteld (§7.3.6)</div>`:''}${nr?`<div data-ttab="risicos" style="cursor:pointer">⚠ ${nr} risico('s) niet acceptabel</div>`:''}${nv?`<div><a href="#operationeel">⚠ ${nv} observatie(s) voldoen niet aan de instandhoudingseis</a></div>`:''}${nc?`<div data-ttab="eisen" style="cursor:pointer">⚠ ${nc} instandhoudingseis(en) niet gehaald volgens NEN 2767-condities</div>`:''}</div>`:''; })()}
   <h3 style="margin-top:18px">Waardekompassen per cluster</h3>
   ${cl.length?`<div class="cards">${cl.map(c=>{ const sig = kompasSignalen(c);
     return `<div class="card" style="cursor:pointer" data-kopen="${c.id}"><h3>${esc(c.naam)||'(naamloos)'}</h3>${kompasRadar(c, kompas(c,'gebruik')?'gebruik':kompas(c,'op')?'op':kompas(c,'af')?'af':'gebruik', false, 260)}
@@ -1249,6 +1250,9 @@ function eisExtra(it){
     ${b===0 && !/compliance/i.test(asp?.naam||'')?'<div style="color:#b5651d;margin-top:4px">Dit aspect is n.v.t. voor dit cluster — is deze eis nodig?</div>':''}
     ${voorstel?`<div style="margin-top:6px">Voorstel volgens niveautabel (${esc(n.naam)}): <b>${esc(voorstel)}</b> ${it.niveau!==voorstel?`<button data-eisvoorstel="${it.id}" style="font-size:12px;padding:2px 8px;margin-left:6px">Neem over</button>`:'✓'}</div>`:''}
     ${/compliance/i.test(asp?.naam||'')?'<div class="muted" style="margin-top:4px">Compliance is de ondergrens; strengere eisen zijn altijd toegestaan.</div>':''}
+    ${(()=>{ const v = eisVerificatie2767(it); if(!v) return '';
+      if(v.geen) return `<div style="margin-top:6px">NEN 2767: nog geen gemeten condities voor bouwdelen in dit cluster.</div>`;
+      return `<div style="margin-top:6px;padding:8px;border-radius:6px;background:${v.ok?'#e7f4e1':'#fdecea'}"><b>Automatische verificatie (NEN 2767):</b> ${v.ok?`✓ alle ${v.n} gemeten bouwdelen voldoen aan conditie ≤ ${v.max}`:`✗ ${v.slecht.length} van ${v.n} gemeten bouwdelen slechter dan ${v.max}: ${v.slecht.map(([b,x])=>esc(b.naam)+' ('+x.res.cond+')').join(', ')}`}${v.ag.cond?` · geaggregeerde clusterconditie ${v.ag.cond}`:''}${v.n<v.totaal?` · ${v.totaal-v.n} bouwdeel/-delen nog niet gemeten`:''}</div>`; })()}
     ${(()=>{ const ob = items('observaties').filter(o=>o.eis===it.id); if(!ob.length) return '<div class="muted" style="margin-top:4px">Nog geen verificatie via observaties (operationeel niveau).</div>';
       const l = ob.slice().sort((a,b)=>(b.datum||'').localeCompare(a.datum||''))[0];
       return `<div style="margin-top:4px">Verificatie: ${ob.length} observatie(s); laatste ${esc(l.datum||'')}: ${l.voldoet==='Nee'?'<b style="color:#c0392b">voldoet niet</b>':l.voldoet==='Ja'?'<b style="color:var(--accent)">voldoet</b>':'nog niet beoordeeld'}</div>`; })()}</div>`;
@@ -1623,7 +1627,7 @@ Object.assign(REG, {
   ]},
 });
 Object.assign(MV, {inspecties:'inspecties', datasets:'gebrekendatasets'});
-const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['datasets','Gebrekendatasets','H2'],['volgt','Gebreken & condities …','H5']];
+const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekendatasets','H2'],['tabellen','⚙ Rekentabellen','']];
 const lvName = a => sector().niveaus[Math.min(a.niveau,5)];
 
 function renderConditie(){
@@ -1681,9 +1685,338 @@ function renderConditie(){
     <p class="small muted">Koppeling met NEN 8026: in de <a href="#tactisch" data-ttab="instellingen">niveautabel</a> stelt de tool per bijdrage een maximaal toegestane conditiescore voor (standaard 4 / 3 / 2 bij bijdrage 1 / 2 / 3).</p>`;
   else if(t==='inspecties') body = `<div class="note small">Leg per inspectie vast wie, wanneer, wat en met welke gebrekendataset is geïnspecteerd. De inspecteur kan gebruikmaken van klachten, storingen, onderhoudshistorie en logboeken (§1.3). De gebrekenregistratie per bouwdeel volgt na hoofdstuk 5.</div>${renderRegister('inspecties')}`;
   else if(t==='datasets') body = `<div class="note small">NEN 2767-1 werkt alleen samen met een gebrekendataset: NEN 2767-2 (gebouwen) of de webapplicatie NEN 2767-4-2 (infra), aangevuld met referentiebeelden uit NPR 4768. Leg hier vast welke versie(s) jullie gebruiken.</div>${renderRegister('datasets')}`;
-  else body = `<div class="panel"><h3>Volgt na hoofdstuk 5</h3><p class="muted" style="margin:0">Gebrekenregistratie (ernst, omvang, intensiteit), berekening van de conditiescore, meerdere gebreken per bouwdeel, vangnetconstructie en aggregatie naar element, beheerobject en cluster — met automatische verificatie van de instandhoudingseisen.</p></div>`;
+  else if(t==='gebreken') body = tGebreken();
+  else if(t==='condities') body = tCondities();
+  else if(t==='kromme') body = tKromme();
+  else if(t==='rekenhulp') body = tRekenhulp();
+  else if(t==='tabellen') body = tRekentabellen();
   return `<h2>Conditiemeting — NEN 2767</h2><div class="ref">NEN 2767-1+C1:2019 · input voor de verificatie en risicoanalyse van NEN 8026</div>
     <div class="tabs">${CTABS.map(([id,n,r])=>`<button data-ctab="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
+}
+
+/* ==================================================================
+   NEN 2767 — REKENHART (H5, Bijlage B, Bijlage F)
+   De rekentabellen (tabel 3, 5, B.1, B.2) staan NIET in de code:
+   de gebruiker vult ze in of importeert ze (licentie NEN 2767).
+   ================================================================== */
+const ERNST = [['gering','Gering'],['serieus','Serieus'],['ernstig','Ernstig']];
+const INTENS = ['','Beginstadium','Gevorderd stadium','Eindstadium'];
+const OMVNAAM = ['','Incidenteel','Plaatselijk','Regelmatig','Aanzienlijk','Algemeen'];
+function T27(){ return (state.data.n2767 ||= {omvang:['','','',''], matrix:{gering:[[],[],[]],serieus:[[],[],[]],ernstig:[[],[],[]]}, b1:['','','','','',''], b2:['','','','',''], vervalMax:'4', enkel:'5.2'}); }
+const isNum = v => v!=='' && v!==null && v!==undefined && !isNaN(+String(v).replace(',','.'));
+const nr = v => +String(v).replace(',','.');
+function tabellenCompleet(){
+  const t = T27(); const cells = [];
+  for(const [e] of ERNST) for(let i=0;i<3;i++) for(let k=0;k<5;k++) cells.push((t.matrix[e][i]||[])[k]);
+  return [...t.omvang, ...t.b1, ...t.b2, ...cells].every(isNum);
+}
+const omvKlasse = p => { const o = T27().omvang.map(nr); return p<o[0]?1 : p<o[1]?2 : p<o[2]?3 : p<o[3]?4 : 5; };
+const matrix = (e,i,k) => nr(T27().matrix[e][i-1][k-1]);
+const factorB1 = c => nr(T27().b1[c-1]);
+const condB2 = u => { const t = T27().b2.map(nr); u = Math.round(u*10000)/10000; for(let i=0;i<5;i++) if(u<=t[i]) return i+1; return 6; };
+/* Verouderingskromme (formule 1 en 2 uit §5.4) */
+const krommeC = x => x<=0 ? 1 : x>=1 ? Infinity : 1 - Math.log2(1-x);
+const krommeT = (C, L) => L - L*Math.pow(0.5, C-1);
+
+/* Rekenmotor: één bouwdeel. input = {vw, gebreken:[{id,oms,ernst,int,omv,comp:{naam,vw}|null,cpct,stapel,auto}]} */
+function berekenBouwdeel(inp){
+  if(!tabellenCompleet()) return {error:'De rekentabellen zijn nog niet (volledig) ingevuld. Ga naar ⚙ Rekentabellen.'};
+  const warn = []; const vwBd = num(inp.vw);
+  const rows = (inp.gebreken||[]).filter(g=>g.ernst && g.int && isNum(g.omv)).map(g=>{
+    let compPct = 100, vwComp = null;
+    if(g.comp){ vwComp = num(g.comp.vw);
+      if(vwComp && vwBd) compPct = vwComp/vwBd*100;
+      else if(isNum(g.cpct)) compPct = nr(g.cpct);
+      else warn.push(`Component "${g.comp.naam}": geen vervangingswaarde of percentage — gerekend als 100 % van het bouwdeel.`); }
+    const omvComp = Math.min(100, Math.max(0, nr(g.omv)));
+    const omv3d = compPct*omvComp/100;
+    const c4a = matrix(g.ernst, +g.int, omvKlasse(omvComp));
+    const c4b = matrix(g.ernst, +g.int, 5);
+    return {g, comp:g.comp, vwComp, compPct, omvComp, omv3d, c4a, c4b, f:factorB1(c4b), excluded:false};
+  });
+  const onvolledig = (inp.gebreken||[]).length - rows.length;
+  if(onvolledig>0) warn.push(`${onvolledig} gebrek(en) niet meegeteld: ernst, intensiteit of omvang ontbreekt.`);
+  // §5.3 situatie 1: gestapelde gebreken → alleen het gebrek met de slechtste conditie telt
+  const groep = r => r.g.stapel && rows.some(x=>x.g.id===r.g.stapel) ? r.g.stapel : r.g.id;
+  const groepen = {}; rows.forEach(r=>{ (groepen[groep(r)] ||= []).push(r); });
+  for(const leden of Object.values(groepen)) if(leden.length>1){
+    const best = leden.slice().sort((a,b)=>b.c4b-a.c4b || b.omv3d-a.omv3d)[0];
+    leden.forEach(r=>{ if(r!==best) r.excluded = true; });
+  }
+  const eff = rows.filter(r=>!r.excluded);
+  const somOmv = eff.reduce((s,r)=>s+r.omv3d,0);
+  if(somOmv>100.0001) warn.push(`De gebreken beslaan samen ${somOmv.toFixed(1)} % van het bouwdeel (meer dan 100 %). Controleer de omvang of markeer gestapelde gebreken.`);
+  const rest = Math.max(0, 100-somOmv);
+  const corr = eff.reduce((s,r)=>s+r.omv3d*r.f,0) + rest*1;
+  const uitkomstB = corr/100; const condB = condB2(uitkomstB);
+  const base = {rows, eff, rest, corr, uitkomstB, condB, warn, somOmv};
+  if(!eff.length) return {...base, cond:1, methode:'geen', uitleg:'Geen gebreken geconstateerd: conditiescore 1 (bouwdelen zonder gebreken tellen mee, §3.7).', factor:1};
+  if(eff.length===1){
+    const r = eff[0]; const c52 = matrix(r.g.ernst, +r.g.int, omvKlasse(r.omv3d));
+    if(T27().enkel==='B') return {...base, cond:condB, methode:'B', factor:uitkomstB, alt:c52, uitleg:`Eén gebrek, berekend met de rekenmethodiek van Bijlage B (zo ingesteld). Volgens §5.2 zou de score ${c52} zijn.`};
+    return {...base, cond:c52, methode:'5.2', factor:factorB1(c52), alt:condB, uitleg:`Eén gebrek: conditie direct uit de matrix (§5.2) met omvang ${r.omv3d.toFixed(1)} % (${OMVNAAM[omvKlasse(r.omv3d)].toLowerCase()}). Ter vergelijking: Bijlage B geeft ${condB}.`};
+  }
+  const e0 = eff[0];
+  if(eff.every(r=>r.g.ernst===e0.g.ernst && +r.g.int===+e0.g.int)){
+    const c = matrix(e0.g.ernst, +e0.g.int, omvKlasse(somOmv));
+    return {...base, cond:c, methode:'5.3-2', factor:factorB1(c), alt:condB, uitleg:`§5.3 situatie 2: gebreken met dezelfde ernst en intensiteit op verschillende gedeelten. De omvang wordt opgeteld (${somOmv.toFixed(1)} %, ${OMVNAAM[omvKlasse(somOmv)].toLowerCase()}) en de conditie volgt uit de matrix.`};
+  }
+  return {...base, cond:condB, methode:'B', factor:uitkomstB, uitleg:`§5.3 situatie 3: verschillende gebreken op verschillende gedeelten. Berekend met de zeven stappen van Bijlage B: uitkomst ${uitkomstB.toFixed(3).replace('.',',')} → conditie ${condB} (tabel B.2).`};
+}
+
+/* ---------- Visualisaties bij een berekening ---------- */
+const ckleur = c => (CSCHAAL[c-1]||CSCHAAL[0])[3];
+function calcVisual(res){
+  const W = 660, x0 = 150, bw = W-x0-20; const scale = bw/Math.max(100, res.corr);
+  let y = 26, g = '';
+  const bar = (label, sub, parts, yy) => { let x = x0; let s = `<text x="${x0-10}" y="${yy+15}" text-anchor="end" font-size="12" font-weight="600" fill="#1d2321">${label}</text><text x="${x0-10}" y="${yy+29}" text-anchor="end" font-size="10.5" fill="#5f6b66">${sub}</text>`;
+    parts.forEach(p=>{ const w = p.w*scale; if(w<=0) return; s += `<rect x="${x}" y="${yy}" width="${w}" height="34" fill="${p.c}" stroke="#fff"><title>${esc(p.t)}</title></rect>`; if(w>34) s += `<text x="${x+w/2}" y="${yy+21}" text-anchor="middle" font-size="10.5" fill="${p.dark?'#fff':'#1d2321'}">${esc(p.l)}</text>`; x += w; });
+    return s; };
+  const parts1 = res.eff.map((r,i)=>({w:r.omv3d, c:ckleur(r.c4b), dark:r.c4b>=4, l:`${i+1}`, t:`${r.g.oms||'gebrek'}: ${r.omv3d.toFixed(1)} % · conditie ter plaatse ${r.c4b}`})).concat([{w:res.rest, c:'#e8f1e8', l:'geen gebrek', t:`Geen gebrek: ${res.rest.toFixed(1)} %`}]);
+  const parts2 = res.eff.map((r,i)=>({w:r.omv3d*r.f, c:ckleur(r.c4b), dark:r.c4b>=4, l:`${i+1}`, t:`${r.g.oms||'gebrek'}: ${r.omv3d.toFixed(1)} % × ${r.f} = ${(r.omv3d*r.f).toFixed(1)} %`})).concat([{w:res.rest, c:'#e8f1e8', l:'× 1', t:`Geen gebrek: ${res.rest.toFixed(1)} % × 1`}]);
+  g += bar('Bouwdeel', 'omvang (stap 3d)', parts1, y);
+  g += bar('Gecorrigeerd', 'omvang × factor (stap 6)', parts2, y+56);
+  const x100 = x0 + 100*scale;
+  g += `<line x1="${x100}" y1="${y-8}" x2="${x100}" y2="${y+98}" stroke="#1d2321" stroke-dasharray="4 3"/><text x="${x100}" y="${y-12}" text-anchor="middle" font-size="10.5" fill="#1d2321">100 %</text>`;
+  g += `<text x="${x0+res.corr*scale}" y="${y+104}" text-anchor="end" font-size="11" font-weight="600" fill="#1d2321">${res.corr.toFixed(1)} %</text>`;
+  // meter tabel B.2
+  const gy = y+132, gx0 = x0, gw = bw, umin = 1, umax = 2.1; const t = T27().b2.map(nr);
+  const X = u => gx0 + (Math.min(umax,Math.max(umin,u))-umin)/(umax-umin)*gw;
+  const edges = [umin, ...t, umax];
+  g += `<text x="${x0-10}" y="${gy+15}" text-anchor="end" font-size="12" font-weight="600" fill="#1d2321">Uitkomst</text><text x="${x0-10}" y="${gy+29}" text-anchor="end" font-size="10.5" fill="#5f6b66">tabel B.2 (stap 7)</text>`;
+  for(let c=1;c<=6;c++){ const a = X(edges[c-1]), b = X(edges[c]); g += `<rect x="${a}" y="${gy}" width="${Math.max(0,b-a)}" height="22" fill="${ckleur(c)}" opacity=".85"/><text x="${(a+b)/2}" y="${gy+15}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${c}</text>`; }
+  t.forEach((v,i)=>{ g += `<text x="${X(v)}" y="${gy+36+(i%2)*11}" text-anchor="middle" font-size="9.5" fill="#5f6b66">${String(v).replace('.',',')}</text>`; });
+  const mx = X(res.uitkomstB);
+  g += `<path d="M${mx} ${gy-2} l-7 -12 h14 z" fill="#1d2321"/><text x="${mx}" y="${gy-18}" text-anchor="middle" font-size="12" font-weight="700" fill="#1d2321">${res.uitkomstB.toFixed(3).replace('.',',')}</text>`;
+  return `<svg viewBox="0 0 ${W} ${gy+58}" style="width:100%;max-width:${W}px">${g}</svg>`;
+}
+function calcStappen(res){
+  const p = v => v===null||v===undefined ? '' : (Math.round(v*100)/100).toLocaleString('nl-NL')+' %';
+  const ernstN = e => (ERNST.find(x=>x[0]===e)||['',''])[1];
+  return `<div style="overflow:auto"><table class="stappen" style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <tr class="small muted" style="text-align:left;vertical-align:bottom">
+      <th style="padding:4px">#</th><th>Component</th><th>Stap 1a<br>Gebrek</th><th>1b<br>Ernst</th><th>2<br>Intensiteit</th><th>3a<br>Verv.w.</th><th>3b<br>% comp.</th><th>3c<br>Omv. op comp.</th><th>3d<br>Omv. bouwdeel</th><th>4a<br>Cond. comp.</th><th>4b<br>Cond. 100 %</th><th>5<br>Factor B.1</th><th>6<br>Gecorr.</th></tr>
+    ${res.rows.map((r,i)=>`<tr style="border-top:1px solid var(--line);${r.excluded?'color:#9aa5a0;text-decoration:line-through':''}">
+      <td style="padding:4px">${r.excluded?'':res.eff.indexOf(r)+1}</td><td>${esc(r.comp?.naam||'hele bouwdeel')}</td><td>${esc(r.g.oms||'')}${r.g.auto?' <span class="badge">vangnet</span>':''}${r.excluded?' <span class="small" style="text-decoration:none">(gestapeld, telt niet)</span>':''}</td>
+      <td>${ernstN(r.g.ernst)}</td><td>${INTENS[r.g.int]}</td><td>${r.vwComp?'€ '+r.vwComp.toLocaleString('nl-NL'):''}</td><td>${r.comp?p(r.compPct):''}</td><td>${r.comp?p(r.omvComp):''}</td><td><b>${p(r.omv3d)}</b></td>
+      <td>${r.comp?r.c4a:''}</td><td><span class="cb" style="background:${ckleur(r.c4b)}">${r.c4b}</span></td><td>${r.excluded?'':String(r.f).replace('.',',')}</td><td>${r.excluded?'':p(r.omv3d*r.f)}</td></tr>`).join('')}
+    <tr style="border-top:1px solid var(--line)"><td></td><td colspan="7">Resterend gedeelte zonder gebreken</td><td><b>${p(res.rest)}</b></td><td></td><td><span class="cb" style="background:${ckleur(1)}">1</span></td><td>1</td><td>${p(res.rest)}</td></tr>
+    <tr style="border-top:2px solid var(--ink);font-weight:600"><td></td><td colspan="7">Totaal</td><td>${p(res.somOmv+res.rest)}</td><td colspan="3" style="text-align:right">Uitkomst = ${p(res.corr)} / 100 % =</td><td>${res.uitkomstB.toFixed(3).replace('.',',')} → <span class="cb" style="background:${ckleur(res.condB)}">${res.condB}</span></td></tr>
+  </table></div>`;
+}
+function calcPanel(res){
+  if(res.error) return `<div class="warn small">${res.error}</div>`;
+  return `<div class="panel" style="border-left:6px solid ${ckleur(res.cond)}">
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div style="width:64px;height:64px;border-radius:12px;background:${ckleur(res.cond)};color:#fff;font-size:32px;font-weight:700;display:flex;align-items:center;justify-content:center">${res.cond}</div>
+        <div style="flex:1;min-width:240px"><div style="font-size:18px;font-weight:650">${CSCHAAL[res.cond-1][1]}</div><div class="small">${res.uitleg}</div></div></div>
+      ${res.warn.length?`<div class="warn small">${res.warn.map(esc).join('<br>')}</div>`:''}
+    </div>
+    ${res.eff.length?`<div class="panel" style="margin-top:12px"><h3>Visueel: van gebreken naar conditie</h3>${calcVisual(res)}
+      <p class="small muted" style="margin:4px 0 0">Bovenste balk: het bouwdeel (100 %) verdeeld over de gedeelten, gekleurd naar de conditie ter plaatse. Middelste balk: dezelfde gedeelten na correctie — slechte delen wegen zwaarder. Onder: de uitkomst op de schaal van tabel B.2.${res.methode!=='B'?' <b>Let op:</b> de conditie hierboven volgt uit '+(res.methode==='5.2'?'§5.2':'§5.3 situatie 2')+'; de balken en meter tonen de Bijlage B-berekening ter vergelijking.':''}</p></div>
+    <div class="panel" style="margin-top:12px"><h3>De zeven stappen (Bijlage B)</h3>${calcStappen(res)}</div>`:''}`;
+}
+
+/* ---------- Conditie per bouwdeel uit de inspecties ---------- */
+let condCache = new Map();
+const opnames = () => (state.data.opname ||= {});
+function bdInput(bd, op, insp){
+  const comps = state.data.assets.filter(a=>a.parent===bd.id);
+  const gebreken = (op.gebreken||[]).map(g=>({...g, comp: g.comp ? (a=>a?{naam:a.naam||'(component)', vw:a.vervangingswaarde}:null)(comps.find(c=>c.id===g.comp)) : null}));
+  if(op.status==='vangnet'){
+    const v = vervalVoor(bd, insp);
+    if(v.int) gebreken.push({id:'verval', oms:'Verval (vangnet, Bijlage F)', ernst:'gering', int:v.int, omv: isNum(op.vervalOmv)?op.vervalOmv:vervalStandaard(bd, gebreken), comp:null, auto:true});
+  }
+  return {vw: bd.vervangingswaarde, gebreken};
+}
+function vervalStandaard(bd, gebreken){
+  if(!gebreken.length || !tabellenCompleet()) return 100;
+  const r = berekenBouwdeel({vw:bd.vervangingswaarde, gebreken}); return Math.max(0, Math.round((100 - (r.somOmv||0))*10)/10);
+}
+function vervalVoor(bd, insp){
+  const L = num(bd.levensduur), bj = num(bd.bouwjaar); if(!L || !bj) return {int:0, msg:'Vul bouwjaar en technische levensduur in om het vangnet te kunnen toepassen.'};
+  const jaar = insp?.datum ? +insp.datum.slice(0,4) : new Date().getFullYear();
+  const x = (jaar-bj)/L; let int = x>=0.875?3 : x>=0.75?2 : x>=0.5?1 : 0;
+  const cap = {'2':1,'3':2,'4':3}[T27().vervalMax||'4']; const gecapt = int>cap; int = Math.min(int, cap);
+  return {int, x, msg:`Leeftijd ${jaar-bj} jaar = ${Math.round(x*100)} % van de levensduur (${L} jaar) → ${int?'verval gering, '+INTENS[int].toLowerCase():'nog geen verval (< 50 %)'}${gecapt?` (begrensd door instelling: verval tot conditie ${T27().vervalMax})`:''}.`};
+}
+function bdConditie(bd){
+  if(condCache.has(bd.id)) return condCache.get(bd.id);
+  const insps = items('inspecties').slice().sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
+  let out = null;
+  for(const i of insps){ const op = opnames()[i.id]?.[bd.id]; if(op && (op.status==='geinsp'||op.status==='vangnet')){ const res = berekenBouwdeel(bdInput(bd, op, i)); if(!res.error) out = {res, insp:i}; break; } }
+  condCache.set(bd.id, out); return out;
+}
+const bouwdelenOnder = id => { const out = []; const walk = pid => children(pid).forEach(a=>{ if(a.niveau===4) out.push(a); else if(a.niveau<4) walk(a.id); }); const a = state.data.assets.find(x=>x.id===id); if(a?.niveau===4) return [a]; walk(id); return out; };
+function aggregeer(bds){
+  let som = 0, vw = 0, zonderVw = 0, zonderCond = 0, n = 0;
+  for(const bd of bds){ const c = bdConditie(bd); if(!c){ zonderCond++; continue; } const v = num(bd.vervangingswaarde); if(!v){ zonderVw++; continue; } som += v*c.res.factor; vw += v; n++; }
+  if(!vw) return {n, zonderVw, zonderCond, totaal:bds.length};
+  const u = som/vw; return {cond:condB2(u), uitkomst:u, vw, n, zonderVw, zonderCond, totaal:bds.length};
+}
+const cbadge = (c, extra='') => c ? `<span class="cb" style="background:${ckleur(c)}" ${extra}>${c}</span>` : '<span class="cb" style="background:#ccd3cf">–</span>';
+
+/* ---------- Tab: rekentabellen ---------- */
+function tRekentabellen(){
+  const t = T27(); const ok = tabellenCompleet();
+  const inp = (path, v, w=60) => `<input data-t27="${path}" value="${esc(v??'')}" style="width:${w}px;text-align:center;${isNum(v)?'':'border-color:#e0a95c'}">`;
+  return `<div class="note small">De rekentabellen komen uit NEN 2767-1 en zijn auteursrechtelijk beschermd. Ze staan daarom <b>niet</b> in de code van de tool (en dus niet op GitHub). Vul ze één keer in vanuit je eigen exemplaar van de norm, of importeer een tabellenbestand. Ze worden in je browser bewaard en gaan mee met Exporteren.</div>
+    <div class="${ok?'note':'warn'} small" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${ok?'✓ Rekentabellen compleet — de berekeningen werken.':'Rekentabellen nog niet compleet: oranje velden ontbreken.'}</b>
+      <span style="flex:1"></span><button data-t27imp="1">Tabellen importeren</button><button data-t27exp="1">Tabellen exporteren</button><input type="file" id="t27file" accept=".json" hidden></div>
+    <div class="panel"><h3>Omvang: ondergrens van omvangscore 2 t/m 5 (in %) — tabel 3</h3>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">${[2,3,4,5].map((k,i)=>`<label class="small">${k} · ${OMVNAAM[k].toLowerCase()} vanaf<br>${inp('omvang.'+i, t.omvang[i])} %</label>`).join('')}</div></div>
+    <div class="panel" style="margin-top:12px"><h3>Matrix resulterende conditiescores — tabel 5</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px">${ERNST.map(([e,n])=>`<div><b>${n}e gebreken</b>
+        <table style="border-collapse:collapse;font-size:12.5px;margin-top:4px"><tr class="muted"><td></td>${[1,2,3,4,5].map(k=>`<td style="text-align:center">${OMVNAAM[k].slice(0,6)}.</td>`).join('')}</tr>
+        ${[1,2,3].map(i=>`<tr><td class="small" style="padding-right:6px">${INTENS[i]}</td>${[1,2,3,4,5].map(k=>`<td>${inp(`matrix.${e}.${i-1}.${k-1}`, (t.matrix[e][i-1]||[])[k-1], 44)}</td>`).join('')}</tr>`).join('')}</table></div>`).join('')}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+      <div class="panel"><h3>Correctiefactor per conditiescore — tabel B.1</h3><div style="display:flex;gap:10px;flex-wrap:wrap">${[1,2,3,4,5,6].map(c=>`<label class="small">${cbadge(c)}<br>${inp('b1.'+(c-1), t.b1[c-1])}</label>`).join('')}</div></div>
+      <div class="panel"><h3>Conditieherleiding: bovengrens uitkomst — tabel B.2</h3><div style="display:flex;gap:10px;flex-wrap:wrap">${[1,2,3,4,5].map(c=>`<label class="small">${cbadge(c)} tot en met<br>${inp('b2.'+(c-1), t.b2[c-1])}</label>`).join('')}<span class="small muted" style="align-self:end">daarboven ${cbadge(6)}</span></div></div></div>
+    <div class="panel form" style="margin-top:12px"><h3>Keuzes van de organisatie</h3>
+      <div><label>Bij één gebrek op een bouwdeel geldt als maatgevend (Bijlage B: vooraf vastleggen)</label><select data-t27="enkel"><option value="5.2" ${t.enkel!=='B'?'selected':''}>De matrix van §5.2 (standaard)</option><option value="B" ${t.enkel==='B'?'selected':''}>De rekenmethodiek van Bijlage B</option></select></div>
+      <div><label>Vangnet: het gebrek "verval" mag worden toegepast tot conditie (Bijlage F, opm. 1)</label><select data-t27="vervalMax">${['2','3','4'].map(v=>`<option value="${v}" ${t.vervalMax===v?'selected':''}>${v} (levensduur > ${{2:'50',3:'75',4:'87,5'}[v]} %)</option>`).join('')}</select></div></div>`;
+}
+
+/* ---------- Tab: gebrekenregistratie ---------- */
+function tGebreken(){
+  const ins = items('inspecties');
+  if(!ins.length) return `<div class="panel"><p class="muted" style="margin:0">Maak eerst een inspectie aan (tab Inspecties).</p></div>`;
+  const insp = ins.find(x=>x.id===ui.oinsp) || ins.slice().sort((a,b)=>(b.datum||'').localeCompare(a.datum||''))[0]; ui.oinsp = insp.id;
+  const scope = (insp.objecten||[]).length ? [...new Set(insp.objecten.flatMap(bouwdelenOnder))] : state.data.assets.filter(a=>a.niveau===4);
+  const ops = (opnames()[insp.id] ||= {});
+  const bd = scope.find(b=>b.id===ui.obd) || scope[0]; if(bd) ui.obd = bd.id;
+  const statusL = {geinsp:'geïnspecteerd', vangnet:'vangnet', niet:'niet geïnspecteerd'};
+  const pad = a => { const p = []; let x = state.data.assets.find(y=>y.id===a.parent); while(x){ p.unshift(x.naam); x = state.data.assets.find(y=>y.id===x.parent); } return p.slice(2).join(' › '); };
+  const left = `<div class="tree">${scope.map(b=>{ const op = ops[b.id]; const r = op&&op.status!=='niet' ? berekenBouwdeel(bdInput(b, op, insp)) : null;
+      return `<div class="node ${bd&&b.id===bd.id?'sel':''}" data-obd="${b.id}"><span style="flex:1">${esc(b.naam)||'(naamloos)'}<div class="small muted">${esc(pad(b))}</div></span>
+        <span class="small muted">${op?statusL[op.status]||'':''}</span>${r&&!r.error?cbadge(r.cond):''}</div>`; }).join('') || '<p class="muted small" style="padding:8px">Geen bouwdelen binnen de scope van deze inspectie. Voeg bouwdelen toe in de Assetstructuur.</p>'}</div>`;
+  let right = '';
+  if(bd){
+    const op = (ops[bd.id] ||= {status:'', gebreken:[]});
+    const comps = state.data.assets.filter(a=>a.parent===bd.id);
+    const gs = op.gebreken;
+    const v = op.status==='vangnet' ? vervalVoor(bd, insp) : null;
+    right = `<div class="panel form">
+      <div><b style="font-size:16px">${esc(bd.naam)}</b> <span class="small muted">${esc(pad(bd))}${bd.materiaal?' · '+esc(bd.materiaal):''}${bd.vervangingswaarde?' · € '+num(bd.vervangingswaarde).toLocaleString('nl-NL'):''}</span></div>
+      <div><label>Status in deze inspectie</label><select data-ost="1"><option value="">— kies —</option>
+        <option value="geinsp" ${op.status==='geinsp'?'selected':''}>Geïnspecteerd (gebreken vastleggen; geen gebreken = conditie 1)</option>
+        <option value="vangnet" ${op.status==='vangnet'?'selected':''}>Niet te beoordelen op gebreken → vangnet "verval" (§5.4, Bijlage F)</option>
+        <option value="niet" ${op.status==='niet'?'selected':''}>Niet geïnspecteerd</option></select></div>
+      ${v?`<div class="note small" style="margin:0">${v.msg}${v.int?`<div style="margin-top:6px">Omvang van het gedeelte met verval: <input data-ovo="1" value="${esc(op.vervalOmv??'')}" placeholder="${vervalStandaard(bd, bdInput(bd,{...op,status:''},insp).gebreken)}" style="width:60px"> % <span class="muted">(leeg = het gedeelte zonder andere gebreken)</span> <span class="muted">(overige gebreken hieronder tellen mee volgens §5.3 situatie 3)</span></div>`:''}<div class="muted" style="margin-top:4px">Vooraf vastleggen of en hoe het vangnet mag worden toegepast; onjuist gebruik leidt tot ingrepen op basis van veronderstellingen.</div></div>`:''}
+    </div>
+    ${op.status&&op.status!=='niet'?`<div class="panel" style="margin-top:12px;overflow:auto"><h3>Geconstateerde gebreken</h3>
+      ${gs.length?`<table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th>Gebrek</th><th>Component</th>${gs.some(g=>g.comp&&!num(comps.find(c=>c.id===g.comp)?.vervangingswaarde))?'<th>% comp.</th>':''}<th>Ernst</th><th>Intensiteit</th><th>Omvang %</th><th>Zelfde gedeelte als</th><th></th></tr>
+        ${gs.map((g,i)=>{ const needPct = g.comp && !num(comps.find(c=>c.id===g.comp)?.vervangingswaarde); const anyPct = gs.some(x=>x.comp&&!num(comps.find(c=>c.id===x.comp)?.vervangingswaarde));
+          return `<tr style="border-top:1px solid var(--line)"><td><input data-gr="oms" data-gid="${g.id}" value="${esc(g.oms)}" placeholder="bijv. losse naden" style="width:100%;min-width:140px"></td>
+          <td><select data-gr="comp" data-gid="${g.id}"><option value="">hele bouwdeel</option>${comps.map(c=>`<option value="${c.id}" ${g.comp===c.id?'selected':''}>${esc(c.naam)}</option>`).join('')}</select></td>
+          ${anyPct?`<td>${needPct?`<input data-gr="cpct" data-gid="${g.id}" value="${esc(g.cpct)}" style="width:55px" title="Aandeel van de component in het bouwdeel (geen vervangingswaarde bekend)">`:''}</td>`:''}
+          <td><select data-gr="ernst" data-gid="${g.id}"><option value=""></option>${ERNST.map(([k,n])=>`<option value="${k}" ${g.ernst===k?'selected':''}>${n}</option>`).join('')}</select></td>
+          <td><select data-gr="int" data-gid="${g.id}"><option value=""></option>${[1,2,3].map(k=>`<option value="${k}" ${+g.int===k?'selected':''}>${INTENS[k]}</option>`).join('')}</select></td>
+          <td><input data-gr="omv" data-gid="${g.id}" value="${esc(g.omv)}" style="width:60px" title="${g.comp?'Omvang van het gebrek op de component (stap 3c)':'Omvang t.o.v. het hele bouwdeel'}"></td>
+          <td><select data-gr="stapel" data-gid="${g.id}"><option value="">— eigen gedeelte —</option>${gs.slice(0,i).map((x,j)=>`<option value="${x.id}" ${g.stapel===x.id?'selected':''}>${j+1}. ${esc(x.oms||'gebrek')}</option>`).join('')}</select></td>
+          <td><button class="danger" data-gdel="${g.id}">×</button></td></tr>`; }).join('')}</table>`:'<p class="small muted" style="margin:0">Geen gebreken vastgelegd — het bouwdeel krijgt conditie 1.</p>'}
+      <button data-gadd="1" style="margin-top:8px">+ gebrek</button>
+      <p class="small muted" style="margin:8px 0 0">Bij een component is de omvang die op de component (stap 3c); de tool rekent hem om naar het bouwdeel via de vervangingswaarden (stap 3a–3d). "Zelfde gedeelte als" = gestapeld gebrek (§5.3 situatie 1): alleen het gebrek met de slechtste conditie telt.</p></div>
+      <div id="calcout" style="margin-top:12px">${calcPanel(berekenBouwdeel(bdInput(bd, op, insp)))}</div>`:''}`;
+  }
+  return `<div style="display:flex;gap:10px;align-items:end;margin-bottom:12px;flex-wrap:wrap"><div class="ctl"><label>Inspectie</label><select data-oinsp="1">${ins.map(i=>`<option value="${i.id}" ${i.id===insp.id?'selected':''}>${esc(i.titel||'(naamloos)')}${i.datum?' · '+i.datum:''}</option>`).join('')}</select></div>
+    ${tabellenCompleet()?'':'<div class="warn small" style="margin:0">Rekentabellen nog niet compleet — <a href="#conditie" data-ctab="tabellen">vul ze in</a>.</div>'}</div>
+    <div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:16px;align-items:start">${left}<div>${right}</div></div>`;
+}
+
+/* ---------- Tab: condities (aggregatie §5.5) ---------- */
+function tCondities(){
+  if(!tabellenCompleet()) return `<div class="warn small">Rekentabellen nog niet compleet — <a href="#conditie" data-ctab="tabellen">vul ze in</a>.</div>`;
+  const allBd = state.data.assets.filter(a=>a.niveau===4);
+  const dist = [0,0,0,0,0,0]; let vwTot = 0;
+  allBd.forEach(b=>{ const c = bdConditie(b); const v = num(b.vervangingswaarde); if(c && v){ dist[c.res.cond-1] += v; vwTot += v; } });
+  const distBar = vwTot ? `<div style="display:flex;height:28px;border-radius:6px;overflow:hidden">${dist.map((v,i)=>v?`<div style="width:${v/vwTot*100}%;background:${ckleur(i+1)};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center" title="Conditie ${i+1}: € ${v.toLocaleString('nl-NL')} (${Math.round(v/vwTot*100)} %)">${v/vwTot>0.06?i+1:''}</div>`:'').join('')}</div>
+    <p class="small muted" style="margin:4px 0 0">Verdeling van de vervangingswaarde (€ ${vwTot.toLocaleString('nl-NL')}) over de conditiescores.</p>` : '<p class="small muted">Nog geen bouwdelen met conditie én vervangingswaarde.</p>';
+  const rows = []; const walk = (pid,d)=>children(pid).forEach(a=>{ if(a.niveau<=4){ rows.push([a,d]); walk(a.id,d+1); } }); walk(null,0);
+  const tree = rows.map(([a,d])=>{
+    if(a.niveau===4){ const c = bdConditie(a); return `<tr style="border-top:1px solid var(--line)"><td style="padding:5px 6px;padding-left:${6+d*16}px">${esc(a.naam)} <span class="small muted">bouwdeel</span></td><td>${cbadge(c?.res.cond)}</td><td class="small">${c?c.res.factor.toFixed(3).replace('.',','):''}</td><td class="small">${a.vervangingswaarde?'€ '+num(a.vervangingswaarde).toLocaleString('nl-NL'):'<span style="color:#b5651d">geen vw</span>'}</td><td class="small muted">${c?esc(c.insp.titel||'')+(c.insp.datum?' · '+c.insp.datum:''):'geen inspectie'}</td></tr>`; }
+    const ag = aggregeer(bouwdelenOnder(a.id));
+    return `<tr style="border-top:1px solid var(--line);background:#fafbfa"><td style="padding:5px 6px;padding-left:${6+d*16}px"><b>${esc(a.naam)}</b> <span class="small muted">${esc(lvName(a))}</span></td><td>${cbadge(ag.cond)}</td><td class="small">${ag.uitkomst?ag.uitkomst.toFixed(3).replace('.',','):''}</td><td class="small">${ag.vw?'€ '+ag.vw.toLocaleString('nl-NL'):''}</td>
+      <td class="small muted">${ag.n} van ${ag.totaal} bouwdelen meegeteld${ag.zonderCond?` · ${ag.zonderCond} zonder conditie`:''}${ag.zonderVw?` · <span style="color:#b5651d">${ag.zonderVw} zonder vervangingswaarde</span>`:''}</td></tr>`; }).join('');
+  const cl = items('clusters').map(c=>{ const ag = aggregeer([...new Set((c.objecten||[]).flatMap(bouwdelenOnder))]); return `<div class="card"><h3>${esc(c.naam)}</h3><div style="display:flex;gap:8px;align-items:center">${cbadge(ag.cond)}<span class="small muted">${ag.uitkomst?'uitkomst '+ag.uitkomst.toFixed(3).replace('.',',')+' · ':''}${ag.n} van ${ag.totaal} bouwdelen</span></div></div>`; }).join('');
+  return `<div class="note small">Aggregatie (§5.5, Bijlage B): per bouwdeel geldt de laatste inspectie. Omhoog wordt gewogen naar <b>vervangingswaarde</b> × correctiefactor (bij een met Bijlage B berekend bouwdeel de uitkomst zelf, anders tabel B.1), gedeeld door de totale vervangingswaarde en herleid met tabel B.2. Bouwdelen zonder vervangingswaarde of conditie tellen niet mee.</div>
+    <div class="panel">${distBar}</div>
+    ${cl?`<h3 style="margin-top:16px">Per cluster (NEN 8026)</h3><div class="cards">${cl}</div>`:''}
+    <div class="panel" style="margin-top:14px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Niveau</th><th>Conditie</th><th>Factor / uitkomst</th><th>Vervangingswaarde</th><th>Toelichting</th></tr>${tree||'<tr><td class="muted">Nog geen objecten.</td></tr>'}</table></div>`;
+}
+
+/* ---------- Tab: verouderingskromme (figuur 2, interactief) ---------- */
+function krommeInner(){
+  const k = (ui.kr ||= {L:40, t:20, C:3, bd:''}); const L = Math.max(1, num(k.L)||40); const t = Math.min(L, Math.max(0, +k.t||0));
+  const bd = state.data.assets.find(a=>a.id===k.bd); const gemeten = bd ? bdConditie(bd)?.res.cond : null;
+  const W = 660, H = 360, x0 = 60, x1 = 620, y0 = 24, y1 = 300; const X = f => x0 + f*(x1-x0); const Y = C => y0 + (Math.min(6,C)-1)/5*(y1-y0);
+  let g = '';
+  [[0.5,0.75,'#7cb34222'],[0.75,0.875,'#f1c40f22'],[0.875,1,'#e67e2222']].forEach(([a,b,c])=>{ g += `<rect x="${X(a)}" y="${y0}" width="${X(b)-X(a)}" height="${y1-y0}" fill="${c}"/>`; });
+  for(let c=1;c<=6;c++){ g += `<line x1="${x0}" y1="${Y(c)}" x2="${x1}" y2="${Y(c)}" stroke="#e3e7e5"/><text x="${x0-10}" y="${Y(c)+4}" text-anchor="end" font-size="12" fill="#3b4642">${c}</text>`; }
+  [[0.5,'½ L'],[0.75,'¾ L'],[0.875,'⅞ L'],[1,'L']].forEach(([f,l])=>{ g += `<line x1="${X(f)}" y1="${y0}" x2="${X(f)}" y2="${y1}" stroke="#cfd6d2" stroke-dasharray="3 3"/><text x="${X(f)}" y="${y1+18}" text-anchor="middle" font-size="11.5" fill="#3b4642">${l} = ${Math.round(f*L*10)/10} jr</text>`; });
+  let d = ''; for(let f=0; f<=0.969; f+=0.004){ d += (d?'L':'M')+X(f).toFixed(1)+' '+Y(krommeC(f)).toFixed(1); }
+  g += `<path d="${d}" fill="none" stroke="#1d2321" stroke-width="2.4"/><path d="M${X(0.969)} ${Y(6)} L${X(1)} ${y1+2}" stroke="#1d2321" stroke-dasharray="2 3"/>`;
+  g += `<line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y1}" stroke="#1d2321"/><line x1="${x0}" y1="${y1}" x2="${x1}" y2="${y1}" stroke="#1d2321"/>`;
+  g += `<text x="${(x0+x1)/2}" y="${H-4}" text-anchor="middle" font-size="12" fill="#5f6b66">verstreken levensduur t (jaar)</text><text x="16" y="${(y0+y1)/2}" font-size="12" fill="#5f6b66" transform="rotate(-90 16 ${(y0+y1)/2})" text-anchor="middle">conditiescore C</text>`;
+  [[0.625,'verval → 2'],[0.8125,'→ 3'],[0.9375,'→ 4']].forEach(([f,l])=>{ g += `<text x="${X(f)}" y="${y0+14}" text-anchor="middle" font-size="10.5" fill="#5f6b66">${l}</text>`; });
+  const Ct = krommeC(t/L);
+  g += `<line x1="${X(t/L)}" y1="${y0}" x2="${X(t/L)}" y2="${y1}" stroke="#2d5f9a" stroke-width="1.5"/><circle cx="${X(t/L)}" cy="${Y(Ct)}" r="7" fill="#2d5f9a"/>`;
+  const lab = `t = ${t} jr → C = ${isFinite(Ct)&&Ct<6?Ct.toFixed(2).replace('.',','):'6'}`; const rechts = t/L < 0.6;
+  g += `<text x="${X(t/L)+(rechts?12:-12)}" y="${Math.max(y0+28, Math.min(y1-6,Y(Ct))-12)}" text-anchor="${rechts?'start':'end'}" font-size="12.5" font-weight="700" fill="#2d5f9a">${lab}</text>`;
+  const Cm = gemeten || +k.C; const tm = krommeT(Cm, L);
+  g += `<circle cx="${X(Math.min(1,tm/L))}" cy="${Y(Cm)}" r="8" fill="#fff" stroke="#c0392b" stroke-width="3"/><text x="${X(Math.min(1,tm/L))-10}" y="${Y(Cm)+20}" text-anchor="end" font-size="12" font-weight="700" fill="#c0392b">${gemeten?'gemeten':'C'} = ${Cm} ↔ t = ${String(Math.round(tm*10)/10).replace('.',',')} jr</text>`;
+  const vervalC = t/L>=0.875?4 : t/L>=0.75?3 : t/L>=0.5?2 : 1;
+  let uitleg = `<div><b>Theoretische conditie bij ${t} jaar:</b> ${isFinite(Ct)&&Ct<6?Ct.toFixed(2).replace('.',','):'6 (einde levensduur)'} · formule (1). Vangnet "verval" volgens Bijlage F: conditie <b>${Math.min(vervalC, +T27().vervalMax||4)}</b>${vervalC>(+T27().vervalMax||4)?` (begrensd tot ${T27().vervalMax} door instelling)`:''}.</div>
+    <div style="margin-top:6px"><b>Conditie ${Cm}</b> hoort theoretisch bij een leeftijd van <b>${String(Math.round(tm*10)/10).replace('.',',')} jaar</b> · theoretische restlevensduur <b>${String(Math.round((L-tm)*10)/10).replace('.',',')} jaar</b> · formule (2).</div>`;
+  if(bd && gemeten){ const age = t; const diff = Math.round((tm-age)*10)/10;
+    uitleg += `<div class="${Math.abs(diff)<1?'note':'warn'}" style="margin-top:8px;margin-bottom:0">${esc(bd.naam)}: werkelijke leeftijd ${age} jaar, gemeten conditie ${gemeten}. ${Math.abs(diff)<1?'De veroudering verloopt zoals de kromme verwacht.':diff>0?`Het bouwdeel is <b>${String(diff).replace('.',',')} jaar sneller verouderd</b> dan de standaardkromme verwacht.`:`Het bouwdeel is <b>${String(-diff).replace('.',',')} jaar langzamer verouderd</b> dan de standaardkromme verwacht.`} De restlevensduur volgt uit de huidige conditie (§5.4 opm. 2).</div>`; }
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">${g}</svg><div class="small" style="margin-top:6px">${uitleg}</div>`;
+}
+function tKromme(){
+  const k = (ui.kr ||= {L:40, t:20, C:3, bd:''});
+  const bds = state.data.assets.filter(a=>a.niveau===4 && num(a.bouwjaar) && num(a.levensduur));
+  return `<div class="note small">Eigen interactieve weergave van het theoretische conditieverloop (§5.4, figuur 2). De kromme is <b>alleen een vangnet</b> voor bouwdelen die niet op gebreken te beoordelen zijn, en waarvan veroudering objectief meetbaar is. Levensduren zijn indicatief, niet normatief (Bijlage F, opm. 2).</div>
+    <div class="panel"><div style="display:flex;gap:16px;flex-wrap:wrap;align-items:end;margin-bottom:10px">
+      <div class="ctl"><label>Bouwdeel (optioneel)</label><select data-kr="bd"><option value="">— vrij invullen —</option>${bds.map(b=>`<option value="${b.id}" ${k.bd===b.id?'selected':''}>${esc(b.naam)}</option>`).join('')}</select></div>
+      <div class="ctl"><label>Levensduur L (jaar)</label><input data-kr="L" value="${esc(k.L)}" style="width:80px"></div>
+      <div class="ctl" style="flex:1;min-width:220px"><label>Leeftijd t: <span id="krtl">${k.t}</span> jaar</label><input type="range" data-kr="t" min="0" max="${num(k.L)||40}" step="1" value="${k.t}" style="width:100%"></div>
+      <div class="ctl"><label>Conditie → leeftijd</label><select data-kr="C" ${k.bd&&bdConditie(state.data.assets.find(a=>a.id===k.bd)||{})?'disabled title="gemeten conditie van het bouwdeel"':''}>${[1,2,3,4,5,6].map(c=>`<option ${+k.C===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    </div><div id="krwrap">${krommeInner()}</div>
+    <p class="small muted" style="margin:8px 0 0">Gekleurde zones: verval-gebied van Bijlage F (50–75 % → 2, 75–87,5 % → 3, > 87,5 % → 4). Een nieuw bouwdeel dat niet vlekkeloos is opgeleverd, start met C > 1 en dus met een "beginleeftijd".</p></div>`;
+}
+
+/* ---------- Tab: rekenhulp (zeven stappen, los van de assets) ---------- */
+function sandboxInput(){ const S = (state.data.sandbox ||= {vw:'', rows:[]});
+  return {vw:S.vw, gebreken:S.rows.map(r=>({...r, comp: r.comp ? {naam:r.comp, vw:r.compVw} : null}))}; }
+function tRekenhulp(){
+  const S = (state.data.sandbox ||= {vw:'', rows:[]});
+  return `<div class="note small">Oefen of controleer een berekening volgens de zeven stappen van Bijlage B, los van je assetgegevens. Tip: neem de rekenvoorbeelden uit Bijlage B van de norm over om de tool te controleren.</div>
+    <div class="panel" style="overflow:auto"><div style="display:flex;gap:10px;align-items:end;margin-bottom:8px;flex-wrap:wrap"><div class="ctl"><label>Vervangingswaarde hele bouwdeel (€, nodig bij componenten)</label><input data-sbvw="1" value="${esc(S.vw)}" style="width:140px"></div>
+      <button data-sbclear="1" class="danger">Leegmaken</button></div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th>Component (leeg = hele bouwdeel)</th><th>Verv.w. comp. €</th><th>Gebrek</th><th>Ernst</th><th>Intensiteit</th><th>Omvang % (op comp.)</th><th>Zelfde gedeelte als</th><th></th></tr>
+      ${S.rows.map((r,i)=>`<tr style="border-top:1px solid var(--line)"><td><input data-sb="comp" data-sid="${r.id}" value="${esc(r.comp)}" style="width:110px"></td><td><input data-sb="compVw" data-sid="${r.id}" value="${esc(r.compVw)}" style="width:80px"></td>
+        <td><input data-sb="oms" data-sid="${r.id}" value="${esc(r.oms)}" style="width:100%;min-width:120px"></td>
+        <td><select data-sb="ernst" data-sid="${r.id}"><option value=""></option>${ERNST.map(([k,n])=>`<option value="${k}" ${r.ernst===k?'selected':''}>${n}</option>`).join('')}</select></td>
+        <td><select data-sb="int" data-sid="${r.id}"><option value=""></option>${[1,2,3].map(k=>`<option value="${k}" ${+r.int===k?'selected':''}>${INTENS[k]}</option>`).join('')}</select></td>
+        <td><input data-sb="omv" data-sid="${r.id}" value="${esc(r.omv)}" style="width:60px"></td>
+        <td><select data-sb="stapel" data-sid="${r.id}"><option value="">— eigen gedeelte —</option>${S.rows.slice(0,i).map((x,j)=>`<option value="${x.id}" ${r.stapel===x.id?'selected':''}>${j+1}. ${esc(x.oms||'gebrek')}</option>`).join('')}</select></td>
+        <td><button class="danger" data-sbdel="${r.id}">×</button></td></tr>`).join('')}</table>
+    <button data-sbadd="1" style="margin-top:8px">+ gebrek</button></div>
+    <div id="calcout" style="margin-top:12px">${calcPanel(berekenBouwdeel(sandboxInput()))}</div>`;
+}
+function refreshCalc(){ const o = document.getElementById('calcout'); if(!o) return;
+  if((ui.ctab)==='rekenhulp') o.innerHTML = calcPanel(berekenBouwdeel(sandboxInput()));
+  else { condCache = new Map(); const insp = items('inspecties').find(x=>x.id===ui.oinsp); const bd = state.data.assets.find(a=>a.id===ui.obd); const op = opnames()[ui.oinsp]?.[ui.obd]; if(bd&&op) o.innerHTML = calcPanel(berekenBouwdeel(bdInput(bd, op, insp))); } }
+
+/* ---------- Verificatie van instandhoudingseisen met gemeten condities ---------- */
+function eisVerificatie2767(it){
+  if(!/2767|conditie/i.test((it.maatstaf||'')+' '+(it.eis||'')) || !isNum(parseInt(it.niveau))) return null;
+  const c = items('clusters').find(x=>x.id===it.cluster); if(!c || !tabellenCompleet()) return null;
+  const max = parseInt(it.niveau); const bds = [...new Set((c.objecten||[]).flatMap(bouwdelenOnder))];
+  const metC = bds.map(b=>[b, bdConditie(b)]).filter(([,x])=>x);
+  if(!metC.length) return {geen:true, max};
+  const slecht = metC.filter(([,x])=>x.res.cond>max); const ag = aggregeer(bds);
+  return {max, ok:!slecht.length, slecht, n:metC.length, totaal:bds.length, ag};
 }
 
 /* ---------------- Overige modules (nog te bouwen) ---------------- */
@@ -1696,6 +2029,7 @@ function renderModule(m){
 
 /* ---------------- Router ---------------- */
 function route(){
+  condCache = new Map();
   const id = location.hash.slice(1) || 'start';
   const m = MODULES.find(x=>x.id===id) || MODULES[0];
   renderNav(m.id);
@@ -1706,9 +2040,17 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.obd){ ui.obd = d.obd; rerender(); return; }
+    if(d.gadd){ const op = opnames()[ui.oinsp][ui.obd]; op.gebreken.push({id:uid(), oms:'', ernst:'', int:'', omv:'', comp:'', stapel:''}); save(); rerender(); return; }
+    if(d.gdel){ const op = opnames()[ui.oinsp][ui.obd]; op.gebreken = op.gebreken.filter(g=>g.id!==d.gdel); op.gebreken.forEach(g=>{ if(g.stapel===d.gdel) g.stapel=''; }); save(); rerender(); return; }
+    if(d.sbadd){ (state.data.sandbox ||= {vw:'',rows:[]}).rows.push({id:uid(), comp:'', compVw:'', oms:'', ernst:'', int:'', omv:'', stapel:''}); save(); rerender(); return; }
+    if(d.sbdel){ const S = state.data.sandbox; S.rows = S.rows.filter(x=>x.id!==d.sbdel); S.rows.forEach(x=>{ if(x.stapel===d.sbdel) x.stapel=''; }); save(); rerender(); return; }
+    if(d.sbclear){ state.data.sandbox = {vw:'', rows:[]}; save(); rerender(); return; }
+    if(d.t27exp){ const blob = new Blob([JSON.stringify({type:'nen2767-rekentabellen', versie:1, tabellen:T27()},null,2)],{type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nen2767-rekentabellen.json'; a.click(); return; }
+    if(d.t27imp){ const f = document.getElementById('t27file'); f.onchange = async ()=>{ try{ const j = JSON.parse(await f.files[0].text()); if(j.type!=='nen2767-rekentabellen') throw 0; state.data.n2767 = {...T27(), ...j.tabellen}; save(); rerender(); }catch(err){ console.log('Ongeldig tabellenbestand'); } }; f.click(); return; }
     if(d.ctab){ ui.ctab = d.ctab; window.scrollTo(0,0); route(); return; }
     if(d.otab){ ui.otab = d.otab; window.scrollTo(0,0); route(); return; }
     if(d.cvoorstel){ const it = items('concepten').find(x=>x.id===d.cvoorstel); it.onderhoud = d.cv; it._t = Date.now(); save(); rerender(); return; }
@@ -1783,6 +2125,19 @@ main.addEventListener('click', e=>{
 });
 main.addEventListener('input', e=>{
   const el = e.target, d = el.dataset;
+  if(d.t27){ const t = T27(); const pth = d.t27.split('.'); let o = t; for(let i=0;i<pth.length-1;i++){ o = o[isNaN(pth[i])?pth[i]:+pth[i]] ||= []; } o[isNaN(pth.at(-1))?pth.at(-1):+pth.at(-1)] = el.value.trim(); save();
+    if(el.tagName==='SELECT') rerender(); else { el.style.borderColor = isNum(el.value)?'':'#e0a95c'; } return; }
+  if(d.oinsp){ ui.oinsp = el.value; ui.obd = null; rerender(); return; }
+  if(d.ost){ opnames()[ui.oinsp][ui.obd].status = el.value; save(); rerender(); return; }
+  if(d.ovo){ opnames()[ui.oinsp][ui.obd].vervalOmv = el.value; save(); refreshCalc(); return; }
+  if(d.gr){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gid); g[d.gr] = el.value; save(); if(d.gr==='comp'||d.gr==='oms') { if(d.gr==='comp') { rerender(); return; } } refreshCalc(); return; }
+  if(d.sbvw){ state.data.sandbox.vw = el.value; save(); refreshCalc(); return; }
+  if(d.sb){ const r = state.data.sandbox.rows.find(x=>x.id===d.sid); r[d.sb] = el.value; save(); refreshCalc(); return; }
+  if(d.kr){ const k = (ui.kr ||= {L:40,t:20,C:3,bd:''});
+    if(d.kr==='bd'){ k.bd = el.value; const b = state.data.assets.find(a=>a.id===el.value); if(b){ k.L = num(b.levensduur); k.t = Math.max(0, new Date().getFullYear()-num(b.bouwjaar)); } rerender(); return; }
+    k[d.kr] = el.value; if(d.kr==='L'){ k.t = Math.min(+k.t, num(k.L)||40); const rg = main.querySelector('[data-kr="t"]'); if(rg){ rg.max = num(k.L)||40; rg.value = k.t; } }
+    const tl = document.getElementById('krtl'); if(tl) tl.textContent = k.t;
+    document.getElementById('krwrap').innerHTML = krommeInner(); return; }
   if(d.ampc){ ui.ampc = el.value; rerender(); return; }
   if(d.mw){ const m = items('maatregelen').find(x=>x.id===d.mw); m[d.mk] = el.value; m._t=Date.now(); if(d.mk==='status'&&el.value==='Gereed'&&!m.gereed){ m.gereed = new Date().toISOString().slice(0,10); } save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.op){ (state.data.op ||= {})[d.op] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }

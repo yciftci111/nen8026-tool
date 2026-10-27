@@ -126,6 +126,9 @@
   .krit{display:flex;gap:4px}
   .krit button{flex:1;padding:6px 0}
   .krit button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .pick{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fafbfa}
+  .pick label{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink);margin:0;cursor:pointer}
+  .pick input{width:auto;margin:0}
   footer{color:var(--muted);font-size:12px;padding:30px 0 10px}
 
   @media (max-width:860px){
@@ -139,7 +142,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.2</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.3</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -309,14 +312,14 @@ const BEGRIPPEN = [
 
 /* ---------------- Opslag ---------------- */
 const STORE_KEY = 'nen8026-tool-v1';
-const DEFAULT = {sector:'leeg', rol:'alle', data:{assets:[]}};
+const DEFAULT = {sector:'leeg', rol:'alle', data:{assets:[], reg:{}, best:{}, info:{}}};
 function load(){
   try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); return s ? {...DEFAULT, ...s, data:{...DEFAULT.data, ...(s.data||{})}} : structuredClone(DEFAULT); }
   catch(e){ return structuredClone(DEFAULT); }
 }
 function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 let state = load();
-let ui = {step:'g1', tab:'begrippen', phase:'gebruik', schil:'instandhouding', tier:'tactisch', glq:'', glb:'', node:null, armed:false};
+let ui = {step:'g1', tab:'begrippen', phase:'gebruik', schil:'instandhouding', tier:'tactisch', glq:'', glb:'', node:null, armed:false, btab:'overzicht', sel:{}, rarmed:null};
 
 const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sector = () => SECTOREN.find(s=>s.id===state.sector) || SECTOREN[0];
@@ -490,7 +493,7 @@ function renderTree(pid, depth){
     const lv = sector().niveaus[Math.min(a.niveau,3)];
     return `<div class="node ${ui.node===a.id?'sel':''}" data-node="${a.id}" style="padding-left:${8+depth*20}px">
       <span class="lv">${esc(lv)}</span><span>${esc(a.naam)||'<i class="muted">(naamloos)</i>'}</span>
-      ${a.krit?`<span class="small muted">K${a.krit}</span>`:''}<span class="fase ${f[2]}">${f[1].replace('Transitie – ','↗ ').replace('↗ afwaarderen','↘ afwaarderen')}</span></div>`
+      ${a.krit?`<span class="small muted">K${a.krit}</span>`:''}${perspectiefVoor(a.id)?`<span class="fase" style="background:#f3ecf6;color:#7a4b8c;margin-left:auto" title="Er is een perspectief aangekondigd (§5.3.4)">◷ perspectief</span>`:''}<span class="fase ${f[2]}" ${perspectiefVoor(a.id)?'style="margin-left:4px"':''}>${f[1].replace('Transitie – ','↗ ').replace('↗ afwaarderen','↘ afwaarderen')}</span></div>`
       + renderTree(a.id, depth+1);
   }).join('');
 }
@@ -519,6 +522,197 @@ function renderAssets(){
     <p class="small muted">De benaming van de niveaus past zich aan aan de gekozen sector. Kriticiteit en levensfase worden later gebruikt in het waardekompas en de risicoanalyse.</p>`;
 }
 
+/* ==================================================================
+   REGISTER: herbruikbaar onderdeel (lijst + formulier) voor alle niveaus
+   ================================================================== */
+const PRIMAIR = ['Huisvesting','Werkvoorziening','Productie','Onderwijs','Gezondheidszorg','Mobiliteit','Waterbeheer','Leefbaarheid','Anders'];
+const GRONDSLAG = ['Maatschappelijke waarde (bijv. transitieopgaven)','Toekomstwaarde','Kriticiteit','Gebruikswaarde','Economische afweging','Staat en functioneren van de assets','Gewenst financieel rendement','Kostprijsdekking','Marktwaarde'];
+const REG = {
+  stakeholders:{ t:'stakeholder', label:x=>x.naam, meta:x=>[x.soort,x.participatie].filter(Boolean).join(' · '), fields:[
+    {k:'naam',l:'Naam stakeholder',type:'text',ph:'bijv. huurders, gemeente, gebruikers, omwonenden'},
+    {k:'soort',l:'Soort',type:'select',opts:['Intern','Extern']},
+    {k:'belang',l:'Belang / wensen ten aanzien van de assets',type:'textarea'},
+    {k:'participatie',l:'Gewenste mate van invloed (§5.3.3, participatie)',type:'select',opts:['Informeren','Raadplegen','Adviseren','Coproduceren','Meebeslissen'],
+      hint:'Indeling volgens de participatieladder: eigen invulling, niet uit de norm.'},
+    {k:'doelen',l:'Raakt aan organisatiedoelstellingen',type:'ref',ref:'doelen'},
+  ]},
+  doelen:{ t:'organisatiedoelstelling', label:x=>x.titel, meta:x=>[x.primair,x.horizon,x.status].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Organisatiedoelstelling',type:'text',ph:'bijv. In 2030 werken we klimaatneutraal en circulair'},
+    {k:'primair',l:'Primair organisatiedoel',type:'select',opts:PRIMAIR},
+    {k:'toelichting',l:'Toelichting',type:'textarea'},
+    {k:'horizon',l:'Horizon (jaar)',type:'text',ph:'bijv. 2030'},
+    {k:'status',l:'Status',type:'select',opts:['Concept','Vastgesteld door asset owner','Vervallen']},
+  ]},
+  randvoorwaarden:{ t:'randvoorwaarde', label:x=>x.titel, meta:x=>x.categorie, fields:[
+    {k:'titel',l:'Randvoorwaarde',type:'text',ph:'bijv. Onderhoudsbudget max. € 4 mln per jaar'},
+    {k:'categorie',l:'Categorie',type:'select',opts:['Financieel','Economisch','Maatschappelijk','Organisatorisch','Technologisch']},
+    {k:'toelichting',l:'Toelichting',type:'textarea'},
+    {k:'bron',l:'Bron / besluit',type:'text'},
+    {k:'tot',l:'Geldig tot',type:'date'},
+  ]},
+  besluiten:{ t:'perspectief of besluit', label:x=>x.titel, meta:x=>[x.soort,x.ingreep,x.datum].filter(Boolean).join(' · '), fields:[
+    {k:'soort',l:'Soort',type:'select',opts:['Perspectief (aangekondigd)','Besluit (genomen)'],
+      hint:'Een perspectief laat de assets in de gebruiksfase. Pas een besluit brengt ze in de transitiefase (§5.3.4, §4.4).'},
+    {k:'titel',l:'Omschrijving',type:'text',ph:'bijv. 16 tijdelijke gebouwen afstoten binnen 3 jaar'},
+    {k:'ingreep',l:'Betreft',type:'select',opts:['Aanpassing','Vervanging','Uitbreiding','Afstoting']},
+    {k:'richting',l:'Richting',type:'select',opts:['Opwaarderen','Afwaarderen']},
+    {k:'assets',l:'Betrokken objecten',type:'assets'},
+    {k:'grondslag',l:'Grondslag van het besluit',type:'checks',opts:GRONDSLAG},
+    {k:'toelichting',l:'Toelichting',type:'textarea'},
+    {k:'datum',l:'Datum',type:'date'},
+    {k:'uitvoering',l:'Verwachte uitvoering',type:'date'},
+    {k:'uitstel',l:'Consequenties van (nog) niet besluiten — voorgelegd door AM',type:'textarea',if:x=>(x.soort||'').startsWith('Perspectief'),
+      hint:'De assetmanager sorteert niet voor op een transitie, maar legt de (meestal financiële) gevolgen van uitstel voor aan de asset owner.'},
+  ]},
+  dilemmas:{ t:'dilemma', label:x=>x.titel, meta:x=>[x.datum, x.besluit?'besloten':'open'].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Dilemma',type:'text',ph:'bijv. Verduurzamen vs. betaalbaarheid huur'},
+    {k:'omschrijving',l:'Omschrijving',type:'textarea'},
+    {k:'stakeholders',l:'Betrokken stakeholders / belangen',type:'ref',ref:'stakeholders'},
+    {k:'opties',l:'Opties',type:'textarea'},
+    {k:'criteria',l:'Toegepaste beslissingscriteria',type:'textarea',hint:'Beslissingscriteria worden in het assetmanagementproces opgesteld (buiten de methode zelf, zie §4.6).'},
+    {k:'besluit',l:'Besluit asset owner',type:'textarea'},
+    {k:'datum',l:'Datum',type:'date'},
+  ]},
+  communicatie:{ t:'melding', label:x=>x.onderwerp, meta:x=>x.gedeeld?('gedeeld '+x.gedeeld):'nog niet gedeeld met AM', fields:[
+    {k:'onderwerp',l:'Nieuwe informatie',type:'text',ph:'bijv. gemeente overweegt herbestemming schoollocatie'},
+    {k:'ontvangen',l:'Bekend bij asset owner sinds',type:'date'},
+    {k:'gevolgen',l:'Gevolgen voor',type:'checks',opts:['Samenstelling assetportfolio','Waardeaspecten','Levensfasen']},
+    {k:'assets',l:'Betrokken objecten',type:'assets'},
+    {k:'gedeeld',l:'Gedeeld met assetmanager op',type:'date'},
+    {k:'toelichting',l:'Toelichting',type:'textarea'},
+  ]},
+  assessments:{ t:'assessment', label:x=>'Assessment '+(x.jaar||'(jaar?)'), meta:x=>x.balans||'', fields:[
+    {k:'jaar',l:'Jaar',type:'text',ph:'bijv. 2026'},
+    {k:'datum',l:'Datum bestuurlijk gesprek',type:'date'},
+    {k:'uitgevoerd',l:'Verantwoording: wat is uitgevoerd?',type:'textarea'},
+    {k:'bijdrage',l:'Bijdrage aan de organisatiedoelstellingen',type:'textarea'},
+    {k:'balans',l:'Kosten, prestaties en risico\'s in balans?',type:'select',opts:['In balans','Aandachtspunten','Uit balans']},
+    {k:'consequenties',l:'Consequenties en risico\'s van besluiten en randvoorwaarden (positief en negatief)',type:'textarea'},
+    {k:'maatregelen',l:'Advies over beheers- of verbetermaatregelen',type:'textarea'},
+    {k:'portfolio',l:'Advies over samenstelling en strategie van het assetportfolio',type:'textarea'},
+    {k:'bijsturing',l:'Bijsturing door asset owner',type:'textarea',hint:'Op organisatiedoelstellingen, portfoliobesluiten en randvoorwaarden.'},
+  ]},
+};
+const items = key => (state.data.reg[key] ||= []);
+
+function assetPicker(sel, name){
+  const rows = []; const walk=(pid,d)=>children(pid).forEach(a=>{rows.push([a,d]);walk(a.id,d+1);}); walk(null,0);
+  if(!rows.length) return `<p class="small muted" style="margin:0">Nog geen objecten. Voeg ze toe in <a href="#assets">Assetstructuur</a>.</p>`;
+  return `<div class="pick">${rows.map(([a,d])=>`<label style="padding-left:${d*16}px"><input type="checkbox" ${name} data-rv="${a.id}" ${(sel||[]).includes(a.id)?'checked':''}> ${esc(a.naam)||'(naamloos)'} <span class="small muted">${esc(sector().niveaus[Math.min(a.niveau,3)])}</span></label>`).join('')}</div>`;
+}
+function fieldHtml(key, it, f){
+  const a = `data-rk="${key}" data-rid="${it.id}" data-rf="${f.k}"`; const v = it[f.k];
+  let inp;
+  if(f.type==='text') inp = `<input ${a} value="${esc(v)}" placeholder="${esc(f.ph||'')}">`;
+  else if(f.type==='textarea') inp = `<textarea ${a} rows="3">${esc(v)}</textarea>`;
+  else if(f.type==='date') inp = `<input type="date" ${a} value="${esc(v)}">`;
+  else if(f.type==='select') inp = `<select ${a}><option value="">— kies —</option>${f.opts.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  else if(f.type==='checks') inp = `<div class="pick">${f.opts.map(o=>`<label><input type="checkbox" ${a} data-rv="${esc(o)}" ${(v||[]).includes(o)?'checked':''}> ${esc(o)}</label>`).join('')}</div>`;
+  else if(f.type==='assets') inp = assetPicker(v, a);
+  else if(f.type==='ref'){ const src = items(f.ref);
+    inp = src.length ? `<div class="pick">${src.map(o=>`<label><input type="checkbox" ${a} data-rv="${o.id}" ${(v||[]).includes(o.id)?'checked':''}> ${esc(REG[f.ref].label(o)||'(naamloos)')}</label>`).join('')}</div>`
+      : `<p class="small muted" style="margin:0">Nog niets ingevoerd bij ${REG[f.ref].t}s.</p>`; }
+  return `<div><label>${f.l}</label>${inp}${f.hint?`<div class="small muted" style="margin-top:3px">${f.hint}</div>`:''}</div>`;
+}
+function renderRegister(key, extraForm){
+  const R = REG[key], list = items(key), it = list.find(x=>x.id===ui.sel[key]);
+  return `<div class="tree-wrap">
+    <div><div class="tree">${list.map(x=>`<div class="node ${it&&it.id===x.id?'sel':''}" data-rsel="${key}:${x.id}">
+        <span class="rl">${esc(R.label(x))||'<i class="muted">(naamloos)</i>'}</span><span class="small muted" style="margin-left:auto;text-align:right">${esc(R.meta(x)||'')}</span></div>`).join('')
+        || `<p class="muted small" style="padding:8px">Nog geen ${R.t}s.</p>`}</div>
+      <div style="margin-top:8px"><button data-radd="${key}">+ ${R.t} toevoegen</button></div></div>
+    <div>${it ? `<div class="panel form">${R.fields.filter(f=>!f.if||f.if(it)).map(f=>fieldHtml(key,it,f)).join('')}
+        ${extraForm?extraForm(it):''}
+        <div><button class="danger ${ui.rarmed===it.id?'armed':''}" data-rdel="${key}:${it.id}">${ui.rarmed===it.id?'Klik nogmaals om te verwijderen':'Verwijderen'}</button></div></div>`
+      : `<div class="panel"><p class="muted" style="margin:0">Selecteer links een ${R.t} of voeg er een toe.</p></div>`}</div></div>`;
+}
+function perspectiefVoor(assetId){
+  return (state.data.reg.besluiten||[]).some(b=>(b.soort||'').startsWith('Perspectief') && (b.assets||[]).includes(assetId));
+}
+
+/* ==================================================================
+   BESTUURLIJK NIVEAU (H5)
+   ================================================================== */
+const BTABS = [
+  ['overzicht','Overzicht',''],
+  ['stakeholders','Stakeholders','§5.3.1'],
+  ['doelen','Organisatiedoelstellingen','§5.3.2'],
+  ['randvoorwaarden','Randvoorwaarden','§5.3.3'],
+  ['besluiten','Perspectief & besluit','§5.3.4'],
+  ['dilemmas','Dilemma\'s','§5.3.5'],
+  ['communicatie','Tijdige communicatie','§5.3.6'],
+  ['assessments','Assessment','§5.4'],
+  ['info','Informatiebehoefte','§5.5'],
+];
+const BINTRO = {
+  stakeholders:'De asset owner behartigt de belangen van stakeholders. Leg vast wie ze zijn, wat ze willen en hoeveel invloed ze mogen of moeten hebben op het in stand houden (participatie, §5.3.3). Belangen kunnen tegenstrijdig zijn: de asset owner besluit.',
+  doelen:'Organisatiedoelstellingen passen binnen de missie, gelden voor het hele portfolio en vormen de basis voor de assetmanagementdoelstellingen op strategisch niveau.',
+  randvoorwaarden:'Financiële, economische, maatschappelijke, organisatorische en technologische kaders die de asset owner meegeeft aan de assetmanagementorganisatie.',
+  besluiten:'Asset owner en assetmanager besluiten samen over aanpassing, vervanging, uitbreiding en afstoting. Een <b>perspectief</b> is aangekondigd, maar nog geen besluit: de assets blijven in gebruiksfase. Een <b>besluit</b> brengt de assets in de transitiefase.',
+  dilemmas:'Dilemma\'s op portfolioniveau worden door de asset owner besloten, met behulp van beslissingscriteria. Vastleggen maakt keuzes later navolgbaar.',
+  communicatie:'Informatie die gevolgen heeft voor portfolio, waardeaspecten of levensfasen wordt zo snel mogelijk gedeeld met de assetmanager. Zo worden geen middelen verspild en wordt niet aan verkeerde doelen gewerkt.',
+  assessments:'Jaarlijks bestuurlijk gesprek, voorbereid door de assetmanager: verantwoording, consequenties en risico\'s, en advies over het portfolio. Daarna stuurt de asset owner bij.',
+};
+const INFO5 = ['Resultaten assessment – verantwoording','Advisering samenstelling en omvang assetportfolio','Advisering over levensfasen','Risico\'s en kansen','Maatschappelijk rendement','Financiële gegevens','Economische gegevens'];
+
+function renderBestuurlijk(){
+  const t = ui.btab;
+  let body;
+  if(t==='overzicht') body = bOverzicht();
+  else if(t==='info') body = bInfo();
+  else body = `<div class="note small">${BINTRO[t]}</div>` + renderRegister(t, t==='besluiten'?besluitExtra:null);
+  return `<h2>Bestuurlijk niveau</h2><div class="ref">NEN 8026 H5 · rol: asset owner · scope: het gehele assetportfolio · product: <b>Kaders</b></div>
+    <div class="tabs">${BTABS.map(([id,n,r])=>`<button data-btab="${id}" class="${t===id?'on':''}" title="${r}">${n}${id!=='overzicht'&&id!=='info'&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
+}
+function besluitExtra(it){
+  if(!(it.soort||'').startsWith('Besluit') || !it.richting || !(it.assets||[]).length) return '';
+  const f = it.richting==='Opwaarderen'?'op':'af';
+  const klaar = it.assets.every(id=>state.data.assets.find(a=>a.id===id)?.fase===f);
+  return `<div class="warn small" style="margin:0">${klaar?'✓ De betrokken objecten staan in de transitiefase ('+it.richting.toLowerCase()+').'
+    :`Dit besluit brengt ${it.assets.length} object(en) in de transitiefase. <div style="margin-top:6px"><button class="primary" data-apply="${it.id}">Zet objecten in transitiefase – ${it.richting.toLowerCase()}</button></div>`}</div>`;
+}
+function bOverzicht(){
+  const B = state.data.best;
+  const box = (t,c='') => `<div style="background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:13px;text-align:center;${c}">${t}</div>`;
+  const card = (id,n,r) => { const c = items(id).length;
+    return `<div class="card" data-btab="${id}" style="cursor:pointer;border-left:4px solid ${c?'var(--l1)':'var(--line)'}"><h3>${n}</h3><p>${r} · ${c?c+' vastgelegd':'nog leeg'}</p></div>`; };
+  return `<div class="panel" style="background:var(--l1s);border-color:transparent">
+      <div style="display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:10px;align-items:center">
+        <div data-btab="besluiten" style="cursor:pointer">${box('Assetportfolio-<b>perspectief</b> formuleren')}</div>
+        <div data-btab="doelen" style="cursor:pointer">${box('Organisatiedoelstellingen formuleren<br>Richting geven met AM-beleid<br>Assetportfolio samenstellen')}</div>
+        <div data-btab="besluiten" style="cursor:pointer">${box('Assetportfolio-<b>besluit</b> nemen')}</div>
+      </div>
+      <p class="small muted" style="text-align:center;margin:8px 0 0">↓ input voor de assetmanagementdoelstellingen op <a href="#strategisch">strategisch niveau</a> · eigen weergave, zie §5.1</p>
+    </div>
+    <div class="panel form" style="margin-top:14px">
+      <div><label>Missie van de organisatie (§5.3.2)</label><textarea data-best="missie" rows="2" placeholder="bijv. Wij staan voor droge voeten, veilige dijken en schoon en voldoende water.">${esc(B.missie)}</textarea></div>
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:10px">
+        <div><label>Is er assetmanagementbeleid?</label><select data-best="beleid"><option value="">— kies —</option>${['Ja','In ontwikkeling','Nee'].map(o=>`<option ${B.beleid===o?'selected':''}>${o}</option>`).join('')}</select></div>
+        <div><label>Vindplaats / omschrijving beleid</label><input data-best="beleidTxt" value="${esc(B.beleidTxt)}" placeholder="bijv. Assetmanagementbeleid 2025–2029, vastgesteld door RvB"></div>
+      </div>
+      ${B.beleid==='Nee'?`<div class="warn small" style="margin:0">Zonder assetmanagementbeleid blijft het beheer beperkt tot technische en functionele aspecten en het voldoen aan wet- en regelgeving (§5.3.2). Waardegestuurd in stand houden vraagt om beleid.</div>`:''}
+    </div>
+    <div class="cards" style="margin-top:14px">${BTABS.filter(x=>!['overzicht','info'].includes(x[0])).map(x=>card(...x)).join('')}
+      <div class="card" data-btab="info" style="cursor:pointer;border-left:4px solid var(--line)"><h3>Informatiebehoefte</h3><p>§5.5 · ${INFO5.filter((_,i)=>state.data.info['b'+i]?.status==='Beschikbaar').length} van ${INFO5.length} beschikbaar</p></div></div>`;
+}
+function bInfo(){
+  const nA = state.data.assets.length, nT = state.data.assets.filter(a=>a.fase==='op'||a.fase==='af').length;
+  const hint = [
+    `${items('assessments').length} assessment(s) vastgelegd in de tool`,
+    `${state.data.assets.filter(a=>a.niveau===0).length} portfolio('s), ${nA} objecten in de assetstructuur`,
+    `${nA-nT} object(en) in gebruiksfase, ${nT} in transitiefase`,
+    `Risicoanalyse volgt op tactisch niveau (§7.3.4)`,
+    '', '', '' ];
+  return `<div class="note small">Deze informatie heeft de asset owner nodig. De <b>assetmanager</b> is verantwoordelijk om haar op portfolioniveau aan te leveren (§5.5). De lijst is niet limitatief.</div>
+    <div class="panel"><table style="width:100%;border-collapse:collapse;font-size:14px">
+      <tr class="small muted" style="text-align:left"><th style="padding:6px">Informatie</th><th>Status</th><th>Bron / vindplaats</th></tr>
+      ${INFO5.map((n,i)=>{ const v = state.data.info['b'+i]||{};
+        return `<tr style="border-top:1px solid var(--line)"><td style="padding:8px 6px">${n}${hint[i]?`<div class="small muted">In de tool: ${hint[i]}</div>`:''}</td>
+          <td><select data-info="b${i}" data-ik="status"><option value="">— kies —</option>${['Beschikbaar','Deels','Niet beschikbaar'].map(o=>`<option ${v.status===o?'selected':''}>${o}</option>`).join('')}</select></td>
+          <td><input data-info="b${i}" data-ik="bron" value="${esc(v.bron)}" style="width:100%"></td></tr>`;}).join('')}
+    </table></div>`;
+}
+
 /* ---------------- Overige modules (nog te bouwen) ---------------- */
 function renderModule(m){
   return `<h2>${m.title}</h2><div class="ref">NEN 8026 ${m.ref}${m.product?' · product: <b>'+m.product+'</b>':''}</div>
@@ -532,13 +726,27 @@ function route(){
   const id = location.hash.slice(1) || 'start';
   const m = MODULES.find(x=>x.id===id) || MODULES[0];
   renderNav(m.id);
-  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets})[m.id]?.() ?? renderModule(m);
+  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets, bestuurlijk:renderBestuurlijk})[m.id]?.() ?? renderModule(m);
   main.innerHTML += `<footer>Deze tool bevat geen normtekst of figuren uit NEN 8026; omschrijvingen en figuren zijn eigen samenvattingen. Raadpleeg de norm voor de officiële inhoud.</footer>`;
 }
 function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
+  const r = e.target.closest('[data-btab],[data-rsel],[data-radd],[data-rdel],[data-apply]');
+  if(r){
+    const d = r.dataset;
+    if(d.btab){ ui.btab = d.btab; window.scrollTo(0,0); route(); return; }
+    if(d.rsel){ const [k,id] = d.rsel.split(':'); ui.sel[k]=id; ui.rarmed=null; }
+    else if(d.radd){ const it = {id:uid()}; items(d.radd).push(it); ui.sel[d.radd]=it.id; ui.rarmed=null; save(); rerender();
+      main.querySelector('.form input, .form select')?.focus(); return; }
+    else if(d.rdel){ const [k,id] = d.rdel.split(':');
+      if(ui.rarmed!==id){ ui.rarmed=id; } else { state.data.reg[k] = items(k).filter(x=>x.id!==id); ui.sel[k]=null; ui.rarmed=null; save(); } }
+    else if(d.apply){ const b = items('besluiten').find(x=>x.id===d.apply); const f = b.richting==='Opwaarderen'?'op':'af';
+      for(const a of state.data.assets) if(b.assets.includes(a.id)){ a.fase=f; a.toelichting = (b.titel||'Besluit')+(b.datum?' ('+b.datum+')':''); }
+      save(); }
+    rerender(); return;
+  }
   const t = e.target.closest('[data-step],[data-tab],[data-phase],[data-schil],[data-tier],[data-glb],[data-node],[data-add],[data-del],[data-krit]');
   if(!t) return;
   const d = t.dataset;
@@ -568,6 +776,18 @@ main.addEventListener('click', e=>{
   rerender();
 });
 main.addEventListener('input', e=>{
+  const el = e.target, d = el.dataset;
+  if(d.rf){
+    const it = items(d.rk).find(x=>x.id===d.rid); if(!it) return;
+    if(el.type==='checkbox'){ const arr = new Set(it[d.rf]||[]); el.checked?arr.add(d.rv):arr.delete(d.rv); it[d.rf]=[...arr]; }
+    else it[d.rf] = el.value;
+    save();
+    if(el.tagName==='SELECT' || el.type==='checkbox' || el.type==='date') rerender();
+    else { const l = main.querySelector(`[data-rsel="${d.rk}:${d.rid}"] .rl`); if(l) l.innerHTML = esc(REG[d.rk].label(it))||'<i class="muted">(naamloos)</i>'; }
+    return;
+  }
+  if(d.best){ state.data.best[d.best] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(d.info){ (state.data.info[d.info] ||= {})[d.ik] = el.value; save(); return; }
   if(e.target.id==='glq'){
     ui.glq = e.target.value; const pos = e.target.selectionStart; rerender();
     const i = document.getElementById('glq'); i.focus(); i.setSelectionRange(pos,pos); return;

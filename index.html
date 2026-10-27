@@ -148,7 +148,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.7</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.8</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -199,18 +199,19 @@ const MODULES = [
   { id:'assets', group:'Inrichting', title:'Assetstructuur', ref:'§3.10–3.14, §4.4', color:'var(--muted)' },
   { id:'waardeaspecten', group:'Inrichting', title:'Waardeaspectentabel', ref:'§6.3.1, Bijlage A', color:'var(--muted)' },
   { id:'rollen', group:'Inrichting', title:'Rolverdeling', ref:'§4.7', color:'var(--muted)' },
+  { id:'conditie', group:'Conditiemeting', title:'NEN 2767', ref:'NEN 2767-1', color:'#8e44ad' },
 ];
 
 /* ---------------- Sectoren (doelgroepen uit §4.2) ---------------- */
 const SECTOREN = [
-  {id:'leeg', naam:'Algemeen / zelf inrichten', niveaus:['Assetportfolio','Assetsysteem','Beheerobject','Onderdeel'], vb:'bijv. portfolio → systeem → object → onderdeel'},
-  {id:'overheid', naam:'Rijk, provincie of gemeente', niveaus:['Assetportfolio','Assetsysteem','Beheerobject','Onderdeel'], vb:'bijv. Infra → Wegennet → Brug N201 → Lager'},
-  {id:'waterschap', naam:'Waterschap of drinkwaterbedrijf', niveaus:['Assetportfolio','Watersysteem','Kunstwerk','Onderdeel'], vb:'bijv. Watersysteem → Polder X → Gemaal Y → Pomp 1'},
-  {id:'haven', naam:'Havenbedrijf of luchthaven', niveaus:['Assetportfolio','Assetsysteem','Beheerobject','Onderdeel'], vb:'bijv. Kades → Kade 7 → Bolder'},
-  {id:'commercieel', naam:'Commerciële of particuliere eigenaar', niveaus:['Vastgoedportefeuille','Complex','Gebouw','Bouwdeel'], vb:'bijv. Kantoren → Complex A → Gebouw 1 → Installaties'},
-  {id:'woning', naam:'Woningcorporatie', niveaus:['Woningbezit','Complex','Woongebouw','Bouwdeel'], vb:'bijv. Bezit → Complex 120 → Flat → Dak'},
-  {id:'zorg', naam:'Zorginstelling', niveaus:['Zorgvastgoed','Locatie','Gebouw','Bouwdeel'], vb:'bijv. Locatie Noord → Hoofdgebouw → Liften'},
-  {id:'onderwijs', naam:'Onderwijsinstelling', niveaus:['Onderwijsvastgoed','Locatie','Gebouw','Bouwdeel'], vb:'bijv. Campus → Gebouw B → Gevel'},
+  {id:'leeg', naam:'Algemeen / zelf inrichten', niveaus:['Assetportfolio','Assetsysteem','Beheerobject','Element','Bouwdeel','Component'], vb:'bijv. portfolio → systeem → object → element → bouwdeel'},
+  {id:'overheid', naam:'Rijk, provincie of gemeente', niveaus:['Areaal','Assetsysteem','Beheerobject','Element','Bouwdeel','Component'], vb:'bijv. Infra → Wegennet → Brug N201 → Onderbouw → Pijler'},
+  {id:'waterschap', naam:'Waterschap of drinkwaterbedrijf', niveaus:['Areaal','Watersysteem','Kunstwerk','Element','Bouwdeel','Component'], vb:'bijv. Watersysteem → Polder X → Gemaal Y → Pomp 1'},
+  {id:'haven', naam:'Havenbedrijf of luchthaven', niveaus:['Areaal','Complex','Beheerobject','Element','Bouwdeel','Component'], vb:'bijv. Kades → Kade 7 → Afmeervoorzieningen → Bolder'},
+  {id:'commercieel', naam:'Commerciële of particuliere eigenaar', niveaus:['Vastgoedportefeuille','Complex','Gebouw','Element','Bouwdeel','Component'], vb:'bijv. Kantoren → Complex A → Gebouw 1 → Daken → Dakbedekking'},
+  {id:'woning', naam:'Woningcorporatie', niveaus:['Woningbezit','Complex','Woongebouw','Element','Bouwdeel','Component'], vb:'bijv. Bezit → Complex 120 → Flat → Dak → Dakbedekking'},
+  {id:'zorg', naam:'Zorginstelling', niveaus:['Zorgvastgoed','Locatie','Gebouw','Element','Bouwdeel','Component'], vb:'bijv. Locatie Noord → Hoofdgebouw → Transport → Lift'},
+  {id:'onderwijs', naam:'Onderwijsinstelling', niveaus:['Onderwijsvastgoed','Locatie','Gebouw','Element','Bouwdeel','Component'], vb:'bijv. Campus → Gebouw B → Gevels → Metselwerk'},
 ];
 
 /* ---------------- Methodekaart: stappen (eigen weergave van §4.8) ---------------- */
@@ -264,7 +265,7 @@ const STAPPEN = {
 };
 
 /* ---------------- Begrippen: eigen korte omschrijvingen ---------------- */
-const BOUWSTENEN = ['Rollen','Assetstructuur','Sturing en doelen','Eisen en concepten','Levensfasen','Risico','Uitvoering en meting','Toetsen en verbeteren'];
+const BOUWSTENEN = ['Rollen','Assetstructuur','Sturing en doelen','Eisen en concepten','Levensfasen','Risico','Uitvoering en meting','Toetsen en verbeteren','NEN 2767 – conditiemeting'];
 const BEGRIPPEN = [
   ['3.1','afschrijven','','Levensfasen','Jaarlijkse boekhoudkundige waardevermindering omdat een asset een beperkte levensduur heeft.'],
   ['3.2','afwaarderen','','Levensfasen','Bewust verlagen van de verwachte waarde van een asset, bijv. door functie te verminderen, levensduur niet te verlengen of risico\'s te accepteren (leegstand, afstoten, slopen).'],
@@ -314,6 +315,34 @@ const BEGRIPPEN = [
   ['3.46','verificatie','','Toetsen en verbeteren','Aantonen dat aan de gestelde eisen is voldaan: doen we wat we hebben afgesproken?'],
   ['3.47','waardeaspecten','','Sturing en doelen','Onderwerpen waarop de organisatie stuurt om waarde te realiseren; elke organisatie stelt haar eigen lijst samen.'],
   ['3.48','waardekompas','','Sturing en doelen','Model dat aangeeft in welke mate de instandhoudingseisen bijdragen aan de waardeaspecten en doelen.'],
+  ...[
+  ['3.1','basiskwaliteit','','De technische kwaliteit die je bij oplevering van een bouwdeel minimaal mag verwachten; beoordeeld op materiaalkeuze en verwerking.'],
+  ['3.2','beheerobject','','Afgebakende eenheid binnen een netwerk, portefeuille, complex of areaal, met één of meer zelfstandige gebruiksfuncties (bijv. gebouw, viaduct).'],
+  ['3.3','bouwdeel','','Zelfstandig, aanwijsbaar deel van een element, onderscheiden naar samenstelling of constructiewijze. Hieraan worden de gebreken gekoppeld.'],
+  ['3.4','component','','Zelfstandig onderdeel van een bouwdeel dat rechtstreeks uit productie komt, bijv. een radiatorknop of daktrim.'],
+  ['3.5','complex','','Groep beheerobjecten die samen een specifieke functie vervullen, bijv. een luchthaven of winkelcentrum.'],
+  ['3.6','conditie','','De technische staat van een bouwdeel, uitgedrukt in een conditiescore.'],
+  ['3.7','conditiemeting','','Gestandaardiseerde werkwijze om technische gebreken op te nemen en de conditie van een bouwdeel te bepalen. Bouwdelen zonder gebreken tellen ook mee.'],
+  ['3.8','conditiescore','','Objectieve waarde op een zespuntsschaal: de resultante van ernst, omvang en intensiteit van de gebreken.'],
+  ['3.9','decompositie','','Hiërarchische opsomming van (fysieke) onderdelen en hoe ze samenhangen.'],
+  ['3.10','element','','Deel van een beheerobject, onderscheiden op functie, bestaande uit één of meer bouwdelen (bijv. installaties, constructie).'],
+  ['3.11','ernst','','Gebrekenparameter: hoe zwaar het gebrek het materiaal van het bouwdeel aantast.'],
+  ['3.12','geaggregeerde conditiescore','','Gewogen conditie op een hoger niveau: element, beheerobject, complex of portefeuille.'],
+  ['3.13','gebouwde omgeving','','Door mensen gemaakte of onderhouden omgeving: landschappen, wateren, gebouwen en infrastructuur.'],
+  ['3.14','gebrek','','Degradatie of prestatieverlies van een materiaal of bouwdeel.'],
+  ['3.15','gebrekenparameters','','De drie kenmerken waarmee een gebrek wordt gekwantificeerd: ernst, omvang en intensiteit.'],
+  ['3.16','gevolgen van gebreken','','Wat een gebrek kan betekenen voor de bedrijfsvoering, inclusief de risico\'s. Wordt los van de conditiescore vastgelegd.'],
+  ['3.17','intensiteit','','Gebrekenparameter: het stadium van achteruitgang waarin het gebrek zich bevindt (drie stadia).'],
+  ['3.18','omvang','','Gebrekenparameter: welk deel van het bouwdeel (in %) het gebrek beslaat. Bij verschillende meeteenheden naar vervangingswaarde.'],
+  ['3.19','slijtage','','Geleidelijke achteruitgang van het materiaal door wrijving, zoals schuren, stroming of erosie.'],
+  ['3.20','technische levensduur','','Periode waarin een bouwdeel naar verwachting een bepaald technisch niveau behoudt.'],
+  ['3.21','verouderingskromme','','Theoretisch verband tussen de conditie en de verwachte technische levensduur.'],
+  ['3.22','vervangingswaarde','','Kosten om een bouwdeel, component of element te vervangen door een gelijkwaardig exemplaar, zonder bijkomende kosten.'],
+  ['3.23','verzorgingsgebrek','','Niet-technisch gebrek zoals vuil, mosgroei of graffiti: raakt de visuele acceptatie, niet de technische staat.'],
+  ['3.24','verzorgingskwaliteit','','De mate waarin bouwdelen verzorgd en schoon (visueel acceptabel) zijn.'],
+  ['3.25','verzorgingsscore','','De verzorgingskwaliteit uitgedrukt op een zespuntsschaal.'],
+  ['3.26','zespuntsschaal','','Ordinale schaal van 1 (minimale degradatie) tot 6 (maximale degradatie).'],
+  ].map(([n,t,a,o])=>['2767·'+n,t,a,'NEN 2767 – conditiemeting',o]),
 ];
 
 /* ---------------- Opslag ---------------- */
@@ -406,7 +435,7 @@ function tabBegrippen(){
   return `<div class="gl-tools"><input id="glq" placeholder="Zoek een begrip…" value="${esc(ui.glq)}"></div>
     <div class="gl-tools"><button class="chip ${!ui.glb?'on':''}" data-glb="">Alle (${BEGRIPPEN.length})</button>
     ${BOUWSTENEN.map(b=>`<button class="chip ${ui.glb===b?'on':''}" data-glb="${b}">${b}</button>`).join('')}</div>
-    <div class="gl" id="glist">${list.map(b=>`<div class="term"><span class="tag">§${b[0]}</span><b>${b[1]}</b>${b[2]?` <span class="muted">(${b[2]})</span>`:''}
+    <div class="gl" id="glist">${list.map(b=>`<div class="term"><span class="tag">${b[0].startsWith('2767')?'NEN 2767-1 §'+b[0].slice(5):'NEN 8026 §'+b[0]}</span><b>${b[1]}</b>${b[2]?` <span class="muted">(${b[2]})</span>`:''}
       <p>${b[4]}</p><div style="margin-top:6px"><span class="badge">${b[3]}</span></div></div>`).join('') || '<p class="muted">Geen begrippen gevonden.</p>'}</div>`;
 }
 const FASEN = {
@@ -496,7 +525,7 @@ function children(pid){ return state.data.assets.filter(a=>a.parent===pid); }
 function renderTree(pid, depth){
   return children(pid).map(a=>{
     const f = FASE_OPT.find(x=>x[0]===a.fase)||FASE_OPT[0];
-    const lv = sector().niveaus[Math.min(a.niveau,3)];
+    const lv = sector().niveaus[Math.min(a.niveau,5)];
     return `<div class="node ${ui.node===a.id?'sel':''}" data-node="${a.id}" style="padding-left:${8+depth*20}px">
       <span class="lv">${esc(lv)}</span><span>${esc(a.naam)||'<i class="muted">(naamloos)</i>'}</span>
       ${a.krit?`<span class="small muted">K${a.krit}</span>`:''}${perspectiefVoor(a.id)?`<span class="fase" style="background:#f3ecf6;color:#7a4b8c;margin-left:auto" title="Er is een perspectief aangekondigd (§5.3.4)">◷ perspectief</span>`:''}<span class="fase ${f[2]}" ${perspectiefVoor(a.id)?'style="margin-left:4px"':''}>${f[1].replace('Transitie – ','↗ ').replace('↗ afwaarderen','↘ afwaarderen')}</span></div>`
@@ -507,14 +536,24 @@ function renderAssets(){
   const s = sector();
   const a = state.data.assets.find(x=>x.id===ui.node);
   const form = a ? `<div class="panel form">
-      <h3>${esc(s.niveaus[Math.min(a.niveau,3)])}</h3>
+      <h3>${esc(s.niveaus[Math.min(a.niveau,5)])}</h3>
       <div><label>Naam</label><input data-f="naam" value="${esc(a.naam)}"></div>
       <div><label>Assettype (§3.12)</label><input data-f="assettype" value="${esc(a.assettype||'')}" placeholder="bijv. kunstwerk, gebouw, installatie, lineair"></div>
       <div><label>Levensfase (§4.4)</label><select data-f="fase">${FASE_OPT.map(o=>`<option value="${o[0]}" ${a.fase===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>
       ${a.fase==='op'||a.fase==='af'?`<div><label>Toelichting besluit / aanleiding transitie</label><textarea data-f="toelichting" rows="2">${esc(a.toelichting||'')}</textarea></div>`:''}
+      ${a.niveau>=4?`<div class="panel small" style="background:var(--l4s);border-color:transparent;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="grid-column:1/-1"><b>${a.niveau===4?'Bouwdeel':'Component'} — gegevens voor de conditiemeting (NEN 2767)</b></div>
+        <div><label>Materiaalsoort</label><input data-f="materiaal" value="${esc(a.materiaal||'')}" placeholder="bijv. bitumineus, metselwerk, staal"></div>
+        <div><label>Code uit de dataset (optioneel)</label><input data-f="code" value="${esc(a.code||'')}"></div>
+        <div><label>Hoeveelheid</label><input data-f="hoeveelheid" value="${esc(a.hoeveelheid||'')}" placeholder="bijv. 450"></div>
+        <div><label>Eenheid</label><input data-f="eenheid" value="${esc(a.eenheid||'')}" placeholder="m², m¹, st"></div>
+        <div><label>Vervangingswaarde (€)</label><input data-f="vervangingswaarde" value="${esc(a.vervangingswaarde||'')}"></div>
+        <div><label>Bouw-/installatiejaar</label><input data-f="bouwjaar" value="${esc(a.bouwjaar||'')}"></div>
+        <div><label>Technische levensduur (jaar)</label><input data-f="levensduur" value="${esc(a.levensduur||'')}"></div>
+        <div class="muted" style="align-self:end">Gebreken worden vastgelegd per bouwdeel (NEN 2767-1 §1.2).</div></div>`:''}
       <div><label>Kriticiteit (§3.28) – 1 laag … 5 zeer kritiek</label><div class="krit">${[1,2,3,4,5].map(k=>`<button data-krit="${k}" class="${a.krit===k?'on':''}">${k}</button>`).join('')}</div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${a.niveau<3?`<button class="primary" data-add="${a.id}">+ ${esc(s.niveaus[a.niveau+1])} toevoegen</button>`:''}
+        ${a.niveau<5?`<button class="primary" data-add="${a.id}">+ ${esc(s.niveaus[a.niveau+1])} toevoegen</button>`:''}
         <button class="danger ${ui.armed?'armed':''}" data-del="${a.id}">${ui.armed?'Klik nogmaals om te verwijderen (incl. onderliggend)':'Verwijderen'}</button>
       </div></div>`
     : `<div class="panel"><p class="muted" style="margin:0">Selecteer links een object, of begin met een nieuw ${esc(s.niveaus[0].toLowerCase())}.</p></div>`;
@@ -671,7 +710,7 @@ function gecombineerd(persoonId){
 function assetPicker(sel, name, max){
   const rows = []; const walk=(pid,d)=>children(pid).forEach(a=>{ if(max===undefined||a.niveau<=max){rows.push([a,d]);walk(a.id,d+1);} }); walk(null,0);
   if(!rows.length) return `<p class="small muted" style="margin:0">Nog geen objecten. Voeg ze toe in <a href="#assets">Assetstructuur</a>.</p>`;
-  return `<div class="pick">${rows.map(([a,d])=>`<label style="padding-left:${d*16}px"><input type="checkbox" ${name} data-rv="${a.id}" ${(sel||[]).includes(a.id)?'checked':''}> ${esc(a.naam)||'(naamloos)'} <span class="small muted">${esc(sector().niveaus[Math.min(a.niveau,3)])}</span></label>`).join('')}</div>`;
+  return `<div class="pick">${rows.map(([a,d])=>`<label style="padding-left:${d*16}px"><input type="checkbox" ${name} data-rv="${a.id}" ${(sel||[]).includes(a.id)?'checked':''}> ${esc(a.naam)||'(naamloos)'} <span class="small muted">${esc(sector().niveaus[Math.min(a.niveau,5)])}</span></label>`).join('')}</div>`;
 }
 function fieldHtml(key, it, f){
   const a = `data-rk="${key}" data-rid="${it.id}" data-rf="${f.k}"`; const v = it[f.k];
@@ -885,7 +924,7 @@ function sLevensfasen(){
       <tr class="small muted" style="text-align:left"><th style="padding:6px">Object</th><th>Levensfase</th><th>Transitie van</th><th>tot</th><th>Grondslag</th></tr>
       ${rows.map(([a,d])=>{ const tr = a.fase==='op'||a.fase==='af';
         return `<tr style="border-top:1px solid var(--line);vertical-align:top">
-          <td style="padding:8px 6px;padding-left:${6+d*16}px"><b>${esc(a.naam)||'(naamloos)'}</b><div class="small muted">${esc(s.niveaus[Math.min(a.niveau,3)])}${perspectiefVoor(a.id)?' · ◷ perspectief':''}</div></td>
+          <td style="padding:8px 6px;padding-left:${6+d*16}px"><b>${esc(a.naam)||'(naamloos)'}</b><div class="small muted">${esc(s.niveaus[Math.min(a.niveau,5)])}${perspectiefVoor(a.id)?' · ◷ perspectief':''}</div></td>
           <td><select data-af="${a.id}" data-ak="fase">${FASE_OPT.map(o=>`<option value="${o[0]}" ${a.fase===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></td>
           <td>${tr?`<input type="date" data-af="${a.id}" data-ak="transStart" value="${esc(a.transStart)}">`:''}</td>
           <td>${tr?`<input type="date" data-af="${a.id}" data-ak="transEind" value="${esc(a.transEind)}" style="${a.transEind?'':'border-color:#e0a95c'}">`:''}</td>
@@ -1550,6 +1589,103 @@ function renderOperationeel(){
     <div class="tabs">${OTABS.map(([id,n,r])=>`<button data-otab="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
 }
 
+/* ==================================================================
+   CONDITIEMETING — NEN 2767 (basis: decompositie, schaal, inspecties)
+   ================================================================== */
+const CSCHAAL = [
+  [1,'Uitstekende conditie','Nieuwbouwstaat: geen of nauwelijks veroudering. Gebreken hooguit incidenteel en direct te herstellen; installaties storingsvrij.','#2e7d32'],
+  [2,'Goede conditie','Beginnende veroudering. Incidentele gebreken, plaatselijk verwering of vuil; installaties op een enkele uitzondering na storingsvrij.','#7cb342'],
+  [3,'Redelijke conditie','Veroudering plaatselijk op gang. Plaatselijk tot regelmatig gebreken; functioneren soms verstoord, zonder schade aan het bedrijfsproces.','#f1c40f'],
+  [4,'Matige conditie','Veroudering regelmatig zichtbaar. Plaatselijk storingen, (ernstige) gebreken die tot functieverlies kunnen leiden; bedrijfszekerheid matig.','#e67e22'],
+  [5,'Slechte conditie','Veroudering min of meer onomkeerbaar. Primaire functies niet meer gewaarborgd; regelmatig bedrijfsonderbrekingen.','#d35400'],
+  [6,'Zeer slechte conditie','Maximaal gebrekenbeeld: voortdurend storingen, bouwdeel onbruikbaar en technisch rijp voor sloop.','#c0392b'],
+];
+Object.assign(REG, {
+  inspecties:{ t:'inspectie', label:x=>x.titel, meta:x=>[x.datum, x.status].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Omschrijving',type:'text',ph:'bijv. Conditiemeting Gebouw B 2026'},
+    {k:'datum',l:'Datum inspectie',type:'date'},
+    {k:'inspecteur',l:'Inspecteur',type:'refsel',ref:'personen',hint:'De inspecteur vervult de rol van serviceprovider (NEN 8026 §8.2.2).'},
+    {k:'objecten',l:'Beheerobject(en)',type:'assets',max:2},
+    {k:'dataset',l:'Gebrekendataset (versie)',type:'refsel',ref:'datasets',hint:'Leg vast met welke versie is geïnspecteerd: de dataset wordt periodiek geactualiseerd.'},
+    {k:'scope',l:'Scope: welke elementen / bouwdelen',type:'textarea'},
+    {k:'steekproef',l:'Steekproef en uitvoeringswijze',type:'textarea',hint:'NEN 2767 schrijft de uitvoeringswijze (zoals steekproefgrootte) niet voor; leg je eigen afspraak vast.'},
+    {k:'verzorging',l:'Verzorgingsscore meegenomen (Bijlage C)?',type:'select',opts:['Nee','Ja']},
+    {k:'meldingen',l:'Gebruikte informatie: meldingen',type:'ref',ref:'meldingen'},
+    {k:'historie',l:'Gebruikte informatie: klachten, storingen, onderhoudshistorie, logboeken',type:'textarea'},
+    {k:'status',l:'Status',type:'select',opts:['Gepland','Uitgevoerd','Gerapporteerd']},
+    {k:'rapport',l:'Verwijzing naar rapport',type:'text'},
+  ]},
+  datasets:{ t:'gebrekendataset', label:x=>x.naam, meta:x=>x.actief==='Ja'?'actief':'', fields:[
+    {k:'naam',l:'Naam / versie',type:'text',ph:'bijv. NEN 2767-2:2025 (gebouwen) of NEN 2767-4-2 webapplicatie (infra)'},
+    {k:'datum',l:'Versiedatum',type:'text'},
+    {k:'actief',l:'In gebruik voor nieuwe inspecties?',type:'select',opts:['Ja','Nee']},
+    {k:'toelichting',l:'Toelichting',type:'textarea',hint:'De gebrekenlijsten zelf kunnen straks worden geïmporteerd (na Bijlage A en deel 2).'},
+  ]},
+});
+Object.assign(MV, {inspecties:'inspecties', datasets:'gebrekendatasets'});
+const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['datasets','Gebrekendatasets','H2'],['volgt','Gebreken & condities …','H5']];
+const lvName = a => sector().niveaus[Math.min(a.niveau,5)];
+
+function renderConditie(){
+  const t = ui.ctab||'overzicht'; let body;
+  const A = state.data.assets; const cnt = n => A.filter(a=>a.niveau===n).length;
+  if(t==='overzicht'){
+    const lv = sector().niveaus; const nen = ['Areaal / portefeuille','Complex','Beheerobject','Element','Bouwdeel','Component'];
+    body = `<div style="display:grid;grid-template-columns:minmax(280px,1fr) 1fr;gap:16px;align-items:start">
+      <div class="panel"><h3>Decompositie</h3>
+        ${lv.map((n,i)=>`<div style="display:flex;align-items:center;gap:10px;margin:6px 0;${i>=2&&i<=4?'':'opacity:.75'}">
+          <div style="flex:1;border:${i>=2&&i<=4?'2px solid #8e44ad':'1px solid var(--line)'};background:${i>=2&&i<=4?'#f4ecf7':'#fff'};border-radius:8px;padding:8px 12px;margin-left:${i*10}px">
+            <b>${esc(n)}</b> <span class="small muted">· NEN 2767: ${nen[i]}</span>${i===4?' <span class="badge" style="background:#8e44ad;color:#fff">gebreken</span>':''}</div>
+          <span class="small muted" style="width:60px;text-align:right">${cnt(i)}</span></div>`).join('')}
+        <p class="small muted" style="margin:8px 0 0">Paars = de drie niveaus van NEN 2767 (beheerobject – element – bouwdeel). Daarbuiten mag de organisatie zelf niveaus toevoegen (§1.2). Rechts het aantal in je assetstructuur.</p></div>
+      <div class="panel"><h3>Conditie is objectief, prioriteit is waardegestuurd</h3>
+        <p class="small" style="margin-top:0">De gevolgen voor de bedrijfsvoering hebben geen invloed op de conditiescore (§1.1). Die gevolgen worden apart vastgelegd en gewogen met het waardekompas van NEN 8026.</p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="muted" style="text-align:left"><th></th><th>Kantoor</th><th>Parkeergarage</th></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:4px">Gebrek</td><td>lekkage</td><td>lekkage</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:4px">Conditiescore</td><td><b>gelijk</b></td><td><b>gelijk</b></td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:4px">Gevolg bedrijfsvoering</td><td>groot</td><td>beperkt</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:4px">Prioriteit (via kompas)</td><td><b>hoog</b></td><td>lager</td></tr></table>
+        <h3 style="margin-top:14px">Wat NEN 2767 niet doet</h3>
+        <ul class="small" style="margin:0;padding-left:18px"><li>Geen eisen stellen — het gewenste niveau komt uit de <a href="#tactisch" data-ttab="eisen">instandhoudingseisen</a>.</li>
+          <li>Niet bepalen of je repareert of vervangt — dat volgt uit het instandhoudingsconcept en de planning.</li>
+          <li>Geen uitvoeringswijze voorschrijven (zoals steekproefgrootte) — leg die vast per inspectie.</li>
+          <li>Niet-technische gebreken (verzorging) veranderen de conditiescore niet.</li></ul></div></div>
+    <div class="cards" style="margin-top:14px">
+      <div class="card" data-ctab="decompositie" style="cursor:pointer"><h3>Bouwdelen</h3><p>${cnt(4)} bouwdelen, ${cnt(5)} componenten · ${A.filter(a=>a.niveau>=4&&a.materiaal).length} met materiaalsoort</p></div>
+      <div class="card" data-ctab="inspecties" style="cursor:pointer"><h3>Inspecties</h3><p>${items('inspecties').length} vastgelegd</p></div>
+      <div class="card" data-ctab="datasets" style="cursor:pointer;${items('datasets').some(d=>d.actief==='Ja')?'':'border-left:4px solid #b5651d'}"><h3>Gebrekendataset</h3><p>${items('datasets').find(d=>d.actief==='Ja')?.naam||'nog geen actieve dataset'}</p></div>
+    </div>`;
+  }
+  else if(t==='decompositie'){
+    const rows = []; const walk=(pid,d,path)=>children(pid).forEach(a=>{ if(a.niveau>=4) rows.push([a,path]); walk(a.id,d+1, a.niveau===2||a.niveau===3 ? [...path, a.naam] : path); }); walk(null,0,[]);
+    const jaar = new Date().getFullYear();
+    body = `<div class="note small">Per bouwdeel (en component) de gegevens die de conditiemeting en de aggregatie straks nodig hebben. Gebreken zijn uitgewerkt per <b>materiaalsoort</b>; de <b>vervangingswaarde</b> wordt gebruikt bij de omvang (ongelijksoortige eenheden) en bij de aggregatie. Nieuwe bouwdelen voeg je toe in de <a href="#assets">Assetstructuur</a> onder een element.</div>
+      <div class="panel" style="overflow:auto">${rows.length?`<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <tr class="small muted" style="text-align:left"><th style="padding:6px">Bouwdeel / component</th><th>Materiaalsoort</th><th>Hoeveelheid</th><th>Eenheid</th><th>Vervangingswaarde €</th><th>Bouwjaar</th><th>Levensduur</th><th>Rest</th></tr>
+      ${rows.map(([a,path])=>{ const rest = a.bouwjaar&&a.levensduur ? (+a.bouwjaar + +a.levensduur - jaar) : null;
+        return `<tr style="border-top:1px solid var(--line)"><td style="padding:6px"><b>${esc(a.naam)||'(naamloos)'}</b>${a.niveau===5?' <span class="small muted">(component)</span>':''}<div class="small muted">${esc(path.join(' › '))}</div></td>
+        <td><input data-af="${a.id}" data-ak="materiaal" value="${esc(a.materiaal)}" style="width:120px"></td>
+        <td><input data-af="${a.id}" data-ak="hoeveelheid" value="${esc(a.hoeveelheid)}" style="width:70px"></td>
+        <td><input data-af="${a.id}" data-ak="eenheid" value="${esc(a.eenheid)}" style="width:50px"></td>
+        <td><input data-af="${a.id}" data-ak="vervangingswaarde" value="${esc(a.vervangingswaarde)}" style="width:90px"></td>
+        <td><input data-af="${a.id}" data-ak="bouwjaar" value="${esc(a.bouwjaar)}" style="width:60px"></td>
+        <td><input data-af="${a.id}" data-ak="levensduur" value="${esc(a.levensduur)}" style="width:50px"></td>
+        <td class="small" style="${rest!==null&&rest<=0?'color:#c0392b;font-weight:600':''}">${rest===null?'—':rest+' jr'}</td></tr>`; }).join('')}</table>`
+      :`<p class="muted" style="margin:0">Nog geen bouwdelen. Ga naar de <a href="#assets">Assetstructuur</a>, selecteer een element en klik op <i>+ Bouwdeel toevoegen</i>.</p>`}</div>
+      <p class="small muted">Restlevensduur = bouwjaar + technische levensduur − huidig jaar (rekenhulp van de tool). De vangnetconstructie van §5.4 volgt na hoofdstuk 5.</p>`;
+  }
+  else if(t==='schaal') body = `<div class="note small">De conditiescore loopt van 1 (nieuwbouwstaat) tot 6 (slechtst denkbaar). De omschrijvingen zijn indicatief en bedoeld voor de beeldvorming; de berekening volgens hoofdstuk 5 is bepalend (§4.2). Omschrijvingen in eigen woorden.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${CSCHAAL.map(([n,l,o,c])=>`<div class="card" style="border-left:6px solid ${c}">
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:34px;height:34px;border-radius:8px;background:${c};color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center">${n}</span><h3 style="margin:0">${l}</h3></div>
+      <p style="margin-top:8px;color:var(--ink)">${o}</p></div>`).join('')}</div>
+    <p class="small muted">Koppeling met NEN 8026: in de <a href="#tactisch" data-ttab="instellingen">niveautabel</a> stelt de tool per bijdrage een maximaal toegestane conditiescore voor (standaard 4 / 3 / 2 bij bijdrage 1 / 2 / 3).</p>`;
+  else if(t==='inspecties') body = `<div class="note small">Leg per inspectie vast wie, wanneer, wat en met welke gebrekendataset is geïnspecteerd. De inspecteur kan gebruikmaken van klachten, storingen, onderhoudshistorie en logboeken (§1.3). De gebrekenregistratie per bouwdeel volgt na hoofdstuk 5.</div>${renderRegister('inspecties')}`;
+  else if(t==='datasets') body = `<div class="note small">NEN 2767-1 werkt alleen samen met een gebrekendataset: NEN 2767-2 (gebouwen) of de webapplicatie NEN 2767-4-2 (infra), aangevuld met referentiebeelden uit NPR 4768. Leg hier vast welke versie(s) jullie gebruiken.</div>${renderRegister('datasets')}`;
+  else body = `<div class="panel"><h3>Volgt na hoofdstuk 5</h3><p class="muted" style="margin:0">Gebrekenregistratie (ernst, omvang, intensiteit), berekening van de conditiescore, meerdere gebreken per bouwdeel, vangnetconstructie en aggregatie naar element, beheerobject en cluster — met automatische verificatie van de instandhoudingseisen.</p></div>`;
+  return `<h2>Conditiemeting — NEN 2767</h2><div class="ref">NEN 2767-1+C1:2019 · input voor de verificatie en risicoanalyse van NEN 8026</div>
+    <div class="tabs">${CTABS.map(([id,n,r])=>`<button data-ctab="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
+}
+
 /* ---------------- Overige modules (nog te bouwen) ---------------- */
 function renderModule(m){
   return `<h2>${m.title}</h2><div class="ref">NEN 8026 ${m.ref}${m.product?' · product: <b>'+m.product+'</b>':''}</div>
@@ -1563,16 +1699,17 @@ function route(){
   const id = location.hash.slice(1) || 'start';
   const m = MODULES.find(x=>x.id===id) || MODULES[0];
   renderNav(m.id);
-  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets, bestuurlijk:renderBestuurlijk, strategisch:renderStrategisch, tactisch:renderTactisch, operationeel:renderOperationeel, waardeaspecten:renderWaardeaspecten, rollen:renderRollen})[m.id]?.() ?? renderModule(m);
+  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets, bestuurlijk:renderBestuurlijk, strategisch:renderStrategisch, tactisch:renderTactisch, operationeel:renderOperationeel, conditie:renderConditie, waardeaspecten:renderWaardeaspecten, rollen:renderRollen})[m.id]?.() ?? renderModule(m);
   main.innerHTML += `<footer>Deze tool bevat geen normtekst of figuren uit NEN 8026; omschrijvingen en figuren zijn eigen samenvattingen. Raadpleeg de norm voor de officiële inhoud.</footer>`;
 }
 function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.ctab){ ui.ctab = d.ctab; window.scrollTo(0,0); route(); return; }
     if(d.otab){ ui.otab = d.otab; window.scrollTo(0,0); route(); return; }
     if(d.cvoorstel){ const it = items('concepten').find(x=>x.id===d.cvoorstel); it.onderhoud = d.cv; it._t = Date.now(); save(); rerender(); return; }
     if(d.ttab){ ui.ttab = d.ttab; if(location.hash!=='#tactisch'){ location.hash='tactisch'; } window.scrollTo(0,0); route(); return; }

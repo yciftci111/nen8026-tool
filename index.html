@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.16</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.17</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -2646,6 +2646,96 @@ const H7 = {h:'7', t:'Ondersteuning', art:[
       ['e','Distributie, opslag, versiebeheer, bewaring en vernietiging zijn geregeld, ook voor externe documenten.', ()=>{ const t = nI('documenten'), k = items('documenten').filter(d=>(d.bewaar||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met bewaartermijn · ${items('documenten').filter(d=>d.oorsprong==='Extern').length} extern`, ['iso','i7:documenten']); }]]},
 ]};
 
+/* ---------- ISO 55001 H8 Uitvoering ---------- */
+const WIJZCAT = ['Organisatiestructuur, rollen of verantwoordelijkheden','AM-beleid, -doelstellingen of -plannen','Processen of procedures','Nieuwe assets, assetsystemen of technologie','Externe factoren (incl. nieuwe wet- en regelgeving)','Beperkingen in de leveringsketen','Vraag naar producten, diensten, aannemers of leveranciers','Vraag naar mensen en middelen'];
+Object.assign(REG, {
+  processen:{ t:'operationeel proces', label:x=>x.naam, meta:x=>[labelOf('personen',x.eigenaar), x.kpi?'KPI':''].filter(Boolean).join(' · '), fields:[
+    {k:'naam',l:'Proces',type:'text',ph:'bijv. werkorderproces, inspectieproces, storingsafhandeling, inkoop onderhoud'},
+    {k:'bron',l:'Implementeert',type:'checks',opts:['Maatregelen risico\'s en kansen (6.1)','AM-plannen (6.2)','Corrigerende en preventieve maatregelen (10.1/10.2)']},
+    {k:'criteria',l:'Criteria voor het proces (rollen, procedures, mensen en middelen, competenties — 55002 §8.1.2)',type:'textarea'},
+    {k:'eigenaar',l:'Verantwoordelijk voor planning en uitvoering',type:'refsel',ref:'personen'},
+    {k:'procedure',l:'Procedure / werkinstructie',type:'text',ph:'verwijzing naar document'},
+    {k:'kpi',l:'Maatstaf voor procesprestatie (§8.1.3 a)',type:'text',ph:'bijv. % werkorders binnen planning afgerond'},
+    {k:'bewijs',l:'Bewijs dat volgens planning is uitgevoerd',type:'text',ph:'bijv. afgetekende werkorders, opleverrapporten'},
+    {k:'audit',l:'Criteria en planning interne audit (§8.1.3 b)',type:'text'},
+    {k:'risico',l:'Hoe worden risico\'s tijdens planning en uitvoering beheerst',type:'textarea'},
+  ]},
+  wijzigingen:{ t:'wijziging', label:x=>x.titel, meta:x=>[x.gepland, x.status].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Wijziging',type:'text',ph:'bijv. reorganisatie afdeling Vastgoed, nieuwe BBL-eis, overstap naar ander onderhoudssysteem'},
+    {k:'cat',l:'Categorie (ISO 55002 §8.2.2)',type:'select',opts:WIJZCAT},
+    {k:'gepland',l:'Gepland of niet gepland',type:'select',opts:['Gepland','Niet gepland']},
+    {k:'tijd',l:'Permanent of tijdelijk',type:'select',opts:['Permanent','Tijdelijk']},
+    {k:'assets',l:'Betrokken objecten',type:'assets'},
+    {k:'amdoelen',l:'Geraakte AM-doelstellingen',type:'ref',ref:'amdoelen'},
+    {k:'scenario',l:'Afgewogen scenario\'s / opties (§8.2.3)',type:'textarea'},
+    {k:'risicobeoord',l:'Risicobeoordeling vóór implementatie (datum)',type:'date',hint:'ISO 55001 §8.2: risico\'s van een geplande wijziging moeten worden beoordeeld vóórdat ze wordt geïmplementeerd.'},
+    {k:'risicos',l:'Gekoppelde risico\'s (6.1 / 6.2.2)',type:'ref',ref:'risicos'},
+    {k:'onbedoeld',l:'Onbedoelde gevolgen, ook elders in de organisatie',type:'textarea'},
+    {k:'mitigatie',l:'Mitigerende maatregelen',type:'textarea'},
+    {k:'impl',l:'Implementatiedatum',type:'date'},
+    {k:'status',l:'Status',type:'select',opts:['Voorgesteld','Beoordeeld','Goedgekeurd','Geïmplementeerd','Afgewezen']},
+  ]},
+  uitbesteding:{ t:'uitbesteding', label:x=>x.titel, meta:x=>[labelOf('personen',x.sp), x.vorm, x.eind?'t/m '+x.eind:''].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Uitbestede activiteit of proces',type:'text',ph:'bijv. NEN 2767-inspecties, planmatig onderhoud installaties, beheer gebouwen'},
+    {k:'sp',l:'Serviceprovider',type:'refsel',ref:'personen',hint:'Kies uit de Rolverdeling (rol serviceprovider, positie extern).'},
+    {k:'vorm',l:'Formalisering',type:'select',opts:['Contract','Service level agreement (SLA)','Raamovereenkomst','Interne afspraak','Anders']},
+    {k:'start',l:'Startdatum',type:'date'},{k:'eind',l:'Einddatum',type:'date'},
+    {k:'scope',l:'Toepassingsgebied, grenzen en raakvlakken met eigen processen (§8.3 a)',type:'textarea'},
+    {k:'clusters',l:'Clusters / AMP\'s waarop dit betrekking heeft',type:'ref',ref:'clusters'},
+    {k:'aansturing',l:'Intern verantwoordelijk voor aansturing en beheersing (§8.3 b)',type:'refsel',ref:'personen'},
+    {k:'info',l:'Delen van kennis en informatie, incl. overdracht bij de start (§8.3 c)',type:'textarea'},
+    {k:'monitoring',l:'Monitoring van prestaties (§9.1) — KPI\'s, rapportage',type:'textarea'},
+    {k:'comp',l:'Aangetoond: competentie (7.2), bewustzijn (7.3), documentatie (7.6)',type:'checks',opts:['Competentie (7.2)','Bewustzijn (7.3)','Gedocumenteerde informatie (7.6)']},
+    {k:'overdracht',l:'Overdracht bij einde: vereiste toestand van de assets en informatie (55002 §8.3.2 f)',type:'textarea'},
+    {k:'ie',l:'Eigendom van informatie, kennis en intellectueel eigendom (§8.3.4)',type:'text'},
+    {k:'nietover',l:'Risico\'s die niet kunnen worden overgedragen (bijv. reputatie)',type:'textarea'},
+    {k:'risicos',l:'Gekoppelde risico\'s',type:'ref',ref:'risicos'},
+    {k:'beoord',l:'Laatst beoordeeld in directiebeoordeling',type:'date'},
+  ]},
+});
+Object.assign(MV, {processen:'operationele processen', wijzigingen:'wijzigingen', uitbesteding:'uitbestedingen'});
+const OTABS8 = [['processen','Operationele processen','§8.1'],['wijzigingen','Wijzigingen','§8.2'],['uitbesteding','Uitbesteding','§8.3']];
+function tIsoUitvoering(){
+  const t = ui.i8||'processen';
+  const intro = {
+    processen:'Leg per operationeel proces vast wie verantwoordelijk is, volgens welke criteria en procedure het werkt, hoe de prestatie wordt gemeten en welk bewijs aantoont dat het volgens planning is uitgevoerd (bijv. afgetekende werkorders). Het instandhoudingsconcept en de werkzaamheden van de serviceprovider uit NEN 8026 zijn hier de basis.',
+    wijzigingen:'Beoordeel risico\'s van een geplande wijziging vóór implementatie, weeg scenario\'s af en kijk naar onbedoelde gevolgen elders. Leg ook niet-geplande wijzigingen vast. Een besluit tot op- of afwaarderen (transitiefase, NEN 8026) is ook een wijziging.',
+    uitbesteding:'Formaliseer de relatie (contract, SLA) voor besturing, scope en raakvlakken, informatie-uitwisseling, monitoring, kennisdeling en overdracht. Hoe meer wordt uitbesteed, hoe meer beheersing nodig is. Sommige risico\'s blijven bij de organisatie, ook als het werk wordt overgedragen.',
+  };
+  let extra = '';
+  if(t==='wijzigingen'){ const tr = state.data.assets.filter(a=>(a.fase==='op'||a.fase==='af') && !items('wijzigingen').some(w=>(w.assets||[]).includes(a.id)));
+    const zonder = items('wijzigingen').filter(w=>w.gepland==='Gepland' && w.impl && (!w.risicobeoord || w.risicobeoord>w.impl));
+    extra = (tr.length?`<div class="warn small">${tr.length} object(en) in transitiefase zonder geregistreerde wijziging: ${tr.slice(0,6).map(a=>esc(a.naam)).join(', ')}${tr.length>6?' …':''} <button data-wijzvan="1" style="margin-left:6px">Registreer als wijziging</button></div>`:'')
+      + (zonder.length?`<div class="warn small">${zonder.length} geplande wijziging(en) zonder risicobeoordeling vóór de implementatiedatum: ${zonder.map(w=>esc(w.titel||'?')).join(', ')}</div>`:''); }
+  if(t==='uitbesteding'){ const ext = items('personen').filter(p=>(p.rollen||[]).includes('Serviceprovider') && p.positie==='Extern (uitbesteed)' && !items('uitbesteding').some(u=>u.sp===p.id));
+    const vandaag = new Date().toISOString().slice(0,10); const binnenkort = items('uitbesteding').filter(u=>u.eind && u.eind>=vandaag && u.eind <= new Date(Date.now()+180*864e5).toISOString().slice(0,10));
+    extra = (ext.length?`<div class="warn small">Externe serviceprovider(s) zonder vastgelegde uitbesteding: ${ext.map(p=>esc(p.naam)).join(', ')}</div>`:'')
+      + (binnenkort.length?`<div class="warn small">Contract(en) die binnen 6 maanden aflopen — regel de overdracht: ${binnenkort.map(u=>esc(u.titel)+' ('+u.eind+')').join(', ')}</div>`:''); }
+  return `<div class="tabs" style="margin-top:0">${OTABS8.map(([id,n,r])=>`<button data-i8="${id}" class="${t===id?'on':''}" title="${r}">${n}${items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>
+    <div class="note small">${intro[t]}</div>${extra}${renderRegister(t)}`;
+}
+const H8 = {h:'8', t:'Uitvoering', art:[
+  {a:'8.1', t:'Operationele planning en beheersing', g:'Richt processen in om de activiteiten uit de AM-plannen doeltreffend uit te voeren. Maak duidelijk wie verantwoordelijk is voor planning en uitvoering en hoe risico\'s die tijdens uitvoering opduiken worden beheerst. Criteria: rollen, procedures, mensen en middelen, competenties. Beheersing: maatstaven voor procesprestatie en criteria en planning voor interne audits. Zorg voor documentatie waarmee je kunt controleren of het proces is gevolgd en het resultaat is bereikt (bijv. afgetekende werkorders). Wees in staat opkomende risico\'s ("emerging risks") te herkennen, en balanceer iteratief kosten, risico en prestaties.',
+   e:[['a','Er zijn criteria vastgesteld voor de vereiste processen.', ()=>{ const t = nI('processen'), k = items('processen').filter(x=>(x.criteria||'').trim()).length; return ev(t&&k===t, `${k} van ${t} operationele processen met criteria · ${nI('concepten')} instandhoudingsconcept(en)`, ['iso','i8:processen']); }],
+      ['b','Procesbeheersing is geïmplementeerd overeenkomstig de criteria.', ()=>{ const t = nI('processen'), k = items('processen').filter(x=>x.eigenaar&&(x.kpi||'').trim()).length; return ev(t&&k===t, `${k} van ${t} processen met eigenaar en prestatiemaatstaf · ${nI('uitvoeringseisen')} uitvoeringseisen`, ['iso','i8:processen']); }],
+      ['c','Er is gedocumenteerde informatie die aantoont dat processen volgens planning zijn uitgevoerd.', ()=>{ const g = items('maatregelen').filter(m=>m.status==='Gereed'), k = g.filter(m=>m.gereed).length; return ev(k>0, `${k} maatregel(en) gereedgemeld met datum (werkzaamheden operationeel niveau) · ${items('processen').filter(x=>(x.bewijs||'').trim()).length} proces(sen) met beschreven bewijs`, ['operationeel',null]); }],
+      ['d','Risico\'s worden aangepakt en gemonitord volgens de aanpak van 6.2.2.', ()=>{ const t = nI('risicos'), k = items('risicos').filter(r=>r.strategie&&r.trend).length; return ev(t&&k===t, `${k} van ${t} risico's met behandelstrategie en trend · ${items('meldingen').length} melding(en) van serviceproviders`, ['iso','risico']); }],
+      ['e','Processen implementeren de maatregelen uit 6.1, de AM-plannen uit 6.2 en de corrigerende/preventieve maatregelen uit 10.1 en 10.2.', ()=>{ const b = new Set(items('processen').flatMap(p=>p.bron||[])); return ev(b.size===3, `gedekt: ${b.size} van 3 (${[...b].map(x=>x.split(' (')[0]).join('; ')||'–'})`, ['iso','i8:processen']); }]]},
+  {a:'8.2', t:'Management van wijzigingen', g:'Beoordeel interne en externe wijzigingen die assets, AM of het AM-systeem raken vóór implementatie, en neem mitigerende maatregelen — ook bij niet-geplande wijzigingen. Denk aan: organisatie en rollen; beleid, doelen en plannen; processen; nieuwe assets of technologie (incl. economische veroudering); externe factoren en wetgeving; leveringsketen; vraag naar diensten, aannemers, leveranciers, mensen en middelen. Neem feitelijk onderbouwde besluiten en weeg scenario\'s af; kijk naar onbedoelde gevolgen elders in de organisatie.',
+   e:[['a','Risico\'s van geplande permanente of tijdelijke wijzigingen worden beoordeeld vóór implementatie.', ()=>{ const g = items('wijzigingen').filter(w=>w.gepland==='Gepland'), k = g.filter(w=>w.risicobeoord && (!w.impl || w.risicobeoord<=w.impl)).length; return ev(g.length&&k===g.length, `${k} van ${g.length} geplande wijzigingen met tijdige risicobeoordeling`, ['iso','i8:wijzigingen']); }],
+      ['b','Deze risico\'s worden gemanaged volgens 6.1 en 6.2.2.', ()=>{ const t = nI('wijzigingen'), k = items('wijzigingen').filter(w=>(w.risicos||[]).length).length; return ev(t&&k===t, `${k} van ${t} wijzigingen gekoppeld aan het risicoregister`, ['iso','i8:wijzigingen']); }],
+      ['c','Geplande wijzigingen worden beheerst.', ()=>{ const tr = state.data.assets.filter(a=>a.fase==='op'||a.fase==='af'); const k = tr.filter(a=>items('wijzigingen').some(w=>(w.assets||[]).includes(a.id))).length; return ev(nI('wijzigingen')>0 && k===tr.length, `${nI('wijzigingen')} wijziging(en) · ${k} van ${tr.length} objecten in transitie geregistreerd · transitiekompassen NEN 8026`, ['iso','i8:wijzigingen']); }],
+      ['d','Onbedoelde consequenties worden beoordeeld en zo nodig worden maatregelen getroffen.', ()=>{ const t = nI('wijzigingen'), k = items('wijzigingen').filter(w=>(w.onbedoeld||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met beoordeling van onbedoelde gevolgen`, ['iso','i8:wijzigingen']); }]]},
+  {a:'8.3', t:'Uitbesteden', g:'Uitbestede activiteiten die de AM-doelen raken horen bij het AM-systeem en worden gedocumenteerd. Formaliseer (contract, SLA) de besturing en verantwoordelijkheden, de scope, grenzen, raakvlakken, kwaliteit, tijd, financiering en terugkoppeling, de uitwisseling van informatie en kennis bij de start, de monitoring, de kennisdeling en de overdracht bij het einde inclusief de vereiste toestand van de assets. Bespreek prestaties in de directiebeoordeling. Regel het eigendom van informatie en intellectueel eigendom. Sommige risico\'s (bijv. reputatie) kun je niet overdragen.',
+   e:[['a','Risico\'s van uitbesteding zijn beoordeeld.', ()=>{ const t = nI('uitbesteding'), k = items('uitbesteding').filter(u=>(u.risicos||[]).length||(u.nietover||'').trim()).length; return ev(t&&k===t, `${k} van ${t} uitbestedingen met risicobeoordeling`, ['iso','i8:uitbesteding']); }],
+      ['b','Uitbestede processen en activiteiten worden beheerst en zijn gedocumenteerd geïntegreerd in het AM-systeem.', ()=>ev(nI('uitbesteding')>0, `${nI('uitbesteding')} uitbesteding(en) vastgelegd · ${nI('uitvoeringseisen')} uitvoeringseisen (NEN 8026 §7.3.7)`, ['iso','i8:uitbesteding'])],
+      ['c','Vastgesteld: de uit te besteden processen en activiteiten, met scope, grenzen en raakvlakken.', ()=>{ const t = nI('uitbesteding'), k = items('uitbesteding').filter(u=>(u.scope||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met scope en raakvlakken`, ['iso','i8:uitbesteding']); }],
+      ['d','Vastgesteld: interne verantwoordelijkheden en bevoegdheden voor aansturing.', ()=>{ const t = nI('uitbesteding'), k = items('uitbesteding').filter(u=>u.aansturing).length; return ev(t&&k===t, `${k} van ${t} met interne verantwoordelijke`, ['iso','i8:uitbesteding']); }],
+      ['e','Vastgesteld: processen en scope voor het delen van kennis en informatie met serviceproviders.', ()=>{ const t = nI('uitbesteding'), k = items('uitbesteding').filter(u=>(u.info||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met afspraken over informatie en kennis`, ['iso','i8:uitbesteding']); }],
+      ['f','Uitbestede mensen en middelen voldoen aan 7.2, 7.3 en 7.6.', ()=>{ const t = nI('uitbesteding'), k = items('uitbesteding').filter(u=>(u.comp||[]).length===3).length; return ev(t&&k===t, `${k} van ${t} met aangetoonde competentie, bewustzijn en documentatie`, ['iso','i8:uitbesteding']); }],
+      ['g','Prestaties van uitbestede activiteiten worden gemonitord (9.1).', ()=>{ const t = nI('uitbesteding'), k = items('uitbesteding').filter(u=>(u.monitoring||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met monitoring · ${nI('oassessments')} operationele assessment(s)`, ['iso','i8:uitbesteding']); }]]},
+]};
+
 const ISO_HFST = [
   {h:'4', t:'Context van de organisatie', art:[
     {a:'4.1', t:'Inzicht in de organisatie en haar context',
@@ -2764,7 +2854,7 @@ const ISO_HFST = [
      ]},
   ]},
   H7,
-  {h:'8', t:'Uitvoering', art:[{a:'8.1',t:'Operationele planning en beheersing',todo:1},{a:'8.2',t:'Management van wijzigingen',todo:1},{a:'8.3',t:'Uitbesteden',todo:1}]},
+  H8,
   {h:'9', t:'Evaluatie van de prestaties', art:[{a:'9.1',t:'Monitoren, meten, analyseren en evalueren',todo:1},{a:'9.2',t:'Interne audit',todo:1},{a:'9.3',t:'Directiebeoordeling',todo:1}]},
   {h:'10', t:'Verbetering', art:[{a:'10.1',t:'Afwijkingen en corrigerende maatregelen',todo:1},{a:'10.2',t:'Preventieve maatregelen',todo:1},{a:'10.3',t:'Continue verbetering',todo:1}]},
 ];
@@ -2780,7 +2870,7 @@ function tIsoOverzicht(){
   const arts = isoArts(); const sc = arts.map(artScore);
   const alle = arts.flatMap(a=>a.e.map(([k])=>ISO().eval[isoKey(a.a,k)]?.st||''));
   const tel = s => alle.filter(x=>x===s).length;
-  const KORT = {'4.1':'Context','4.2':'Stakeholders','4.3':'Toepassingsgebied','4.4':'AM-systeem','5.1':'Leiderschap','5.2':'Beleid','5.3':'Rollen','6.1':'Risico AM-syst.','6.2.1':'AM-doelen','6.2.2':'Planning','7.1':'Middelen','7.2':'Competentie','7.3':'Bewustzijn','7.4':'Communicatie','7.5':'Informatie','7.6':'Documentatie'}; const axes = arts.map(a=>a.a+' '+(KORT[a.a]||a.t.split(' ')[0]));
+  const KORT = {'4.1':'Context','4.2':'Stakeholders','4.3':'Toepassingsgebied','4.4':'AM-systeem','5.1':'Leiderschap','5.2':'Beleid','5.3':'Rollen','6.1':'Risico AM-syst.','6.2.1':'AM-doelen','6.2.2':'Planning','7.1':'Middelen','7.2':'Competentie','7.3':'Bewustzijn','7.4':'Communicatie','7.5':'Informatie','7.6':'Documentatie','8.1':'Operationeel','8.2':'Wijzigingen','8.3':'Uitbesteden'}; const axes = arts.map(a=>a.a+' '+(KORT[a.a]||a.t.split(' ')[0]));
   const vals = sc.map(s=>s.pct===null?0:s.pct*3);
   const ev0 = arts.flatMap(a=>a.e.map(e=>e[2]())); const evOk = ev0.filter(x=>x.ok).length;
   return `<div class="note small">ISO 55000 geeft overzicht, principes en begrippen; <b>ISO 55001</b> bevat de eisen aan het assetmanagementsysteem; <b>ISO 55002</b> geeft toelichting. In deze tool: per eis een <b>eigen samenvatting</b> met artikelnummer, de toelichting uit 55002 in eigen woorden, het <b>bewijs dat al in de tool ligt</b> (NEN 8026, NEN 2767) en jouw zelfevaluatie. Versie: NEN-ISO 55001:2014 en 55002:2014 — de 2014-edities zijn inmiddels vervangen door ISO 55001:2024; eisen dragen een versielabel zodat 2024 later kan worden toegevoegd.</div>
@@ -2850,7 +2940,7 @@ function tIsoGap(){
       ${rows.map(([a,k,t,E])=>{ const st = ISTAT.find(z=>z[0]===E.st); const late = E.dl && E.dl < new Date().toISOString().slice(0,10);
         return `<tr style="border-top:1px solid var(--line);vertical-align:top"><td style="padding:6px"><b>${a.a}${k!=='0'?' '+k:''}</b> <span class="small">${t}</span></td><td><span class="cb" style="background:${st[2]}">${st[1]}</span></td><td class="small">${esc(E.actie)||'<span style="color:#b5651d">geen actie</span>'}</td><td class="small">${esc(items('personen').find(p=>p.id===E.eig)?.naam||'–')}</td><td class="small" style="${late?'color:#c0392b;font-weight:600':''}">${esc(E.dl||'–')}</td></tr>`; }).join('')}</table>`:'<p class="muted">Geen openstaande gaps.</p>'}</div>`;
 }
-const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['gap','Gap-analyse','']];
+const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['uitv','Uitvoering','§8'],['gap','Gap-analyse','']];
 function tIsoRisico(){
   const R = items('risicos'); const ev2 = R.map(risicoEval);
   const ams = R.filter(r=>r.niveauR==='Assetmanagementsysteem'), kans = R.filter(r=>r.soortR==='Kans');
@@ -2880,7 +2970,7 @@ function tIsoRisico(){
 }
 function renderIso(){
   const t = ui.itab||'overzicht'; let body;
-  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
+  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='uitv') body = tIsoUitvoering(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
   else body = `<div class="note small">ISO 55001 §4.1 met toelichting 55002 §4.1.2: externe en interne onderwerpen die het vermogen beïnvloeden om de beoogde resultaten te behalen. Gebruik de categorieën als checklist; koppel onderwerpen aan waardeaspecten zodat ze doorwerken in doelstellingen en waardekompassen.</div>
     <div class="small muted" style="margin-bottom:8px">Nog niet behandelde categorieën: ${[...CTX_EXT,...CTX_INT].filter(c=>!items('context').some(x=>x.cat===c)).map(esc).join(' · ')||'geen'}</div>${renderRegister('context')}`;
   return `<h2>Assetmanagementsysteem — ISO 55001</h2><div class="ref">NEN-ISO 55000/55001/55002:2014 · eigen samenvattingen met artikelnummer, geen normtekst</div>
@@ -2908,14 +2998,18 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.i8){ ui.i8 = d.i8; rerender(); return; }
+    if(d.wijzvan){ const tr = state.data.assets.filter(a=>(a.fase==='op'||a.fase==='af') && !items('wijzigingen').some(w=>(w.assets||[]).includes(a.id)));
+      const w = {id:uid(), _t:Date.now(), titel:'Transitie: '+tr.map(a=>a.naam).slice(0,3).join(', ')+(tr.length>3?' e.a.':''), cat:'Nieuwe assets, assetsystemen of technologie', gepland:'Gepland', tijd:'Tijdelijk', assets:tr.map(a=>a.id), status:'Goedgekeurd', scenario:tr.map(a=>a.naam+': '+(a.toelichting||'')).join('\n')};
+      items('wijzigingen').push(w); ui.sel.wijzigingen = w.id; save(); rerender(); return; }
     if(d.i7){ ui.i7 = d.i7; rerender(); return; }
     if(d.itab){ ui.itab = d.itab; window.scrollTo(0,0); route(); return; }
     if(d.isof!==undefined){ ui.isof = d.isof; rerender(); return; }
     if(d.isoopen){ ui.isoopen = ui.isoopen===d.isoopen ? null : d.isoopen; rerender(); return; }
-    if(d.isogo){ const [h,tb] = d.isogo.split('|'); if(tb){ if(h==='iso'){ if(tb.startsWith('i7:')){ ui.itab='onderst'; ui.i7 = tb.slice(3); } else ui.itab = tb; } if(h==='bestuurlijk') ui.btab = tb; if(h==='strategisch') ui.stab = tb; if(h==='tactisch') ui.ttab = tb; } location.hash = h; route(); window.scrollTo(0,0); return; }
+    if(d.isogo){ const [h,tb] = d.isogo.split('|'); if(tb){ if(h==='iso'){ if(tb.startsWith('i7:')){ ui.itab='onderst'; ui.i7 = tb.slice(3); } else if(tb.startsWith('i8:')){ ui.itab='uitv'; ui.i8 = tb.slice(3); } else ui.itab = tb; } if(h==='bestuurlijk') ui.btab = tb; if(h==='strategisch') ui.stab = tb; if(h==='tactisch') ui.ttab = tb; } location.hash = h; route(); window.scrollTo(0,0); return; }
     if(d.e1){ ui.e1 = d.e1; rerender(); return; }
     if(d.e1go!==undefined){ const [h,tb] = d.e1go.split('|'); if(h==='conditie'&&tb) ui.ctab = tb; if(h==='tactisch'&&tb) ui.ttab = tb; location.hash = h; route(); window.scrollTo(0,0); return; }
     if(d.mjover){ const n = mjopOvernemen(); r.textContent = `✓ ${n} nieuwe activiteit(en) overgenomen`; return; }

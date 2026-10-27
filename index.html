@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.19</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.20</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -3177,7 +3177,7 @@ function tIsoGap(){
       ${rows.map(([a,k,t,E])=>{ const st = ISTAT.find(z=>z[0]===E.st); const late = E.dl && E.dl < new Date().toISOString().slice(0,10);
         return `<tr style="border-top:1px solid var(--line);vertical-align:top"><td style="padding:6px"><b>${a.a}${k!=='0'?' '+k:''}</b> <span class="small">${t}</span></td><td><span class="cb" style="background:${st[2]}">${st[1]}</span></td><td class="small">${esc(E.actie)||'<span style="color:#b5651d">geen actie</span>'}</td><td class="small">${esc(items('personen').find(p=>p.id===E.eig)?.naam||'–')}</td><td class="small" style="${late?'color:#c0392b;font-weight:600':''}">${esc(E.dl||'–')}</td></tr>`; }).join('')}</table>`:'<p class="muted">Geen openstaande gaps.</p>'}</div>`;
 }
-const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['uitv','Uitvoering','§8'],['evalu','Evaluatie','§9'],['verb','Verbetering','§10'],['gap','Gap-analyse','']];
+const ITABS = [['overzicht','Overzicht',''],['model','Model (fig. B.1)','55002 Bijlage B'],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['uitv','Uitvoering','§8'],['evalu','Evaluatie','§9'],['verb','Verbetering','§10'],['normen','Aanverwante normen','Bijlage A'],['gap','Gap-analyse','']];
 function tIsoRisico(){
   const R = items('risicos'); const ev2 = R.map(risicoEval);
   const ams = R.filter(r=>r.niveauR==='Assetmanagementsysteem'), kans = R.filter(r=>r.soortR==='Kans');
@@ -3205,9 +3205,74 @@ function tIsoRisico(){
     </div>
     <div class="warn small" style="margin-top:12px"><b>Zeldzaam maar catastrofaal</b> — ISO 55002 vraagt aandacht voor gebeurtenissen met zeer lage kans en zeer groot gevolg (bijv. extreem weer): monitor indicatoren die aangeven dat omstandigheden abrupt veranderen. In de tool: ${R.filter(r=>+r.kans===1 && Math.max(0,...Object.values(r.effect||{}).map(Number))>=5).length} risico('s) met kans 1 en effect 5.</div>`;
 }
+/* ---------- ISO 55002 Bijlage B: model kernelementen (eigen weergave) ---------- */
+const B1 = {
+  org:{t:'Plannen en doelstellingen van de organisatie', a:['4.1','4.2','5.1','5.3'], u:'Organisatieplan en -doelstellingen, context en stakeholders. Hieruit vloeit het hele AM-systeem voort; leiderschap en rollen worden hier belegd.', l:[['Organisatiedoelstellingen','bestuurlijk','doelen'],['Stakeholders','bestuurlijk','stakeholders'],['Contextregister','iso','context'],['Verantwoordelijkheden (5.3)','iso','raci']]},
+  beleid:{t:'Assetmanagementbeleid', a:['5.2'], u:'Beknopte verklaring van de principes waarmee AM wordt toegepast; kader voor de AM-doelstellingen.', l:[['Missie en AM-beleid','bestuurlijk','overzicht'],['Beleid per waardeaspect','waardeaspecten',null]]},
+  samp:{t:'SAMP en AM-doelstellingen', a:['4.3','6.2.1'], u:'Vertaling van organisatiedoelen naar AM-doelstellingen en de aanpak, binnen het vastgestelde toepassingsgebied.', l:[['AM-doelstellingen','strategisch','amdoelen'],['SAMP','strategisch','samp'],['Toepassingsgebied','iso','scope'],['Waardeaspecten','waardeaspecten',null]]},
+  amp:{t:'Assetmanagementplannen', a:['6.2.2','8.3'], u:'Wat, wanneer, door wie en met welke middelen — per cluster, inclusief wat wordt uitbesteed.', l:[['Waardekompassen','tactisch','kompas'],['AMP per cluster','tactisch','amp'],['Plannen & begroting','tactisch','maatregelen'],['MJOP (NEN 2767)','conditie','mjop']]},
+  impl:{t:'Implementatie van de AM-plannen', a:['8.1','8.2','8.3'], u:'Operationele planning en beheersing, management van wijzigingen en beheersing van uitbestede activiteiten.', l:[['Werkzaamheden','operationeel','werk'],['Operationele processen','iso','i8:processen'],['Wijzigingen','iso','i8:wijzigingen'],['Uitbesteding','iso','i8:uitbesteding']]},
+  portfolio:{t:'Assetportfolio', a:[], u:'De assets zelf: het resultaat van de implementatie, en de bron van prestatie- en conditiegegevens.', l:[['Assetstructuur','assets',null],['Condities (NEN 2767)','conditie','condities']]},
+  eval:{t:'Prestatie-evaluatie en verbeteringen', a:['9.1','9.2','9.3','10.1','10.2','10.3'], u:'Monitoren en meten, interne audit, directiebeoordeling en verbetering — de terugkoppeling naar alle niveaus erboven.', l:[['Prestatie-indicatoren','iso','i9:kpis'],['Audits','iso','i9:audits'],['Directiebeoordeling','iso','i9:dbs'],['Verbetering','iso','i10:verbeter']]},
+  sysplan:{t:'Plannen voor het ontwikkelen van het AM-systeem', a:['4.4','6.1'], u:'Het AM-systeem zelf inrichten en verbeteren, inclusief de risico\'s en kansen vóór het systeem.', l:[['Zelfevaluatie','iso','eisen'],['Risicoproces','iso','risico'],['Gap-analyse','iso','gap']]},
+  support:{t:'AM-systeem en ondersteunende elementen', a:['7.1','7.2','7.3','7.4','7.5','7.6'], u:'Mensen en middelen, competentie, bewustzijn, communicatie, informatie en documentatie.', l:[['Ondersteuning','iso','i7:capaciteit'],['Competentiematrix','iso','i7:matrix'],['Informatie-eisen','iso','i7:infoeisen'],['Rolverdeling','rollen',null]]},
+};
+function b1Score(id){ const arts = isoArts().filter(a=>B1[id].a.includes(a.a)); const ps = arts.map(artScore).map(s=>s.pct).filter(x=>x!==null);
+  return ps.length ? ps.reduce((a,b)=>a+b,0)/ps.length : null; }
+const b1Kleur = p => p===null ? '#ffffff' : p>=0.8 ? '#d8eed2' : p>=0.4 ? '#fbe9c4' : '#f8d4cf';
+function b1Svg(){
+  const sel = ui.b1||'samp';
+  const box = (id,x,y,w,h,main) => { const p = b1Score(id), on = sel===id; const lines = B1[id].t.match(/.{1,22}(\s|$)/g).map(s=>s.trim());
+    return `<g data-b1="${id}" style="cursor:pointer"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" fill="${b1Kleur(p)}" stroke="${on?'#1f6f5c':main?'#2c3e50':'#7f8c8d'}" stroke-width="${on?3:main?1.8:1.2}"/>
+      ${lines.map((t,i)=>`<text x="${x+w/2}" y="${y+h/2+4+(i-(lines.length-1)/2)*15}" text-anchor="middle" font-size="12.5" font-weight="${main?600:400}" fill="#1d2321" pointer-events="none">${esc(t)}</text>`).join('')}
+      ${B1[id].a.length?`<text x="${x+w-6}" y="${y+h-6}" text-anchor="end" font-size="9.5" fill="#5f6b66" pointer-events="none">${p===null?'–':Math.round(p*100)+'%'}</text>`:''}</g>`; };
+  const A = d => `<path d="${d}" fill="none" stroke="#2c3e50" stroke-width="1.6" marker-end="url(#b1a)"/>`;
+  const F = d => `<path d="${d}" fill="none" stroke="#5fbfa9" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#b1f)"/>`;
+  const cx = 150, w = 210;
+  return `<svg viewBox="0 0 640 640" style="width:100%;max-width:640px">
+    <defs><marker id="b1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2c3e50"/></marker>
+      <marker id="b1f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5fbfa9"/></marker></defs>
+    <text x="320" y="20" text-anchor="middle" font-size="13" font-weight="600" fill="#1d2321">Context van stakeholders en organisatie</text>
+    <rect x="30" y="118" width="590" height="500" rx="16" fill="#eef1ef" stroke="#c9cfcc"/><text x="420" y="608" font-size="10.5" fill="#5f6b66">grens AM-systeem (grijs vlak)</text>
+    ${A(`M${cx+w/2} 92V130`)}${A(`M${cx+w/2} 192V236`)}${A(`M${cx+w/2} 290V334`)}${A(`M${cx+w/2} 388V430`)}${A(`M${cx+w/2} 486V560`)}
+    ${A(`M${cx+w} 66H500V100`)}${A(`M500 152V166H${cx+w}`)}${A(`M${cx+w} 262H400`)}${A(`M500 300V334`)}${A(`M400 360H${cx+w+4}`)}
+    ${F(`M${cx} 586H60V60H${cx}`)}${F(`M60 160H${cx}`)}${F(`M60 262H${cx}`)}${F(`M60 360H${cx}`)}${F(`M${cx+w+40} 586H612V268H604`)}${F(`M612 366H604`)}
+    ${box('org',cx,40,w,52,true)}${box('beleid',400,100,200,52,false)}
+    ${box('samp',cx,140,w,52,true)}${box('amp',cx,238,w,52,true)}${box('sysplan',400,236,200,64,false)}
+    ${box('impl',cx,336,w,52,true)}${box('support',400,334,200,64,false)}
+    ${box('portfolio',cx+30,432,w-60,54,true)}${box('eval',cx-40,560,w+80,52,true)}
+  </svg>`;
+}
+function tIsoModel(){
+  const sel = ui.b1||'samp'; const E = B1[sel]; const p = b1Score(sel);
+  const arts = isoArts().filter(a=>E.a.includes(a.a));
+  return `<div class="note small">Eigen interactieve weergave van het verband tussen de kernelementen van een AM-systeem (ISO 55002 Bijlage B, figuur B.1). Doorgetrokken pijlen: de hoofdlijn van organisatieplan naar assetportfolio; groene stippellijnen: terugkoppeling uit evaluatie en verbetering. Elk element kleurt mee met je zelfevaluatie van de bijbehorende artikelen (groen ≥ 80 %, oranje ≥ 40 %, rood lager, wit = nog niet beoordeeld). Klik een element aan.</div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr);gap:16px;align-items:start">
+      <div class="panel">${b1Svg()}</div>
+      <div class="panel" style="border-left:5px solid ${p===null?'#c9cfcc':p>=0.8?'#2e7d32':p>=0.4?'#e6a23c':'#c0392b'}">
+        <h3 style="margin-top:0">${esc(E.t)}</h3><p class="small">${E.u}</p>
+        ${arts.length?`<div class="small"><b>ISO 55001-artikelen</b>${arts.map(a=>{ const s = artScore(a); return `<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding:4px 0;cursor:pointer" data-b1art="${a.a}"><span>${a.a} ${esc(a.t)}</span><span>${s.pct===null?`<span class="muted">${s.beoord}/${s.tot}</span>`:`<span class="cb" style="background:${s.pct>=0.8?'#2e7d32':s.pct>=0.4?'#e6a23c':'#c0392b'}">${Math.round(s.pct*100)}%</span>`}</span></div>`; }).join('')}</div>`:'<p class="small muted">Geen eigen artikelen: dit is het object van het AM-systeem.</p>'}
+        <div class="small" style="margin-top:10px"><b>In de tool</b><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${E.l.map(([n,h,t])=>`<button data-isogo="${h}|${t||''}" style="font-size:12px;padding:3px 8px">${esc(n)} →</button>`).join('')}</div></div>
+      </div></div>`;
+}
+/* ---------- Bijlage A: aanverwante thema's en normen ---------- */
+const BIJA_ISO = [['Gegevensbeheer','i7:infoeisen'],['Conditiemonitoring','conditie'],['Risicomanagement','risico'],['Kwaliteitsmanagement',null],['Milieumanagement',null],['Systeem- en software-engineering',null],['Life cycle costing','conditie:mjop'],['Bedrijfszekerheid (beschikbaarheid, betrouwbaarheid, onderhoudbaarheid, onderhoudsondersteuning)','waardeaspecten'],['Configuratiemanagement',null],['Terotechnologie',null],['Duurzame ontwikkeling','waardeaspecten'],['Inspectie','conditie'],['Niet-destructief onderzoek',null],['Drukapparatuur',null],['Financieel management',null],['Waardebeheer','waardeaspecten'],['Schokken en trillingen',null],['Akoestiek',null],['Kwalificatie en beoordeling van medewerkers','i7:matrix'],['Projectmanagement',null],['Vastgoed en vastgoedbeheer','start'],['Facilitair management',null],['Apparatuurbeheer',null],['Inbedrijfstellingsproces',null],['Energiemanagement',null]];
+function tIsoNormen(){
+  const N = (ISO().normen ||= {});
+  const tl = l => { if(!l) return ''; if(l==='conditie') return isoLink(['conditie','overzicht']); if(l==='conditie:mjop') return isoLink(['conditie','mjop']); if(l==='waardeaspecten'||l==='start') return isoLink([l,null]); if(l==='risico') return isoLink(['iso','risico']); return isoLink(['iso',l]); };
+  const tel = v => BIJA_ISO.filter(([t])=>N[t]?.st===v).length;
+  return `<div class="note small">ISO 55001 en 55002 Bijlage A: thema's die in andere normen worden behandeld en die je waar mogelijk raadpleegt voor een consistente toepassing van AM in de hele organisatie. Leg per thema vast of het voor jullie relevant is en welke norm of werkwijze je toepast. "In de tool" verwijst naar onderdelen die het thema (deels) dekken.</div>
+    <div class="small" style="margin-bottom:8px">Relevant en toegepast: <b>${tel('Toegepast')}</b> · relevant, nog niet toegepast: <b>${tel('Relevant, nog niet toegepast')}</b> · niet relevant: <b>${tel('Niet relevant')}</b> · open: <b>${BIJA_ISO.length-tel('Toegepast')-tel('Relevant, nog niet toegepast')-tel('Niet relevant')}</b></div>
+    <div class="panel" style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Thema</th><th>Status</th><th>Toegepaste norm / werkwijze</th><th>In de tool</th></tr>
+      ${BIJA_ISO.map(([t,l])=>{ const v = N[t]||{}; return `<tr style="border-top:1px solid var(--line)"><td style="padding:5px">${esc(t)}</td>
+        <td><select data-inorm="${esc(t)}" data-ink="st" style="${v.st==='Relevant, nog niet toegepast'?'border-color:#e0a95c':''}"><option value="">—</option>${['Toegepast','Relevant, nog niet toegepast','Niet relevant'].map(o=>`<option ${v.st===o?'selected':''}>${o}</option>`).join('')}</select></td>
+        <td><input data-inorm="${esc(t)}" data-ink="norm" value="${esc(v.norm)}" placeholder="${t==='Risicomanagement'?'bijv. ISO 31000':t==='Conditiemonitoring'||t==='Inspectie'?'bijv. NEN 2767':t==='Kwaliteitsmanagement'?'bijv. ISO 9001':t==='Milieumanagement'?'bijv. ISO 14001':t==='Energiemanagement'?'bijv. ISO 50001':''}" style="width:100%"></td>
+        <td>${tl(l)}</td></tr>`; }).join('')}</table></div>`;
+}
+
 function renderIso(){
   const t = ui.itab||'overzicht'; let body;
-  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='uitv') body = tIsoUitvoering(); else if(t==='evalu') body = tIsoEvaluatie(); else if(t==='verb') body = tIsoVerbetering(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
+  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='model') body = tIsoModel(); else if(t==='normen') body = tIsoNormen(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='uitv') body = tIsoUitvoering(); else if(t==='evalu') body = tIsoEvaluatie(); else if(t==='verb') body = tIsoVerbetering(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
   else body = `<div class="note small">ISO 55001 §4.1 met toelichting 55002 §4.1.2: externe en interne onderwerpen die het vermogen beïnvloeden om de beoogde resultaten te behalen. Gebruik de categorieën als checklist; koppel onderwerpen aan waardeaspecten zodat ze doorwerken in doelstellingen en waardekompassen.</div>
     <div class="small muted" style="margin-bottom:8px">Nog niet behandelde categorieën: ${[...CTX_EXT,...CTX_INT].filter(c=>!items('context').some(x=>x.cat===c)).map(esc).join(' · ')||'geen'}</div>${renderRegister('context')}`;
   return `<h2>Assetmanagementsysteem — ISO 55001</h2><div class="ref">NEN-ISO 55000/55001/55002:2014 · eigen samenvattingen met artikelnummer, geen normtekst</div>
@@ -3235,9 +3300,11 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-b1],[data-b1art],[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.b1){ ui.b1 = d.b1; rerender(); return; }
+    if(d.b1art){ ui.itab = 'eisen'; ui.isoopen = d.b1art; ui.isof = ''; window.scrollTo(0,0); route(); return; }
     if(d.i10){ ui.i10 = d.i10; rerender(); return; }
     if(d.prevactie){ const a = {id:uid(), _t:Date.now(), titel:'Preventief: '+d.prevtxt.slice(0,80), bron:'Preventief signaal', soortAc:'Preventief', signaal:d.prevactie, status:'Open'}; items('acties').push(a); save(); rerender(); return; }
     if(d.mkinc){ const m = items('meldingen').find(x=>x.id===d.mkinc); const i = {id:uid(), _t:Date.now(), titel:m.titel, soortI:'Functionele storing asset', datum:m.datum||'', assets:m.assets||[], melding:m.id, reactie:m.opvolging||''}; items('incidenten').push(i); ui.sel.incidenten = i.id; ui.i10='incidenten'; save(); rerender(); return; }
@@ -3253,7 +3320,7 @@ main.addEventListener('click', e=>{
     if(d.itab){ ui.itab = d.itab; window.scrollTo(0,0); route(); return; }
     if(d.isof!==undefined){ ui.isof = d.isof; rerender(); return; }
     if(d.isoopen){ ui.isoopen = ui.isoopen===d.isoopen ? null : d.isoopen; rerender(); return; }
-    if(d.isogo){ const [h,tb] = d.isogo.split('|'); if(tb){ if(h==='iso'){ if(tb.startsWith('i7:')){ ui.itab='onderst'; ui.i7 = tb.slice(3); } else if(tb.startsWith('i8:')){ ui.itab='uitv'; ui.i8 = tb.slice(3); } else if(tb.startsWith('i9:')){ ui.itab='evalu'; ui.i9 = tb.slice(3); } else if(tb.startsWith('i10:')){ ui.itab='verb'; ui.i10 = tb.slice(4); } else ui.itab = tb; } if(h==='bestuurlijk') ui.btab = tb; if(h==='strategisch') ui.stab = tb; if(h==='tactisch') ui.ttab = tb; } location.hash = h; route(); window.scrollTo(0,0); return; }
+    if(d.isogo){ const [h,tb] = d.isogo.split('|'); if(tb){ if(h==='iso'){ if(tb.startsWith('i7:')){ ui.itab='onderst'; ui.i7 = tb.slice(3); } else if(tb.startsWith('i8:')){ ui.itab='uitv'; ui.i8 = tb.slice(3); } else if(tb.startsWith('i9:')){ ui.itab='evalu'; ui.i9 = tb.slice(3); } else if(tb.startsWith('i10:')){ ui.itab='verb'; ui.i10 = tb.slice(4); } else ui.itab = tb; } if(h==='bestuurlijk') ui.btab = tb; if(h==='strategisch') ui.stab = tb; if(h==='tactisch') ui.ttab = tb; if(h==='conditie') ui.ctab = tb; if(h==='operationeel') ui.otab = tb; } location.hash = h; route(); window.scrollTo(0,0); return; }
     if(d.e1){ ui.e1 = d.e1; rerender(); return; }
     if(d.e1go!==undefined){ const [h,tb] = d.e1go.split('|'); if(h==='conditie'&&tb) ui.ctab = tb; if(h==='tactisch'&&tb) ui.ttab = tb; location.hash = h; route(); window.scrollTo(0,0); return; }
     if(d.mjover){ const n = mjopOvernemen(); r.textContent = `✓ ${n} nieuwe activiteit(en) overgenomen`; return; }
@@ -3360,6 +3427,7 @@ main.addEventListener('input', e=>{
   if(d.ost){ opnames()[ui.oinsp][ui.obd].status = el.value; save(); rerender(); return; }
   if(d.ovo){ opnames()[ui.oinsp][ui.obd].vervalOmv = el.value; save(); refreshCalc(); return; }
   if(d.iev){ const [a,k] = d.iev.split('|'); const E = (ISO().eval[isoKey(a,k)] ||= {}); E[d.iek] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(d.inorm){ const N = (ISO().normen ||= {}); (N[d.inorm] ||= {})[d.ink] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.cm){ (ISO().compmat ||= {})[d.cm] = el.value; save(); rerender(); return; }
   if(d.iscope){ ISO().scope[d.iscope] = el.value; save(); return; }
   if(d.iraci){ ISO().raci[d.iraci] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }

@@ -136,7 +136,7 @@
     #samp,.printdoc{border:none;padding:0}
   }
   main{min-width:0;overflow-x:hidden}
-  .cb{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;padding:0 6px;border-radius:5px;color:#fff;font-weight:700;font-size:12px;text-decoration:none}
+  .cb{display:inline-flex;white-space:nowrap;align-items:center;justify-content:center;min-width:24px;height:22px;padding:0 6px;border-radius:5px;color:#fff;font-weight:700;font-size:12px;text-decoration:none}
   footer{color:var(--muted);font-size:12px;padding:30px 0 10px}
 
   @media (max-width:860px){
@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.11</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.12</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -1629,7 +1629,7 @@ Object.assign(REG, {
   ]},
 });
 Object.assign(MV, {inspecties:'inspecties', datasets:'gebrekendatasets'});
-const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['tabellen','⚙ Rekentabellen','']];
+const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['prioriteit','Gevolgen & prioriteit','Bijlage D'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['gevolgen','⚙ Gevolgen-aspecten','Bijlage D'],['tabellen','⚙ Rekentabellen','']];
 const lvName = a => sector().niveaus[Math.min(a.niveau,5)];
 
 function renderConditie(){
@@ -1692,6 +1692,8 @@ function renderConditie(){
   else if(t==='gebreken') body = tGebreken();
   else if(t==='condities') body = tCondities();
   else if(t==='aanvullend') body = tAanvullend();
+  else if(t==='prioriteit') body = tPrioriteit();
+  else if(t==='gevolgen') body = tGevolgen();
   else if(t==='kromme') body = tKromme();
   else if(t==='rekenhulp') body = tRekenhulp();
   else if(t==='tabellen') body = tRekentabellen();
@@ -1925,6 +1927,7 @@ function gebrekKaart(g, i, gs, comps, sec){
       <label class="small muted">Zelfde gedeelte als<select data-gr="stapel" data-gid="${g.id}" style="width:100%"><option value="">— eigen gedeelte —</option>${gs.slice(0,i).map((x,j)=>`<option value="${x.id}" ${g.stapel===x.id?'selected':''}>${j+1}. ${esc(x.oms||'gebrek')}</option>`).join('')}</select></label>
     </div>
     ${uitLijst?`<div class="small muted" style="margin-top:6px">Uit lijst ${esc(uitLijst.code)} · ${esc(uitLijst.soort)}${uitLijst.int?` · intensiteit voorgeschreven: <b>${INTENS[uitLijst.int].toLowerCase()}</b>`:''}${uitLijst.omvang?` · omvang: <b>${esc(uitLijst.omvang)}</b>`:''}${intAfw?' <span style="color:#b5651d">— afwijkende intensiteit gekozen</span>':''}</div>`:''}
+    ${gevolgenBlok(g)}
   </div>`;
 }
 function tBibliotheek(){
@@ -2199,6 +2202,120 @@ function tAanvullend(){
       <p class="small muted" style="margin:8px 0 0">Een instandhoudingseis met maatstaf "verzorgingsscore" of "CROW beeldkwaliteit" wordt automatisch getoetst aan deze scores, net als conditie-eisen aan de conditiescore.</p></div>`;
 }
 
+/* ==================================================================
+   NEN 2767-1 BIJLAGE D — gevolgen van gebreken, prioriteit, onderhoudsniveau
+   De inspecteur legt per gebrek het effect (1 gering, 2 matig, 3 sterk) vast,
+   zonder zelf over prioriteit te oordelen. De prioritering gebeurt hier,
+   waardegestuurd via het waardekompas van NEN 8026 (voorstel van de tool).
+   ================================================================== */
+const ASP_STD = [
+  ['Veiligheid/gezondheid gebruikers','S','Veiligheid','Kans op letsel voor gebruikers, bezoekers, passanten, monteurs e.d.'],
+  ['Constructieve veiligheid','R','Betrouwbaarheid','Invloed op het functioneren en de sterkte van de constructie.'],
+  ['Cultuurhistorische waarde','E','Cultuurhistorisch','Verlies van kunsthistorische of architectonische waarde.'],
+  ['Gebruik en bedrijfsproces','E','Bruikbaarheid','Verstoring van gebruik, ruimten of installaties en het bedrijfsproces.'],
+  ['Technische vervolgschade','E','Onderhoudbaarheid','Meerkosten aan het bouwdeel of onderliggende constructie bij uitstel.'],
+  ['Toename klachtenonderhoud','E','Bruikbaarheid','Meer reparaties door klachten van gebruikers.'],
+  ['Beleving, esthetica','P','Esthetica','Ergernis of imagoschade door het aanzien; samen met de verzorgingsscore.'],
+];
+const ASP_RAMS = [
+  ['Reliability (betrouwbaarheid)','R','Betrouwbaarheid',''],['Availability (beschikbaarheid)','A','Beschikbaarheid',''],
+  ['Maintainability (onderhoudbaarheid)','M','Onderhoudbaarheid',''],['Safety (veiligheid)','S','Veiligheid',''],
+  ['Security (beveiliging)','S','Veiligheid',''],['Health (gezondheid)','H','Gezondheid',''],
+  ['Environment (omgeving en milieu)','E','Leefbaarheid',''],['Economics (kosten/baten)','E','',''],['Political (politiek/imago)','P','Esthetica',''],
+];
+function GV(){ const G = (state.data.gevolg ||= {methode:'kompas', matrix:{}});
+  if(!G.aspecten) G.aspecten = ASP_STD.map(([naam,letter,wa,oms])=>({id:uid(), naam, letter, wa, oms}));
+  return G; }
+const PKLASSE = [['','Geen','#ccd3cf'],['1','Zeer hoog','#c0392b'],['2','Hoog','#e67e22'],['3','Middel','#f1c40f'],['4','Laag','#7cb342']];
+const klasseVan = s => s>=7?1 : s>=5?2 : s>=3?3 : s>=1?4 : 0;
+const toegelaten = b => b>=3?1 : b===2?2 : 3;   // toegelaten effect per bijdrage (voorstel van de tool)
+function objectVan(a){ let x = a; while(x && x.niveau>2) x = state.data.assets.find(y=>y.id===x.parent); return x; }
+function clusterVan(bd){ const ids = new Set(); let x = bd; while(x){ ids.add(x.id); x = state.data.assets.find(y=>y.id===x.parent); }
+  return items('clusters').find(c=>(c.objecten||[]).some(id=>ids.has(id))); }
+function waardeaspectByName(n){ if(!n) return null; const nn = (ALIAS[n]||n).toLowerCase(); return items('waardeaspecten').find(w=>(w.naam||'').toLowerCase()===nn); }
+function prioriteit(g, bd){
+  const G = GV(); const c = clusterVan(bd); const obj = objectVan(bd); const f = obj?.fase==='op'||obj?.fase==='af' ? obj.fase : 'gebruik';
+  const det = [];
+  for(const a of G.aspecten){ const e = +(g.eff||{})[a.id]; if(!e) continue;
+    const w = waardeaspectByName(a.wa); const b = c && w ? bijdrage(c, w.id, f) : 2;
+    const mp = G.matrix[a.id] ? nr(G.matrix[a.id][e-1]) : NaN;
+    det.push({a, e, b, s:e*b, gekoppeld:!!(c&&w), toeg:toegelaten(b), mp: isNaN(mp)?null:mp}); }
+  const score = Math.max(0, ...det.map(d=>d.s));
+  const mps = det.map(d=>d.mp).filter(x=>x!==null); const mprio = mps.length ? Math.min(...mps) : null;
+  return {score, klasse:klasseVan(score), det, cluster:c, fase:f, buiten:det.filter(d=>d.e>d.toeg), mprio};
+}
+const pbadge = k => `<span class="cb" style="background:${PKLASSE[k]?.[2]||'#ccd3cf'}">${k?PKLASSE[k][1]:'–'}</span>`;
+function gevolgenBlok(g){
+  const G = GV(); if(!G.aspecten.length) return '';
+  return `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)"><div class="small muted" style="margin-bottom:4px">Gevolgen bij niet oplossen (Bijlage D) — effect: 1 gering · 2 matig · 3 sterk. De inspecteur oordeelt niet over prioriteit.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${G.aspecten.map(a=>{ const v = (g.eff||{})[a.id]||'';
+      return `<label class="small" style="display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 6px;${v?'background:'+['','#eef6e8','#fdf3dc','#fde4dc'][+v]:''}" title="${esc(a.oms||'')}">${esc(a.naam)}
+        <select data-geff="${a.id}" data-gid="${g.id}" style="padding:1px 4px"><option value="">–</option>${[1,2,3].map(x=>`<option ${+v===x?'selected':''}>${x}</option>`).join('')}</select></label>`; }).join('')}</div></div>`;
+}
+function alleGebreken(){
+  const out = [];
+  for(const bd of state.data.assets.filter(a=>a.niveau===4)){
+    const c = bdConditie(bd); if(!c) continue; const op = opnames()[c.insp.id]?.[bd.id]; if(!op) continue;
+    for(const g of (op.gebreken||[])){ const row = c.res.rows.find(r=>r.g.id===g.id);
+      out.push({bd, g, insp:c.insp, cond:c.res.cond, c4b:row?.c4b, excluded:row?.excluded, p:prioriteit(g, bd)}); } }
+  return out;
+}
+function tPrioriteit(){
+  if(!tabellenCompleet()) return `<div class="warn small">Rekentabellen nog niet compleet — <a href="#conditie" data-ctab="tabellen">vul ze in</a>.</div>`;
+  const G = GV(); const cl = ui.pcl||''; let L = alleGebreken().filter(x=>!cl || x.p.cluster?.id===cl);
+  const metEff = L.filter(x=>x.p.det.length);
+  L.sort((a,b)=> (G.methode==='matrix' && a.p.mprio!==null && b.p.mprio!==null ? a.p.mprio-b.p.mprio : 0) || (a.p.klasse||9)-(b.p.klasse||9) || b.p.score-a.p.score || (b.c4b||0)-(a.c4b||0));
+  // heatmap: klasse × conditie ter plaatse
+  const H = {}; L.forEach(x=>{ const k = `${x.p.klasse}|${x.c4b||0}`; H[k] = (H[k]||0)+1; });
+  const maxH = Math.max(1, ...Object.values(H));
+  const heat = `<table style="border-collapse:separate;border-spacing:3px;font-size:12px"><tr><td></td>${[1,2,3,4,5,6].map(c=>`<td style="text-align:center">${cbadge(c)}</td>`).join('')}</tr>
+    ${[1,2,3,4,0].map(k=>`<tr><td style="padding-right:6px;white-space:nowrap">${pbadge(k)}</td>${[1,2,3,4,5,6].map(c=>{ const n = H[`${k}|${c}`]||0; return `<td style="width:46px;height:30px;text-align:center;border-radius:5px;background:${n?`rgba(31,111,92,${0.15+0.75*n/maxH})`:'#f1f3f2'};color:${n/maxH>0.5?'#fff':'#1d2321'};font-weight:600">${n||''}</td>`; }).join('')}</tr>`).join('')}</table>
+    <div class="small muted" style="margin-top:4px">Horizontaal: conditie ter plaatse van het gebrek (stap 4b, objectief). Verticaal: waardegestuurde prioriteit. Rechtsboven = slecht én belangrijk.</div>`;
+  const rows = L.map(x=>{ const p = x.p;
+    return `<tr style="border-top:1px solid var(--line);vertical-align:top;${x.excluded?'opacity:.55':''}">
+      <td style="padding:6px">${pbadge(p.klasse)}${G.methode==='matrix'&&p.mprio!==null?`<div class="small muted">matrix: ${p.mprio}</div>`:''}</td>
+      <td><b>${esc(x.g.oms||'(gebrek)')}</b>${x.g.code?` <span class="small muted">${esc(x.g.code)}</span>`:''}${x.excluded?' <span class="small muted">(gestapeld)</span>':''}<div class="small muted">${esc(x.bd.naam)} · ${esc(objectVan(x.bd)?.naam||'')}${p.cluster?' · '+esc(p.cluster.naam):''}${p.fase!=='gebruik'?' · transitie':''}</div></td>
+      <td>${cbadge(x.c4b)} <span class="small muted">bouwdeel ${x.cond}</span></td>
+      <td class="small">${p.det.length?p.det.map(d=>`<div>${esc(d.a.naam)}: effect <b>${d.e}</b> × bijdrage ${d.b}${d.gekoppeld?'':'*'} = <b>${d.s}</b>${d.e>d.toeg?' <span style="color:#c0392b">› basisniveau</span>':''}</div>`).join(''):'<span class="muted">geen gevolgen vastgelegd</span>'}</td>
+      <td style="white-space:nowrap"><button data-mkm="${x.bd.id}|${x.g.id}" style="font-size:12px;padding:3px 8px">→ maatregel</button><br><button data-mkr="${x.bd.id}|${x.g.id}" style="font-size:12px;padding:3px 8px;margin-top:3px">→ risico</button></td></tr>`; }).join('');
+  return `<div class="note small">De inspecteur legt de gevolgen van het niet oplossen van een gebrek vast; de <b>prioritering gebeurt in het assetmanagement</b> (Bijlage D). De tool weegt elk effect met de bijdrage van het gekoppelde waardeaspect in het <b>waardekompas</b> van het cluster: <b>score = effect × bijdrage</b> (0–9), hoogste aspect telt. Zo krijgt dezelfde lekkage in een kantoor (bedrijfsproces bijdrage 3) een hogere prioriteit dan in een parkeergarage (bijdrage 1), terwijl de conditie gelijk is. Dit is een voorstel van de tool, geen normmethode.</div>
+    <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px"><div class="ctl"><label>Cluster</label><select data-pcl="1"><option value="">Alle</option>${items('clusters').map(c=>`<option value="${c.id}" ${cl===c.id?'selected':''}>${esc(c.naam)}</option>`).join('')}</select></div>
+      <span class="small muted">${L.length} gebreken uit de laatste inspecties · ${metEff.length} met vastgelegde gevolgen · ${L.filter(x=>x.p.buiten.length).length} boven het basisonderhoudsniveau</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;align-items:start">
+      <div class="panel" style="overflow:auto">${heat}</div>
+      <div class="panel small"><b>Klassen</b> (score effect × bijdrage): ${[1,2,3,4].map(k=>`${pbadge(k)} ${['','7–9','5–6','3–4','1–2'][k]}`).join(' · ')}
+        <div style="margin-top:8px"><b>Basisonderhoudsniveau</b> (naar Bijlage D, tabel D.3-idee): per aspect is een effect toegelaten dat afhangt van de bijdrage in het kompas — bijdrage 3 → max. 1, bijdrage 2 → max. 2, bijdrage 0–1 → max. 3. Daarboven: rood gemarkeerd. De toegelaten conditiescore komt uit de <a href="#tactisch" data-ttab="eisen">instandhoudingseisen</a>.</div>
+        <div class="muted" style="margin-top:6px">* geen cluster of geen gekoppeld waardeaspect: gerekend met bijdrage 2. Instellingen: <a href="#conditie" data-ctab="gevolgen">⚙ Gevolgen & prioriteit</a>.</div></div></div>
+    <div class="panel" style="margin-top:12px;overflow:auto">${L.length?`<table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Prioriteit</th><th>Gebrek</th><th>Conditie</th><th>Gevolgen × waardekompas</th><th></th></tr>${rows}</table>`:'<p class="muted small" style="margin:0">Nog geen gebreken in de inspecties.</p>'}</div>`;
+}
+function tGevolgen(){
+  const G = GV(); const wa = items('waardeaspecten').map(w=>w.naam).filter(Boolean);
+  return `<div class="note small">Welke gevolgen-aspecten de inspecteur beoordeelt, stelt de organisatie <b>beleidsmatig</b> vast (Bijlage D). Koppel elk aspect aan een waardeaspect uit je waardeaspectentabel: dan weegt het waardekompas van het cluster mee in de prioriteit.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button data-gvset="std">Standaardlijst (7 aspecten)</button><button data-gvset="rams">RAMSSHEEP (9 aspecten)</button><button data-gvadd="1">+ eigen aspect</button></div>
+    <div class="panel" style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Aspect</th><th>RAMSSHEEP</th><th>Gekoppeld waardeaspect (NEN 8026)</th>${G.methode==='matrix'?'<th>Prioriteit bij effect 1 / 2 / 3</th>':''}<th></th></tr>
+      ${G.aspecten.map(a=>`<tr style="border-top:1px solid var(--line)"><td style="padding:5px"><input data-gva="naam" data-gaid="${a.id}" value="${esc(a.naam)}" style="width:100%"></td>
+        <td><input data-gva="letter" data-gaid="${a.id}" value="${esc(a.letter)}" style="width:44px"></td>
+        <td><select data-gva="wa" data-gaid="${a.id}"><option value="">— niet gekoppeld (bijdrage 2) —</option>${[...new Set([...wa, a.wa].filter(Boolean))].map(n=>`<option ${a.wa===n?'selected':''}>${esc(n)}</option>`).join('')}</select>${a.wa&&!waardeaspectByName(a.wa)?'<div class="small" style="color:#b5651d">staat niet in je waardeaspectentabel</div>':''}</td>
+        ${G.methode==='matrix'?`<td>${[0,1,2].map(i=>`<input data-gvm="${a.id}" data-gvi="${i}" value="${esc((G.matrix[a.id]||[])[i]??'')}" style="width:44px;margin-right:4px">`).join('')}</td>`:''}
+        <td><button class="danger" data-gvdel="${a.id}">×</button></td></tr>`).join('')}</table></div>
+    <div class="panel form" style="margin-top:12px"><div><label>Leidende prioriteringsmethode</label><select data-gvmeth="1">
+      <option value="kompas" ${G.methode!=='matrix'?'selected':''}>Waardegestuurd: effect × bijdrage uit het waardekompas (voorstel van de tool)</option>
+      <option value="matrix" ${G.methode==='matrix'?'selected':''}>Eigen prioriteitsmatrix per aspect (zoals de voorbeelden in Bijlage D)</option></select></div>
+      <div class="small muted">Bij de eigen matrix vul je per aspect in welke prioriteit (1 = hoogst) hoort bij effect 1, 2 en 3; het gebrek krijgt de hoogste prioriteit van zijn aspecten. De waardegestuurde klasse blijft ter vergelijking zichtbaar. De voorbeeldmatrices uit de norm kun je zelf overnemen.</div></div>`;
+}
+function maakVanGebrek(kind, key){
+  const [bdId, gId] = key.split('|'); const bd = state.data.assets.find(a=>a.id===bdId); const x = alleGebreken().find(y=>y.bd.id===bdId && y.g.id===gId); if(!x) return;
+  const p = x.p; const tekst = p.det.map(d=>`${d.a.naam}: effect ${d.e}`).join('; ');
+  if(kind==='m'){ const m = {id:uid(), _t:Date.now(), titel:`Herstel: ${x.g.oms||'gebrek'} (${bd.naam})`, cluster:p.cluster?.id||'', assets:[bd.id], soort:'Correctief onderhoud', plan:p.klasse===1?'Jaarplan':'Meerjarenplan', status:'Gepland',
+      toelichting:`Uit conditiemeting ${x.insp.titel||''} ${x.insp.datum||''}. Conditie ter plaatse ${x.c4b}, prioriteit ${PKLASSE[p.klasse][1]} (score ${p.score}). ${tekst}`};
+    items('maatregelen').push(m); ui.sel.maatregelen = m.id; ui.ttab = 'maatregelen'; }
+  else { const eff = {}; p.det.forEach(d=>{ const w = waardeaspectByName(d.a.wa); if(w) eff[w.id] = String({1:2,2:3,3:5}[d.e]); });
+    const r = {id:uid(), _t:Date.now(), titel:`${x.g.oms||'Gebrek'} – ${bd.naam}`, cluster:p.cluster?.id||'', fase:{gebruik:'Gebruiksfase',op:'Transitie – opwaarderen',af:'Transitie – afwaarderen'}[p.fase], methode:'Risicomatrix in deze tool',
+      oorzaak:`Gebrek uit conditiemeting (${x.insp.titel||''} ${x.insp.datum||''}), conditie ter plaatse ${x.c4b}.`, gevolg:`Gevolgen bij niet oplossen (Bijlage D): ${tekst}. Effect omgezet: 1→2, 2→3, 3→5 — controleer en vul de kans in.`, effect:eff, kans:''};
+    items('risicos').push(r); ui.sel.risicos = r.id; ui.ttab = 'risicos'; }
+  save(); location.hash = 'tactisch'; route(); window.scrollTo(0,0);
+}
+
 /* ---------------- Overige modules (nog te bouwen) ---------------- */
 function renderModule(m){
   return `<h2>${m.title}</h2><div class="ref">NEN 8026 ${m.ref}${m.product?' · product: <b>'+m.product+'</b>':''}</div>
@@ -2220,9 +2337,14 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.mkm){ maakVanGebrek('m', d.mkm); return; }
+    if(d.mkr){ maakVanGebrek('r', d.mkr); return; }
+    if(d.gvset){ GV().aspecten = (d.gvset==='rams'?ASP_RAMS:ASP_STD).map(([naam,letter,wa,oms])=>({id:uid(), naam, letter, wa, oms})); GV().matrix = {}; save(); rerender(); return; }
+    if(d.gvadd){ GV().aspecten.push({id:uid(), naam:'Nieuw aspect', letter:'', wa:'', oms:''}); save(); rerender(); return; }
+    if(d.gvdel){ GV().aspecten = GV().aspecten.filter(a=>a.id!==d.gvdel); save(); rerender(); return; }
     if(d.vadd){ opnames()[ui.oinsp][ui.obd].extra.verz.gebreken.push({id:uid(), oms:'', ernst:'', int:'', omv:''}); save(); rerender(); return; }
     if(d.vdel){ const V = opnames()[ui.oinsp][ui.obd].extra.verz; V.gebreken = V.gebreken.filter(g=>g.id!==d.vdel); save(); rerender(); return; }
     if(d.obdgo){ ui.obd = d.obdgo; ui.ctab = 'gebreken'; window.scrollTo(0,0); route(); return; }
@@ -2318,6 +2440,11 @@ main.addEventListener('input', e=>{
   if(d.oinsp){ ui.oinsp = el.value; ui.obd = null; rerender(); return; }
   if(d.ost){ opnames()[ui.oinsp][ui.obd].status = el.value; save(); rerender(); return; }
   if(d.ovo){ opnames()[ui.oinsp][ui.obd].vervalOmv = el.value; save(); refreshCalc(); return; }
+  if(d.geff){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gid); (g.eff ||= {})[d.geff] = el.value; save(); rerender(); return; }
+  if(d.pcl){ ui.pcl = el.value; rerender(); return; }
+  if(d.gva){ const a = GV().aspecten.find(x=>x.id===d.gaid); a[d.gva] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(d.gvm){ const M = GV().matrix; (M[d.gvm] ||= ['','',''])[+d.gvi] = el.value; save(); return; }
+  if(d.gvmeth){ GV().methode = el.value; save(); rerender(); return; }
   if(d.ex){ opnames()[ui.oinsp][ui.obd].extra[d.ex] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.exs){ const E = opnames()[ui.oinsp][ui.obd].extra; (E.spec ||= {})[d.exs] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.exv){ opnames()[ui.oinsp][ui.obd].extra.verz[d.exv] = el.value; save(); rerender(); return; }

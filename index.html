@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.14</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.15</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -636,7 +636,10 @@ const REG = {
     {k:'aspect',l:'Waardeaspect',type:'refsel',ref:'waardeaspecten',hint:'Achter elk relevant waardeaspect wordt een AM-doelstelling geformuleerd (§6.3.1).'},
     {k:'orgdoelen',l:'Afgeleid van organisatiedoelstelling(en)',type:'ref',ref:'doelen'},
     {k:'systemen',l:'Geldt voor assetsysteem / portfolio',type:'assets',max:1},
+    {k:'niveauD',l:'Niveau (ISO 55002 §6.2.1.1)',type:'select',opts:['Assetmanagementsysteem','Assetportfolio','Assetsysteem','Asset']},
     {k:'meetbaar',l:'Meetbaar criterium / streefwaarde',type:'text',ph:'bijv. ≥ 95 % beschikbaarheid per jaar'},
+    {k:'smart',l:'SMART-toets',type:'checks',opts:['Specifiek','Meetbaar','Haalbaar','Realistisch','Tijdgebonden']},
+    {k:'monitoring',l:'Monitoring: hoe, hoe vaak, door wie',type:'text',ph:'bijv. jaarlijks via conditiemeting NEN 2767, assetmanager'},
     {k:'toelichting',l:'Toelichting',type:'textarea'},
     {k:'status',l:'Status',type:'select',opts:['Concept','Vastgesteld','Bijstellen','Vervallen']},
   ]},
@@ -1072,6 +1075,11 @@ Object.assign(REG, {
     {k:'objecten',l:'Beheerobjecten in dit cluster',type:'assets'},
     {k:'basis',l:'Kompas vooral ingegeven door',type:'select',opts:['Assetportfoliobesluiten (typisch vastgoed)','Kriticiteit voor het assetsysteem (typisch infra)','Combinatie'],
       hint:'Bij vastgoed volgen de kompassen vooral uit portfoliobesluiten, bij infra vooral uit de kriticiteit (§7.3.1). Houd het aantal clusters beheersbaar.'},
+    {k:'ampVerantw',l:'AMP: verantwoordelijk voor opstellen en uitvoeren (ISO 55001 §6.2.2 e)',type:'refsel',ref:'personen'},
+    {k:'ampHorizon',l:'AMP: tijdshorizon (§6.2.2 h)',type:'text',ph:'bijv. 10 jaar, met doorkijk 30 jaar'},
+    {k:'ampPeriode',l:'AMP: beoordelingsperiode (§6.2.2 j)',type:'select',opts:['Jaarlijks','Tweejaarlijks','Bij elke conditiemeting','Anders']},
+    {k:'ampMiddelen',l:'AMP: benodigde mensen en middelen (§6.2.2 d)',type:'textarea'},
+    {k:'ampEval',l:'AMP: hoe worden de resultaten geëvalueerd (§6.2.2 g)',type:'textarea'},
   ]},
   eisen:{ t:'instandhoudingseis', label:x=>x.eis, meta:x=>[labelOf('clusters',x.cluster), labelOf('waardeaspecten',x.aspect)].filter(Boolean).join(' · '), fields:[
     {k:'eis',l:'Instandhoudingseis',type:'text',ph:'bijv. Conditiescore dakbedekking maximaal 3'},
@@ -1086,6 +1094,8 @@ Object.assign(REG, {
   ]},
   risicos:{ t:'risico', label:x=>x.titel, meta:x=>{ const r=risicoEval(x); return r?`${r.max} · ${r.ok?'acceptabel':'niet acceptabel'}`:''; }, fields:[
     {k:'titel',l:'Ongewenste gebeurtenis / faalwijze',type:'text',ph:'bijv. Lekkage dakbedekking'},
+    {k:'niveauR',l:'Betreft (ISO 55001 §6.1 / §6.2.2)',type:'select',opts:['Asset / assetsysteem','Assetmanagementsysteem'],hint:'Assetmanagementsysteem = risico voor de organisatie, processen of data van het AM (bijv. kennisverlies, slechte datakwaliteit).'},
+    {k:'soortR',l:'Risico of kans',type:'select',opts:['Risico','Kans']},
     {k:'cluster',l:'Cluster',type:'refsel',ref:'clusters'},
     {k:'fase',l:'Fase',type:'select',opts:FASE_SEL},
     {k:'methode',l:'Methode',type:'select',opts:['Risicomatrix in deze tool','FMECA (NEN-EN 16602-30-02)','Risman','RAMS','Anders'],
@@ -1093,7 +1103,12 @@ Object.assign(REG, {
     {k:'oorzaak',l:'Oorzaak',type:'textarea'},
     {k:'gevolg',l:'Gevolg',type:'textarea'},
     {k:'kans',l:'Kans (1 zeer klein … 5 zeer groot)',type:'select',opts:['1','2','3','4','5']},
+    {k:'bestaand',l:'Bestaande beheersmaatregelen (ISO 55002 §6.2.2.3 c)',type:'textarea'},
     {k:'maatregel',l:'Beheersmaatregel',type:'textarea'},
+    {k:'strategie',l:'Behandelstrategie (§6.2.2.3 h)',type:'select',opts:['Bron aanpakken','Vermijden','Verminderen','Tolereren / accepteren','Overdragen','Benutten (kans)']},
+    {k:'trend',l:'Verwachte ontwikkeling in de tijd (§6.2.2.3 f)',type:'select',opts:['Neemt toe','Blijft gelijk','Neemt af']},
+    {k:'effectiviteit',l:'Evaluatie doeltreffendheid maatregel',type:'textarea'},
+    {k:'escalatie',l:'Opgenomen in het risicoregister van de organisatie?',type:'select',opts:['Nee','Ja']},
     {k:'eisen',l:'Leidt tot (bijstelling van) eisen',type:'ref',ref:'eisen',hint:'De terugkoppeling tussen eisen en risicoanalyse (figuur 8).'},
     {k:'rapport',l:'Verwijzing naar rapport',type:'text'},
   ]},
@@ -1487,6 +1502,7 @@ function tAmp(){
     <h2 style="margin-bottom:2px">Assetmanagementplan — ${esc(c.naam)}</h2>
     <div class="small muted">Gegenereerd op ${new Date().toLocaleDateString('nl-NL')}${c.assettypen?' · assettype(n): '+esc(c.assettypen):''}</div>
     ${c.omschrijving?`<p>${esc(c.omschrijving)}</p>`:''}
+    <p class="small">Verantwoordelijk: <b>${esc(labelOf('personen',c.ampVerantw)||'–')}</b> · horizon: <b>${esc(c.ampHorizon||'–')}</b> · beoordeling: <b>${esc(c.ampPeriode||'–')}</b>${c.ampMiddelen?`<br>Mensen en middelen: ${esc(c.ampMiddelen)}`:''}${c.ampEval?`<br>Evaluatie: ${esc(c.ampEval)}`:''}</p>
     <h3>1. Objecten</h3>${li(objs, a=>`${esc(a.naam)} — ${FASE_OPT.find(o=>o[0]===a.fase)?.[1]||'Gebruiksfase'}${a.krit?` · kriticiteit K${a.krit}`:''}`)}
     <h3>2. Waardekompas${fasen.length>1?'sen':''}</h3>
     <div style="display:flex;flex-wrap:wrap;gap:12px">${fasen.map(([f,n])=>`<div style="flex:1;min-width:260px;text-align:center"><b class="small">${n}</b>${kompasRadar(c,f,f!=='gebruik',300)}</div>`).join('')||'<p class="muted">— geen kompas —</p>'}</div>
@@ -2566,7 +2582,55 @@ const ISO_HFST = [
       ...RACI_53.map(([k,t])=>[k, `Verantwoordelijkheid toegekend voor: ${t.charAt(0).toLowerCase()+t.slice(1)}.`, ()=>{ const p = items('personen').find(x=>x.id===ISO().raci[k]); return ev(!!p, p?`toegekend aan ${p.naam}`:'nog niet toegekend', ['iso','raci']); }]),
      ]},
   ]},
-  {h:'6', t:'Planning', art:[{a:'6.1',t:'Risico\'s en kansen voor het AM-systeem',todo:1},{a:'6.2',t:'AM-doelstellingen en planning',todo:1}]},
+  {h:'6', t:'Planning', art:[
+    {a:'6.1', t:'Risico\'s en kansen voor het AM-systeem',
+     g:'"Risico" omvat ook kansen. Het doel is inzicht in oorzaak, gevolg en waarschijnlijkheid van ongunstige gebeurtenissen, de risico\'s op een aanvaardbaar niveau te beheersen en een audittrail te hebben. Stel risicobeoordelingscriteria vast (kans, gevolg, risicohouding), bijvoorbeeld met een risicomatrix. Stem af op het organisatiebrede risicomanagement, inclusief bedrijfscontinuïteit en calamiteiten. AM-risico\'s kunnen in afdelings- of projectregisters staan, met escalatie naar een hoger niveau als ze daar niet kunnen worden aangepakt. Neem de maatregelen op in het implementatieplan van het AM-systeem en toon aan dat je hun doeltreffendheid hebt beoordeeld. Let op: dit artikel gaat over risico\'s voor het AM-systeem zélf (organisatie, processen, data), naast de assetrisico\'s van 6.2.2.',
+     e:[
+      ['a','Bij de planning zijn de contextonderwerpen (4.1) en stakeholdereisen (4.2) meegewogen bij het vaststellen van risico\'s en kansen.', ()=>{ const k = items('context').filter(c=>['Kans','Bedreiging','Beide'].includes(c.invloed)).length; return ev(k>0, `${k} contextonderwerp(en) beoordeeld als kans of bedreiging`, ['iso','context']); }],
+      ['b','Risico\'s en kansen voor het AM-systeem (behalen resultaten, ongewenste effecten, verbetering) zijn vastgesteld.', ()=>{ const k = items('risicos').filter(r=>r.niveauR==='Assetmanagementsysteem').length; return ev(k>0, `${k} risico('s)/kans(en) op niveau van het AM-systeem in het risicoregister`, ['iso','risico']); }],
+      ['c','Er zijn maatregelen gepland, rekening houdend met verandering in de tijd.', ()=>{ const r = items('risicos').filter(r=>r.niveauR==='Assetmanagementsysteem'); const k = r.filter(x=>(x.maatregel||'').trim()&&x.trend).length; return ev(r.length&&k===r.length, `${k} van ${r.length} met maatregel én verwachte trend`, ['iso','risico']); }],
+      ['d','Gepland is hoe de maatregelen in de AM-processen worden geïntegreerd en geïmplementeerd.', ()=>ev(null, 'leg vast in het implementatieplan van het AM-systeem (bijv. via de gap-analyse)', ['iso','gap'])],
+      ['e','Gepland is hoe de doeltreffendheid van de maatregelen wordt geëvalueerd.', ()=>{ const k = items('risicos').filter(r=>(r.effectiviteit||'').trim()).length; return ev(k>0, `${k} risico('s) met vastgelegde evaluatie van de doeltreffendheid`, ['iso','risico']); }],
+     ]},
+    {a:'6.2.1', t:'AM-doelstellingen',
+     g:'AM-doelstellingen zijn de schakel tussen organisatiedoelen en AM-plannen. Ze mogen op verschillende niveaus liggen (AM-systeem, portfolio, assetsysteem, asset) en verschillen per functie. Maak ze SMART, kwantitatief (bijv. MTBF) of kwalitatief (bijv. klanttevredenheid). Bepaal vooraf wat je moet meten om ze te sturen. Beoordeel bij het opstellen de risico\'s van niet-functioneren, het belang van assets, en of ze in de planning toepasbaar zijn. Typische onderwerpen: total cost of ownership, rendement, prestatie tegen planning, volwassenheid, klanttevredenheid, milieu (CO₂), dienstverleningsniveau; voor systemen beschikbaarheid en kosten per eenheid; voor assets betrouwbaarheid, conditie, levenscycluskosten, levensduur, energieprestatie. Afwijkingen voeden herziening; doelen horen in de directiebeoordeling.',
+     e:[
+      ['a','Er zijn AM-doelstellingen voor relevante functies en niveaus.', ()=>{ const lv = new Set(items('amdoelen').map(d=>d.niveauD).filter(Boolean)); return ev(nI('amdoelen')>0, `${nI('amdoelen')} AM-doelstelling(en) op ${lv.size||'?'} niveau(s)`, ['strategisch','amdoelen']); }],
+      ['b','Bij het opstellen is rekening gehouden met stakeholders en met financiële, technische, organisatorische en wettelijke eisen.', ()=>ev(nI('stakeholders')&&nI('randvoorwaarden'), `${nI('stakeholders')} stakeholders · ${nI('randvoorwaarden')} randvoorwaarden · ${nI('compliance')} wettelijke verplichtingen`, ['bestuurlijk','randvoorwaarden'])],
+      ['c','Consistent met en afgestemd op de organisatiedoelstellingen.', ()=>{ const t = nI('amdoelen'), k = items('amdoelen').filter(d=>(d.orgdoelen||[]).length).length; return ev(t&&k===t, `${k} van ${t} gekoppeld aan organisatiedoelen`, ['strategisch','amdoelen']); }],
+      ['d','Consistent met het AM-beleid.', ()=>ev(state.data.best.beleid==='Ja'?null:false, state.data.best.beleid==='Ja'?'beleid aanwezig — controleer inhoudelijk':'geen vastgesteld AM-beleid', ['bestuurlijk',null])],
+      ['e','Vastgesteld en geactualiseerd met gebruik van de beslissingscriteria (4.2).', ()=>ev(nI('criteria')>0, `${nI('criteria')} beslissingscriteria in het SAMP`, ['strategisch','criteria'])],
+      ['f','Vastgesteld en geactualiseerd als onderdeel van het SAMP.', ()=>ev(nI('amdoelen')>0, 'AM-doelstellingen staan in het SAMP van de tool', ['strategisch','samp'])],
+      ['g','Meetbaar (indien praktisch uitvoerbaar).', ()=>{ const t = nI('amdoelen'), k = items('amdoelen').filter(d=>(d.meetbaar||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met meetbaar criterium/streefwaarde`, ['strategisch','amdoelen']); }],
+      ['h','Houden rekening met de van toepassing zijnde eisen.', ()=>ev(nI('compliance')>0, `complianceregister: ${nI('compliance')} verplichting(en); compliance is ondergrens in de waardeaspecten`, ['tactisch','compliance'])],
+      ['i','Worden gemonitord.', ()=>{ const t = nI('amdoelen'), k = items('amdoelen').filter(d=>(d.monitoring||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met vastgelegde monitoring`, ['strategisch','amdoelen']); }],
+      ['j','Worden gecommuniceerd aan relevante stakeholders.', ()=>ev(null, 'leg bewijs zelf vast', null)],
+      ['k','Worden beoordeeld en zo nodig geactualiseerd.', ()=>ev(nI('sassessments')>0, `${nI('sassessments')} strategisch(e) assessment(s) met validatie van de doelstellingen (NEN 8026 §6.4)`, ['strategisch','sassessments'])],
+      ['l','Er is gedocumenteerde informatie over de AM-doelstellingen.', ()=>ev(nI('amdoelen')>0, 'SAMP af te drukken / op te slaan als PDF', ['strategisch','samp'])],
+     ]},
+    {a:'6.2.2', t:'Planning voor het bereiken van de AM-doelstellingen',
+     g:'AM-plannen beschrijven de activiteiten en de mensen en middelen om de doelen te halen, voor een asset, portfolio, groep of klasse — één document of meerdere (bijv. per assetklasse). Begin snel met een voorlopig plan op basis van bestaande informatie. Wijs mensen en middelen toe; los conflicten tussen planning en financiële ruimte iteratief op en koppel aan de financiële plannen. Overweeg oplossingen zonder extra assets. Beoordeel regelmatig of het SAMP de doelen ondersteunt. Let bij plannen op: wie verantwoordelijk is, wie ze leest (gelaagd: samenvatting, hoofdtekst, bijlagen), afhankelijkheden tussen activiteiten, eisen aan het activiteitenprogramma, verwachte prestaties, financiering en toepasselijke normen. Gebruik een gestructureerde risicomethode (stappen a–h), houd een risicoregister bij met escalatie, en neem levenscycluskosten en zeldzame maar catastrofale gebeurtenissen mee. Zie ISO 31000 en IEC 31010.',
+     e:[
+      ['0','De planning is geïntegreerd met andere planning, incl. financiële, personele en ondersteunende functies.', ()=>ev(items('randvoorwaarden').some(r=>r.categorie==='Financieel') && !!ISO().scope.ms, `financiële randvoorwaarden: ${items('randvoorwaarden').filter(r=>r.categorie==='Financieel').length} · koppeling P&C-cyclus ${ISO().scope.ms?'beschreven':'niet beschreven'}`, ['iso','scope'])],
+      ['1','Er zijn AM-plannen vastgesteld, gedocumenteerd en onderhouden, afgestemd op beleid en SAMP.', ()=>ev(nI('clusters')>0, `${nI('clusters')} cluster(s) met AMP in de tool (NEN 8026 §7.3.11)`, ['tactisch','amp'])],
+      ['2','De plannen houden rekening met relevante eisen van buiten het AM-systeem.', ()=>ev(nI('compliance')||nI('uitvoeringseisen'), `${nI('compliance')} verplichtingen · ${nI('uitvoeringseisen')} uitvoeringseisen`, ['tactisch','compliance'])],
+      ['a','Methode en criteria voor beslissingen en prioritering zijn vastgelegd.', ()=>ev(nI('criteria')>0, `${nI('criteria')} beslissingscriteria · prioritering ${GV().methode==='matrix'?'eigen matrix':'waardegestuurd via kompas'} (NEN 2767 Bijlage D)`, ['strategisch','criteria'])],
+      ['b','Processen en methoden voor het managen van assets over de levenscyclus zijn vastgelegd.', ()=>ev(nI('concepten')>0, `${nI('concepten')} instandhoudingsconcept(en) · levensfasen gebruik/transitie`, ['tactisch','concepten'])],
+      ['c','Vastgelegd wat er wordt gedaan.', ()=>ev(nI('maatregelen')>0, `${nI('maatregelen')} maatregel(en) in plannen & begroting`, ['tactisch','maatregelen'])],
+      ['d','Vastgelegd welke mensen en middelen nodig zijn.', ()=>{ const k = items('clusters').filter(c=>(c.ampMiddelen||'').trim()).length; return ev(nI('clusters')&&k===nI('clusters'), `${k} van ${nI('clusters')} cluster(s) met benodigde mensen en middelen`, ['tactisch','clusters']); }],
+      ['e','Vastgelegd wie verantwoordelijk is.', ()=>{ const k = items('clusters').filter(c=>c.ampVerantw).length; return ev(nI('clusters')&&k===nI('clusters'), `${k} van ${nI('clusters')} cluster(s) met verantwoordelijke voor het AMP`, ['tactisch','clusters']); }],
+      ['f','Vastgelegd wanneer het voltooid is.', ()=>{ const t = nI('maatregelen'), k = items('maatregelen').filter(m=>m.jaar).length; return ev(t&&k===t, `${k} van ${t} maatregelen met jaar`, ['tactisch','maatregelen']); }],
+      ['g','Vastgelegd hoe de resultaten worden geëvalueerd.', ()=>{ const k = items('clusters').filter(c=>(c.ampEval||'').trim()).length; return ev(k>0||nI('tassessments')>0, `${k} cluster(s) met evaluatiewijze · ${nI('tassessments')} tactisch(e) assessment(s)`, ['tactisch','tassessments']); }],
+      ['h','De passende tijdshorizon is vastgelegd.', ()=>{ const k = items('clusters').filter(c=>(c.ampHorizon||'').trim()).length; return ev(nI('clusters')&&k===nI('clusters'), `${k} van ${nI('clusters')} cluster(s) met tijdshorizon`, ['tactisch','clusters']); }],
+      ['i','Financiële en niet-financiële implicaties zijn vastgelegd.', ()=>{ const t = nI('maatregelen'), k = items('maatregelen').filter(m=>num(m.kosten)).length; return ev(t&&k===t, `${k} van ${t} maatregelen met kosten · niet-financieel via waardekompas en risico's`, ['tactisch','maatregelen']); }],
+      ['j','De beoordelingsperiode van de plannen is vastgelegd (zie 9.1).', ()=>{ const k = items('clusters').filter(c=>c.ampPeriode).length; return ev(nI('clusters')&&k===nI('clusters'), `${k} van ${nI('clusters')} cluster(s) met beoordelingsperiode`, ['tactisch','clusters']); }],
+      ['k1','Proces voor identificatie van risico\'s en kansen.', ()=>ev(nI('risicos')>0, `${nI('risicos')} risico('s) geïdentificeerd`, ['iso','risico'])],
+      ['k2','Proces voor beoordeling van risico\'s en kansen.', ()=>{ const k = items('risicos').map(risicoEval).filter(Boolean).length; return ev(k>0, `${k} risico('s) beoordeeld met kans × effect per waardeaspect`, ['tactisch','risicos']); }],
+      ['k3','Proces voor het bepalen van het belang van assets voor de AM-doelstellingen.', ()=>{ const k = state.data.assets.filter(a=>a.krit).length; return ev(k>0, `${k} object(en) met kriticiteit · waardekompassen per cluster`, ['assets',null]); }],
+      ['k4','Proces voor implementatie van een passende aanpak en monitoring van risico\'s en kansen.', ()=>{ const t = nI('risicos'), k = items('risicos').filter(r=>r.strategie).length; return ev(t&&k===t, `${k} van ${t} risico's met gekozen behandelstrategie`, ['iso','risico']); }],
+      ['l','AM-risico\'s zijn opgenomen in het organisatiebrede risicomanagement, incl. planning voor noodsituaties.', ()=>{ const k = items('risicos').filter(r=>r.escalatie==='Ja').length; return ev(k>0 && !!ISO().scope.risico, `${k} risico('s) geëscaleerd naar organisatieregister · afstemming ${ISO().scope.risico?'beschreven':'niet beschreven'} · noodplannen: ${items('maatregelen').filter(m=>m.plan==='Noodplan').length}`, ['iso','scope']); }],
+     ]},
+  ]},
   {h:'7', t:'Ondersteuning', art:[{a:'7.1',t:'Mensen en middelen',todo:1},{a:'7.2',t:'Competentie',todo:1},{a:'7.3',t:'Bewustzijn',todo:1},{a:'7.4',t:'Communicatie',todo:1},{a:'7.5',t:'Eisen aan informatie',todo:1},{a:'7.6',t:'Gedocumenteerde informatie',todo:1}]},
   {h:'8', t:'Uitvoering', art:[{a:'8.1',t:'Operationele planning en beheersing',todo:1},{a:'8.2',t:'Management van wijzigingen',todo:1},{a:'8.3',t:'Uitbesteden',todo:1}]},
   {h:'9', t:'Evaluatie van de prestaties', art:[{a:'9.1',t:'Monitoren, meten, analyseren en evalueren',todo:1},{a:'9.2',t:'Interne audit',todo:1},{a:'9.3',t:'Directiebeoordeling',todo:1}]},
@@ -2584,7 +2648,7 @@ function tIsoOverzicht(){
   const arts = isoArts(); const sc = arts.map(artScore);
   const alle = arts.flatMap(a=>a.e.map(([k])=>ISO().eval[isoKey(a.a,k)]?.st||''));
   const tel = s => alle.filter(x=>x===s).length;
-  const KORT = {'4.1':'Context','4.2':'Stakeholders','4.3':'Toepassingsgebied','4.4':'AM-systeem','5.1':'Leiderschap','5.2':'Beleid','5.3':'Rollen'}; const axes = arts.map(a=>a.a+' '+(KORT[a.a]||a.t.split(' ')[0]));
+  const KORT = {'4.1':'Context','4.2':'Stakeholders','4.3':'Toepassingsgebied','4.4':'AM-systeem','5.1':'Leiderschap','5.2':'Beleid','5.3':'Rollen','6.1':'Risico AM-syst.','6.2.1':'AM-doelen','6.2.2':'Planning'}; const axes = arts.map(a=>a.a+' '+(KORT[a.a]||a.t.split(' ')[0]));
   const vals = sc.map(s=>s.pct===null?0:s.pct*3);
   const ev0 = arts.flatMap(a=>a.e.map(e=>e[2]())); const evOk = ev0.filter(x=>x.ok).length;
   return `<div class="note small">ISO 55000 geeft overzicht, principes en begrippen; <b>ISO 55001</b> bevat de eisen aan het assetmanagementsysteem; <b>ISO 55002</b> geeft toelichting. In deze tool: per eis een <b>eigen samenvatting</b> met artikelnummer, de toelichting uit 55002 in eigen woorden, het <b>bewijs dat al in de tool ligt</b> (NEN 8026, NEN 2767) en jouw zelfevaluatie. Versie: NEN-ISO 55001:2014 en 55002:2014 — de 2014-edities zijn inmiddels vervangen door ISO 55001:2024; eisen dragen een versielabel zodat 2024 later kan worden toegevoegd.</div>
@@ -2594,7 +2658,7 @@ function tIsoOverzicht(){
       <div class="panel"><h3>Stand van de zelfevaluatie</h3>
         <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;margin-bottom:6px">${ISTAT.map(s=>{ const n = tel(s[0]); return n?`<div style="flex:${n};background:${s[2]};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center" title="${s[1]}: ${n}">${n}</div>`:''; }).join('')}</div>
         <div class="small">${ISTAT.map(s=>`<span style="margin-right:10px"><span class="cb" style="background:${s[2]};min-width:12px;height:12px;padding:0"></span> ${s[1].replace(/—/g,'').trim()}: ${tel(s[0])}</span>`).join('')}</div>
-        <p class="small" style="margin:12px 0 0"><b>Bewijs uit de tool:</b> voor ${evOk} van ${ev0.length} eisen in hoofdstuk 4–5 ligt al een aanwijzing klaar.</p>
+        <p class="small" style="margin:12px 0 0"><b>Bewijs uit de tool:</b> voor ${evOk} van ${ev0.length} eisen in de verwerkte hoofdstukken ligt al een aanwijzing klaar.</p>
         <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px">${ISO_HFST.map(h=>`<tr style="border-top:1px solid var(--line)"><td style="padding:5px"><b>${h.h}</b> ${h.t}</td><td class="small" style="text-align:right">${h.art.every(a=>a.todo)?'<span class="badge todo">nog te verwerken</span>':h.art.map(a=>{ const s = artScore(a); return `<span title="${a.t}" style="margin-left:4px">${a.a} ${s.pct===null?'–':Math.round(s.pct*100)+'%'}</span>`; }).join('')}</td></tr>`).join('')}</table></div></div>`;
 }
 function tIsoEisen(){
@@ -2649,15 +2713,42 @@ function tIsoGap(){
   const rows = isoArts().flatMap(a=>a.e.map(([k,t])=>[a,k,t,ISO().eval[isoKey(a.a,k)]||{}])).filter(r=>['deels','nee'].includes(r[3].st));
   const open = isoArts().flatMap(a=>a.e.map(([k])=>ISO().eval[isoKey(a.a,k)]?.st)).filter(x=>!x).length;
   return `<div class="note small noprint">Gap-analyse: alle eisen die deels of niet voldoen, met verbeteractie, eigenaar en deadline — bruikbaar als verbeterplan en ter voorbereiding op een (interne) audit. ${open?`<b>${open} eis(en) nog niet beoordeeld.</b>`:''} <button data-print="1" style="margin-left:8px">Afdrukken / PDF</button></div>
-    <div class="panel printdoc" style="overflow:auto"><h2 style="margin-bottom:2px">Gap-analyse ISO 55001</h2><div class="small muted">${new Date().toLocaleDateString('nl-NL')} · versie 2014 · hoofdstuk 4–5</div>
+    <div class="panel printdoc" style="overflow:auto"><h2 style="margin-bottom:2px">Gap-analyse ISO 55001</h2><div class="small muted">${new Date().toLocaleDateString('nl-NL')} · versie 2014 · verwerkte hoofdstukken: ${ISO_HFST.filter(h=>h.art.some(a=>!a.todo)).map(h=>h.h).join(', ')}</div>
     ${rows.length?`<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Eis</th><th>Status</th><th>Verbeteractie</th><th>Eigenaar</th><th>Deadline</th></tr>
       ${rows.map(([a,k,t,E])=>{ const st = ISTAT.find(z=>z[0]===E.st); const late = E.dl && E.dl < new Date().toISOString().slice(0,10);
         return `<tr style="border-top:1px solid var(--line);vertical-align:top"><td style="padding:6px"><b>${a.a}${k!=='0'?' '+k:''}</b> <span class="small">${t}</span></td><td><span class="cb" style="background:${st[2]}">${st[1]}</span></td><td class="small">${esc(E.actie)||'<span style="color:#b5651d">geen actie</span>'}</td><td class="small">${esc(items('personen').find(p=>p.id===E.eig)?.naam||'–')}</td><td class="small" style="${late?'color:#c0392b;font-weight:600':''}">${esc(E.dl||'–')}</td></tr>`; }).join('')}</table>`:'<p class="muted">Geen openstaande gaps.</p>'}</div>`;
 }
-const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['gap','Gap-analyse','']];
+const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['gap','Gap-analyse','']];
+function tIsoRisico(){
+  const R = items('risicos'); const ev2 = R.map(risicoEval);
+  const ams = R.filter(r=>r.niveauR==='Assetmanagementsysteem'), kans = R.filter(r=>r.soortR==='Kans');
+  const stap = (l, t, n, tot, link) => { const ok = tot ? n===tot && n>0 : n>0; const kl = ok?'#2e7d32':n?'#e6a23c':'#c9cfcc';
+    return `<div style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding:8px 0">
+      <span class="cb" style="background:${kl}">${l}</span><div><b class="small">${t[0]}</b><div class="small muted">${t[1]}</div></div>
+      <span class="small" style="white-space:nowrap">${tot!==undefined?`${n} / ${tot}`:n} ${link?isoLink(link):''}</span></div>`; };
+  const strat = {}; R.forEach(r=>{ if(r.strategie) strat[r.strategie] = (strat[r.strategie]||0)+1; });
+  return `<div class="note small">Gestructureerde risicomethode volgens ISO 55002 §6.2.2.3 (stappen a–h, in eigen woorden), uitgevoerd met het risicoregister van het tactisch niveau (NEN 8026 §7.3.4). Het register is aangevuld met wat ISO vraagt: bestaande maatregelen, behandelstrategie, verwachte trend, evaluatie en escalatie naar het organisatieregister.</div>
+    <div class="panel"><h3>Stappen van het risicoproces</h3>
+      ${stap('a',['Assets classificeren en toepassingsgebied bepalen','assetsystemen en assets met hun informatie; grenzen van de beoordeling'], state.data.assets.filter(a=>a.niveau===1).length, undefined, ['assets',null])}
+      ${stap('b',['Risico\'s identificeren','gebeurtenissen en oorzaken, ook risico\'s voor de organisatiedoelen'], R.length, undefined, ['tactisch','risicos'])}
+      ${stap('c',['Bestaande beheersmaatregelen vaststellen','ook voorgestelde maatregelen voor geplande assets'], R.filter(r=>(r.bestaand||'').trim()).length, R.length, ['tactisch','risicos'])}
+      ${stap('d',['Risico\'s analyseren met een geschikte methode','methode per risico vastgelegd'], R.filter(r=>r.methode).length, R.length, ['tactisch','risicos'])}
+      ${stap('e',['Risiconiveau evalueren','kans en gevolg op basis van beslissingscriteria — in de tool kans × effect per waardeaspect'], ev2.filter(Boolean).length, R.length, ['tactisch','risicos'])}
+      ${stap('f',['Verloop in de tijd evalueren','neemt het risico toe, gelijk of af (bijv. door veroudering)'], R.filter(r=>r.trend).length, R.length, ['tactisch','risicos'])}
+      ${stap('g',['Toelaatbaarheid beoordelen','volstaan de maatregelen; voldoen we aan wettelijke eisen — in de tool getoetst aan de grens per bijdrage in het kompas'], ev2.filter(e=>e&&e.ok).length, ev2.filter(Boolean).length, ['tactisch','risicos'])}
+      ${stap('h',['Behandelstrategie kiezen','bron aanpakken, vermijden, verminderen, tolereren of overdragen'], R.filter(r=>r.strategie).length, R.length, ['tactisch','risicos'])}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px">
+      <div class="card"><h3>Risico's voor het AM-systeem (§6.1)</h3><p>${ams.length} vastgelegd${ams.length?': '+ams.slice(0,4).map(r=>esc(r.titel||'?')).join(', '):''}. Kies bij een risico "Betreft: Assetmanagementsysteem".</p></div>
+      <div class="card"><h3>Kansen</h3><p>${kans.length} kans(en) vastgelegd. ISO behandelt risico als effect van onzekerheid — positief of negatief.</p></div>
+      <div class="card"><h3>Behandelstrategieën</h3><p>${Object.keys(strat).length?Object.entries(strat).map(([k,v])=>`${esc(k)}: ${v}`).join(' · '):'nog geen gekozen'}</p></div>
+      <div class="card"><h3>Escalatie</h3><p>${R.filter(r=>r.escalatie==='Ja').length} risico('s) opgenomen in het organisatiebrede register. Afstemming beschreven: ${ISO().scope.risico?'ja':'nee'} ${isoLink(['iso','scope'])}</p></div>
+    </div>
+    <div class="warn small" style="margin-top:12px"><b>Zeldzaam maar catastrofaal</b> — ISO 55002 vraagt aandacht voor gebeurtenissen met zeer lage kans en zeer groot gevolg (bijv. extreem weer): monitor indicatoren die aangeven dat omstandigheden abrupt veranderen. In de tool: ${R.filter(r=>+r.kans===1 && Math.max(0,...Object.values(r.effect||{}).map(Number))>=5).length} risico('s) met kans 1 en effect 5.</div>`;
+}
 function renderIso(){
   const t = ui.itab||'overzicht'; let body;
-  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
+  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='risico') body = tIsoRisico(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
   else body = `<div class="note small">ISO 55001 §4.1 met toelichting 55002 §4.1.2: externe en interne onderwerpen die het vermogen beïnvloeden om de beoogde resultaten te behalen. Gebruik de categorieën als checklist; koppel onderwerpen aan waardeaspecten zodat ze doorwerken in doelstellingen en waardekompassen.</div>
     <div class="small muted" style="margin-bottom:8px">Nog niet behandelde categorieën: ${[...CTX_EXT,...CTX_INT].filter(c=>!items('context').some(x=>x.cat===c)).map(esc).join(' · ')||'geen'}</div>${renderRegister('context')}`;
   return `<h2>Assetmanagementsysteem — ISO 55001</h2><div class="ref">NEN-ISO 55000/55001/55002:2014 · eigen samenvattingen met artikelnummer, geen normtekst</div>

@@ -581,10 +581,10 @@ const REG = {
     {k:'mandaat',l:'Mandaat / bevoegdheden',type:'textarea',ph:'bijv. gemandateerd door RvB voor besluiten tot € 1 mln'},
   ]},
   waardeaspecten:{ t:'waardeaspect', label:x=>x.naam, meta:x=>[x.thema, x.relevant==='Nee'?'niet van toepassing':''].filter(Boolean).join(' · '), fields:[
-    {k:'naam',l:'Waardeaspect',type:'text',ph:'Bijlage A volgt; voorlopig zelf invullen'},
+    {k:'naam',l:'Waardeaspect',type:'text',ph:'bijv. een organisatiespecifiek aspect'},
     {k:'thema',l:'Hoofdthema',type:'select',opts:['Functionaliteit','Leefomgeving en maatschappij','Organisatiespecifiek']},
-    {k:'omschrijving',l:'Omschrijving',type:'textarea'},
-    {k:'relevant',l:'Van toepassing op ons portfolio?',type:'select',opts:['Ja','Nee']},
+    {k:'omschrijving',l:'Wat verstaan wij hieronder?',type:'textarea',hint:'Startomschrijvingen zijn eigen tekst van deze tool; pas ze aan op je organisatie. Voor de aspecten onder Functionaliteit: zie de RAMS-methode (Bijlage A, opm. 4).'},
+    {k:'relevant',l:'Van toepassing op ons portfolio?',type:'select',opts:['Ja','Nee'],hint:'Compliance wordt altijd opgenomen en vormt de ondergrens; strengere eisen dan de wet zijn altijd mogelijk (Bijlage A, opm. 3).'},
     {k:'systemen',l:'Relevant voor assetsystemen',type:'assets',max:1,if:x=>x.relevant!=='Nee'},
   ]},
   amdoelen:{ t:'assetmanagementdoelstelling', label:x=>x.titel, meta:x=>[labelOf('waardeaspecten',x.aspect), x.status].filter(Boolean).join(' · '), fields:[
@@ -676,7 +676,7 @@ function fieldHtml(key, it, f){
   if(f.type==='text') inp = `<input ${a} value="${esc(v)}" placeholder="${esc(f.ph||'')}">`;
   else if(f.type==='textarea') inp = `<textarea ${a} rows="3">${esc(v)}</textarea>`;
   else if(f.type==='date') inp = `<input type="date" ${a} value="${esc(v)}">`;
-  else if(f.type==='select') inp = `<select ${a}><option value="">— kies —</option>${f.opts.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  else if(f.type==='select') inp = `<select ${a} ${it.vast&&f.k==='relevant'?'disabled':''}><option value="">— kies —</option>${f.opts.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
   else if(f.type==='checks') inp = `<div class="pick">${f.opts.map(o=>`<label><input type="checkbox" ${a} data-rv="${esc(o)}" ${(v||[]).includes(o)?'checked':''}> ${esc(o)}</label>`).join('')}</div>`;
   else if(f.type==='assets') inp = assetPicker(v, a, f.max);
   else if(f.type==='refsel'){ const src = items(f.ref);
@@ -696,7 +696,7 @@ function renderRegister(key, extraForm){
       <div style="margin-top:8px"><button data-radd="${key}">+ ${R.t} toevoegen</button></div></div>
     <div>${it ? `<div class="panel form">${R.fields.filter(f=>!f.if||f.if(it)).map(f=>fieldHtml(key,it,f)).join('')}
         ${extraForm?extraForm(it):''}
-        <div><button class="danger ${ui.rarmed===it.id?'armed':''}" data-rdel="${key}:${it.id}">${ui.rarmed===it.id?'Klik nogmaals om te verwijderen':'Verwijderen'}</button></div></div>`
+        ${it.vast?`<div class="small muted">🔒 Vast onderdeel — kan niet worden verwijderd of uitgezet.</div>`:`<div><button class="danger ${ui.rarmed===it.id?'armed':''}" data-rdel="${key}:${it.id}">${ui.rarmed===it.id?'Klik nogmaals om te verwijderen':'Verwijderen'}</button></div>`}</div>`
       : `<div class="panel"><p class="muted" style="margin:0">Selecteer links een ${R.t} of voeg er een toe.</p></div>`}</div></div>`;
 }
 function perspectiefVoor(assetId){
@@ -816,7 +816,7 @@ const STABS = [
   ['info','Informatiebehoefte','§6.5'],
 ];
 const SINTRO = {
-  waardeaspecten:'Elke organisatie bepaalt zelf welke waardeaspecten van toepassing zijn en kan eigen aspecten toevoegen. Bijlage A geeft veelvoorkomende aspecten in twee hoofdthema\'s: <b>functionaliteit</b> en <b>leefomgeving en maatschappij</b>. Zodra je Bijlage A uploadt, maak ik er een startlijst van.',
+  waardeaspecten:'Elke organisatie bepaalt zelf welke waardeaspecten van toepassing zijn en kan eigen aspecten toevoegen. Bijlage A geeft veelvoorkomende aspecten in twee hoofdthema\'s: <b>functionaliteit</b> en <b>leefomgeving en maatschappij</b>. De tabel laat zien dat er meer is om op te sturen dan functionele instandhouding en compliance. Achter elk relevant aspect komt een AM-doelstelling.',
   amdoelen:'De assetmanager formuleert per assetsysteem de assetmanagementdoelstellingen, op basis van de organisatiedoelstellingen en het beleid. Achter elk relevant waardeaspect komt een AM-doelstelling. Zo ontstaat de verbinding tussen organisatiedoel en instandhouding.',
   criteria:'Beslissingscriteria helpen bij dilemma\'s en prioriteringsvraagstukken. Ze worden vastgelegd in het SAMP samen met de AM-doelstellingen.',
   consequenties:'Kan een AM-doel niet gehaald worden door een bestuurlijk besluit, dan is dat de verantwoordelijkheid van de asset owner. De assetmanager wijst de asset owner wél op de gevolgen — ook als er géén besluit genomen wordt. De assetmanager neemt geen besluiten die op bestuurlijk niveau horen.',
@@ -834,6 +834,7 @@ function renderStrategisch(){
   else if(t==='info') body = infoTable('s', INFO6, [
       `${items('doelen').length} organisatiedoelstelling(en); beleid: ${state.data.best.beleid||'onbekend'}`, '', 'Kriticiteit per object in de assetstructuur; toestand volgt op operationeel niveau',
       '', `${items('sassessments').length} assessment(s) vastgelegd`, '', '', 'Risicoanalyse volgt op tactisch niveau'], 'assetmanager');
+  else if(t==='waardeaspecten') body = waTabel();
   else body = `<div class="note small">${SINTRO[t]}</div>` + renderRegister(t);
   return `<h2>Strategisch niveau</h2><div class="ref">NEN 8026 H6 · verantwoordelijk: assetmanager · scope: assetsystemen · product: <b>SAMP</b></div>
     <div class="tabs">${STABS.map(([id,n,r])=>`<button data-stab="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
@@ -912,9 +913,75 @@ function sSamp(){
 }
 
 /* ---------------- Inrichting: waardeaspectentabel en rolverdeling ---------------- */
+/* Startlijst volgens Bijlage A (namen uit tabel A.1; omschrijvingen zijn eigen tekst) */
+const BIJLAGE_A = [
+  ['Functionaliteit', [
+    ['Compliance','Voldoen aan wet- en regelgeving en andere verplichtingen. Altijd opgenomen; vormt de ondergrens.'],
+    ['Veiligheid','Geen onaanvaardbaar risico op letsel of schade voor gebruikers, omgeving en personeel (RAMS: Safety).'],
+    ['Gezondheid','Geen nadelige invloed op de gezondheid van gebruikers en omgeving, bijv. binnenklimaat of waterkwaliteit.'],
+    ['Bruikbaarheid','De asset is geschikt voor het gebruik waarvoor hij bedoeld is.'],
+    ['Beschikbaarheid','De asset is beschikbaar op het moment dat hij nodig is (RAMS: Availability).'],
+    ['Betrouwbaarheid','De asset functioneert zonder onverwachte storingen (RAMS: Reliability).'],
+    ['Onderhoudbaarheid','Onderhoud kan eenvoudig, veilig en met weinig hinder worden uitgevoerd (RAMS: Maintainability).'],
+    ['Toegankelijkheid','De asset is fysiek toegankelijk voor de beoogde gebruikers.'],
+  ]],
+  ['Leefomgeving en maatschappij', [
+    ['Esthetica','Uitstraling en beeldkwaliteit van de asset en zijn omgeving.'],
+    ['Cultuurhistorisch','Behoud van erfgoed- en cultuurhistorische waarden.'],
+    ['Leefbaarheid','Bijdrage aan een prettige, schone en sociaal veilige leefomgeving.'],
+    ['Bereikbaarheid','De asset en zijn omgeving blijven goed bereikbaar, ook tijdens werkzaamheden.'],
+    ['Duurzaamheid','Instandhouding op de lange termijn met zo min mogelijk belasting van mens en milieu.'],
+    ['Circulair','Hergebruik van materialen en grondstoffen; zo min mogelijk afval.'],
+    ['Ecologisch','Behoud en versterking van natuur en biodiversiteit.'],
+    ['Energieverbruik','Beperken van energieverbruik en CO₂-uitstoot.'],
+    ['Klimaatadaptatie','Bestand tegen hitte, droogte, extreme neerslag en wateroverlast.'],
+    ['Inclusiviteit','Bruikbaar voor iedereen, ongeacht beperking, leeftijd of achtergrond.'],
+  ]],
+];
+function laadBijlageA(){
+  const list = items('waardeaspecten'); let n = 0;
+  for(const [thema, rows] of BIJLAGE_A) for(const [naam, oms] of rows){
+    if(list.some(w=>(w.naam||'').toLowerCase()===naam.toLowerCase())) continue;
+    const w = {id:uid(), naam, thema, omschrijving:oms, relevant: naam==='Compliance'?'Ja':'', bron:'Bijlage A'};
+    if(naam==='Compliance') w.vast = true;
+    list.push(w); n++;
+  }
+  const c = list.find(w=>(w.naam||'').toLowerCase()==='compliance'); if(c){ c.vast = true; c.relevant = 'Ja'; }
+  save(); return n;
+}
+function waTabel(){
+  const list = items('waardeaspecten');
+  const B = state.data.best;
+  const geenBeleid = B.beleid!=='Ja';
+  const signaal = items('consequenties').some(c=>c.sig==='beleid');
+  const thema = ['Functionaliteit','Leefomgeving en maatschappij','Organisatiespecifiek'];
+  const groups = thema.map(t=>[t, list.filter(w=>(w.thema||'Organisatiespecifiek')===t)]).filter(g=>g[1].length);
+  const open = list.filter(w=>!w.relevant).length;
+  const view = ui.wview||'tabel';
+  const tabel = `<div class="panel" style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">
+    <tr class="small muted" style="text-align:left"><th style="padding:6px;width:170px">Hoofdthema</th><th>Waardeaspect</th><th style="width:150px">Van toepassing?</th><th>Assetmanagementdoelstelling(en)</th></tr>
+    ${groups.map(([t,ws])=>ws.map((w,i)=>{ const doelen = items('amdoelen').filter(d=>d.aspect===w.id);
+      return `<tr style="border-top:1px solid var(--line);vertical-align:top;${w.relevant==='Nee'?'opacity:.5':''}">
+        ${i===0?`<td rowspan="${ws.length}" style="padding:8px 6px;font-weight:600;background:#fafbfa">${esc(t)}</td>`:''}
+        <td style="padding:8px 6px"><b>${esc(w.naam)}</b>${w.vast?' 🔒':''}<div class="small muted">${esc(w.omschrijving||'')}</div></td>
+        <td><select data-rk="waardeaspecten" data-rid="${w.id}" data-rf="relevant" ${w.vast?'disabled':''} style="${!w.relevant?'border-color:#e0a95c':''}">
+          <option value="">— kies —</option>${['Ja','Nee'].map(o=>`<option ${w.relevant===o?'selected':''}>${o}</option>`).join('')}</select></td>
+        <td style="padding:6px">${doelen.map(d=>`<div class="small" style="cursor:pointer" data-gotodoel="${d.id}">• ${esc(d.titel)||'(naamloos)'}</div>`).join('')}
+          ${w.relevant==='Ja'?`<button data-newdoel="${w.id}" style="font-size:12px;padding:3px 8px;margin-top:4px">+ AM-doelstelling</button>`:''}
+          ${w.relevant==='Ja'&&!doelen.length?`<div class="small" style="color:#b5651d">nog geen doelstelling</div>`:''}</td></tr>`;}).join('')).join('')}
+  </table></div>`;
+  return `<div class="note small">${SINTRO.waardeaspecten}</div>
+    ${geenBeleid?`<div class="warn small"><b>Geen (vastgesteld) assetmanagementbeleid?</b> Dan neemt de assetmanager het initiatief — niet door zelf beleid te maken, maar door de asset owner duidelijk te maken dat sturing nodig is (Bijlage A, opm. 2).
+      <div style="margin-top:6px">${signaal?'✓ Vastgelegd als consequentie op strategisch niveau.':`<button data-signal="beleid">Leg vast als signaal aan de asset owner</button>`}</div></div>`:''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <button class="primary" data-loada="1">${list.length?'Ontbrekende aspecten uit Bijlage A aanvullen':'Startlijst uit Bijlage A laden'}</button>
+      <button data-wview="${view==='tabel'?'lijst':'tabel'}">${view==='tabel'?'Bewerken / eigen aspect toevoegen':'Terug naar tabel'}</button>
+      ${list.length?`<span class="small muted">${list.filter(w=>w.relevant==='Ja').length} van toepassing · ${list.filter(w=>w.relevant==='Nee').length} niet · ${open?`<b style="color:#b5651d">${open} nog te beoordelen</b>`:'alles beoordeeld'}</span>`:''}
+    </div>
+    ${view==='lijst' || !list.length ? renderRegister('waardeaspecten') : tabel}`;
+}
 function renderWaardeaspecten(){
-  return `<h2>Waardeaspectentabel</h2><div class="ref">NEN 8026 §6.3.1 en Bijlage A · ook bereikbaar via Strategisch niveau</div>
-    <div class="note small">${SINTRO.waardeaspecten}</div>${renderRegister('waardeaspecten')}`;
+  return `<h2>Waardeaspectentabel</h2><div class="ref">NEN 8026 §6.3.1 en Bijlage A (tabel A.1) · ook bereikbaar via Strategisch niveau</div>${waTabel()}`;
 }
 function renderRollen(){
   const comb = items('personen').filter(p=>gecombineerd(p.id));

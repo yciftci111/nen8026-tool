@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.10</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.11</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -721,7 +721,7 @@ function fieldHtml(key, it, f){
   else if(f.type==='textarea') inp = `<textarea ${a} rows="3">${esc(v)}</textarea>`;
   else if(f.type==='date') inp = `<input type="date" ${a} value="${esc(v)}">`;
   else if(f.type==='select') inp = `<select ${a} ${it.vast&&f.k==='relevant'?'disabled':''}><option value="">— kies —</option>${(f.optsFn?f.optsFn():f.opts).map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
-  else if(f.type==='checks') inp = `<div class="pick">${f.opts.map(o=>`<label><input type="checkbox" ${a} data-rv="${esc(o)}" ${(v||[]).includes(o)?'checked':''}> ${esc(o)}</label>`).join('')}</div>`;
+  else if(f.type==='checks') inp = `<div class="pick">${(f.optsFn?f.optsFn():f.opts).map(o=>`<label><input type="checkbox" ${a} data-rv="${esc(o)}" ${(v||[]).includes(o)?'checked':''}> ${esc(o)}</label>`).join('')}</div>`;
   else if(f.type==='assets') inp = assetPicker(v, a, f.max);
   else if(f.type==='refsel'){ const src = items(f.ref);
     inp = `<select ${a}><option value="">— kies —</option>${src.map(o=>`<option value="${o.id}" ${v===o.id?'selected':''}>${esc(REG[f.ref].label(o)||'(naamloos)')}</option>`).join('')}</select>`
@@ -1058,6 +1058,7 @@ function bijdrage(c, aspectId, f){
 function niveauData(){ return (state.data.niveau ||= [
   {id:'n1', naam:'NEN 2767 conditiescore (maximaal toegestaan)', v:['n.v.t.','4','3','2']},
   {id:'n2', naam:'CROW beeldkwaliteit (minimaal)', v:['n.v.t.','C','B','A']},
+  {id:'n3', naam:'NEN 2767 verzorgingsscore (maximaal toegestaan)', v:['n.v.t.','4','3','2']},
 ]); }
 function rgrens(){ return (state.data.rgrens ||= {1:12, 2:8, 3:4}); }
 
@@ -1252,8 +1253,8 @@ function eisExtra(it){
     ${voorstel?`<div style="margin-top:6px">Voorstel volgens niveautabel (${esc(n.naam)}): <b>${esc(voorstel)}</b> ${it.niveau!==voorstel?`<button data-eisvoorstel="${it.id}" style="font-size:12px;padding:2px 8px;margin-left:6px">Neem over</button>`:'✓'}</div>`:''}
     ${/compliance/i.test(asp?.naam||'')?'<div class="muted" style="margin-top:4px">Compliance is de ondergrens; strengere eisen zijn altijd toegestaan.</div>':''}
     ${(()=>{ const v = eisVerificatie2767(it); if(!v) return '';
-      if(v.geen) return `<div style="margin-top:6px">NEN 2767: nog geen gemeten condities voor bouwdelen in dit cluster.</div>`;
-      return `<div style="margin-top:6px;padding:8px;border-radius:6px;background:${v.ok?'#e7f4e1':'#fdecea'}"><b>Automatische verificatie (NEN 2767):</b> ${v.ok?`✓ alle ${v.n} gemeten bouwdelen voldoen aan conditie ≤ ${v.max}`:`✗ ${v.slecht.length} van ${v.n} gemeten bouwdelen slechter dan ${v.max}: ${v.slecht.map(([b,x])=>esc(b.naam)+' ('+x.res.cond+')').join(', ')}`}${v.ag.cond?` · geaggregeerde clusterconditie ${v.ag.cond}`:''}${v.n<v.totaal?` · ${v.totaal-v.n} bouwdeel/-delen nog niet gemeten`:''}</div>`; })()}
+      if(v.geen) return `<div style="margin-top:6px">NEN 2767: nog geen gemeten ${v.soort||'condities'} voor bouwdelen in dit cluster.</div>`;
+      return `<div style="margin-top:6px;padding:8px;border-radius:6px;background:${v.ok?'#e7f4e1':'#fdecea'}"><b>Automatische verificatie (NEN 2767, ${v.soort}):</b> ${v.ok?`✓ alle ${v.n} gemeten bouwdelen voldoen (${v.max})`:`✗ ${v.slecht.length} van ${v.n} gemeten bouwdelen voldoen niet (${v.max}): ${v.slecht.map(([b,x])=>esc(b.naam)+' ('+x.res.cond+')').join(', ')}`}${v.ag&&v.ag.cond?` · geaggregeerd cluster: ${v.ag.cond}`:''}${v.n<v.totaal?` · ${v.totaal-v.n} bouwdeel/-delen nog niet gemeten`:''}</div>`; })()}
     ${(()=>{ const ob = items('observaties').filter(o=>o.eis===it.id); if(!ob.length) return '<div class="muted" style="margin-top:4px">Nog geen verificatie via observaties (operationeel niveau).</div>';
       const l = ob.slice().sort((a,b)=>(b.datum||'').localeCompare(a.datum||''))[0];
       return `<div style="margin-top:4px">Verificatie: ${ob.length} observatie(s); laatste ${esc(l.datum||'')}: ${l.voldoet==='Nee'?'<b style="color:#c0392b">voldoet niet</b>':l.voldoet==='Ja'?'<b style="color:var(--accent)">voldoet</b>':'nog niet beoordeeld'}</div>`; })()}</div>`;
@@ -1614,7 +1615,7 @@ Object.assign(REG, {
     {k:'dataset',l:'Gebrekendataset (versie)',type:'refsel',ref:'datasets',hint:'Leg vast met welke versie is geïnspecteerd: de dataset wordt periodiek geactualiseerd.'},
     {k:'scope',l:'Scope: welke elementen / bouwdelen',type:'textarea'},
     {k:'steekproef',l:'Steekproef en uitvoeringswijze',type:'textarea',hint:'NEN 2767 schrijft de uitvoeringswijze (zoals steekproefgrootte) niet voor; leg je eigen afspraak vast.'},
-    {k:'verzorging',l:'Verzorgingsscore meegenomen (Bijlage C)?',type:'select',opts:['Nee','Ja']},
+    {k:'aanvullend',l:'Aanvullende inspecties (Bijlage C) — advies: minimaal verzorgingsscore',type:'checks',optsFn:()=>AANV.map(a=>a[1])},
     {k:'meldingen',l:'Gebruikte informatie: meldingen',type:'ref',ref:'meldingen'},
     {k:'historie',l:'Gebruikte informatie: klachten, storingen, onderhoudshistorie, logboeken',type:'textarea'},
     {k:'status',l:'Status',type:'select',opts:['Gepland','Uitgevoerd','Gerapporteerd']},
@@ -1628,7 +1629,7 @@ Object.assign(REG, {
   ]},
 });
 Object.assign(MV, {inspecties:'inspecties', datasets:'gebrekendatasets'});
-const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['tabellen','⚙ Rekentabellen','']];
+const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['tabellen','⚙ Rekentabellen','']];
 const lvName = a => sector().niveaus[Math.min(a.niveau,5)];
 
 function renderConditie(){
@@ -1690,6 +1691,7 @@ function renderConditie(){
   else if(t==='datasets') body = tBibliotheek();
   else if(t==='gebreken') body = tGebreken();
   else if(t==='condities') body = tCondities();
+  else if(t==='aanvullend') body = tAanvullend();
   else if(t==='kromme') body = tKromme();
   else if(t==='rekenhulp') body = tRekenhulp();
   else if(t==='tabellen') body = tRekentabellen();
@@ -2007,7 +2009,7 @@ function tGebreken(){
       ${gs.map((g,i)=>gebrekKaart(g, i, gs, comps, bibSectie(bd.code))).join('') || '<p class="small muted" style="margin:0">Geen gebreken vastgelegd — het bouwdeel krijgt conditie 1.</p>'}
       <button data-gadd="1" style="margin-top:8px">+ gebrek</button>
       <p class="small muted" style="margin:8px 0 0">Bij een component is de omvang die op de component (stap 3c); de tool rekent hem om naar het bouwdeel via de vervangingswaarden (stap 3a–3d). "Zelfde gedeelte als" = gestapeld gebrek (§5.3 situatie 1): alleen het gebrek met de slechtste conditie telt.</p></div>
-      <div id="calcout" style="margin-top:12px">${calcPanel(berekenBouwdeel(bdInput(bd, op, insp)))}</div>`:''}`;
+      <div id="calcout" style="margin-top:12px">${calcPanel(berekenBouwdeel(bdInput(bd, op, insp)))}</div>${extraPanel(bd, op, insp)}`:''}`;
   }
   return `<div style="display:flex;gap:10px;align-items:end;margin-bottom:12px;flex-wrap:wrap"><div class="ctl"><label>Inspectie</label><select data-oinsp="1">${ins.map(i=>`<option value="${i.id}" ${i.id===insp.id?'selected':''}>${esc(i.titel||'(naamloos)')}${i.datum?' · '+i.datum:''}</option>`).join('')}</select></div>
     ${tabellenCompleet()?'':'<div class="warn small" style="margin:0">Rekentabellen nog niet compleet — <a href="#conditie" data-ctab="tabellen">vul ze in</a>.</div>'}</div>
@@ -2024,15 +2026,15 @@ function tCondities(){
     <p class="small muted" style="margin:4px 0 0">Verdeling van de vervangingswaarde (€ ${vwTot.toLocaleString('nl-NL')}) over de conditiescores.</p>` : '<p class="small muted">Nog geen bouwdelen met conditie én vervangingswaarde.</p>';
   const rows = []; const walk = (pid,d)=>children(pid).forEach(a=>{ if(a.niveau<=4){ rows.push([a,d]); walk(a.id,d+1); } }); walk(null,0);
   const tree = rows.map(([a,d])=>{
-    if(a.niveau===4){ const c = bdConditie(a); return `<tr style="border-top:1px solid var(--line)"><td style="padding:5px 6px;padding-left:${6+d*16}px">${esc(a.naam)} <span class="small muted">bouwdeel</span></td><td>${cbadge(c?.res.cond)}</td><td class="small">${c?c.res.factor.toFixed(3).replace('.',','):''}</td><td class="small">${a.vervangingswaarde?'€ '+num(a.vervangingswaarde).toLocaleString('nl-NL'):'<span style="color:#b5651d">geen vw</span>'}</td><td class="small muted">${c?esc(c.insp.titel||'')+(c.insp.datum?' · '+c.insp.datum:''):'geen inspectie'}</td></tr>`; }
+    if(a.niveau===4){ const c = bdConditie(a); return `<tr style="border-top:1px solid var(--line)"><td style="padding:5px 6px;padding-left:${6+d*16}px">${esc(a.naam)} <span class="small muted">bouwdeel</span></td><td>${cbadge(c?.res.cond)}</td><td>${(w=>w?cbadge(+w.v):'')(extraWaarde(a,'verz'))}</td><td class="small">${c?c.res.factor.toFixed(3).replace('.',','):''}</td><td class="small">${a.vervangingswaarde?'€ '+num(a.vervangingswaarde).toLocaleString('nl-NL'):'<span style="color:#b5651d">geen vw</span>'}</td><td class="small muted">${c?esc(c.insp.titel||'')+(c.insp.datum?' · '+c.insp.datum:''):'geen inspectie'}</td></tr>`; }
     const ag = aggregeer(bouwdelenOnder(a.id));
-    return `<tr style="border-top:1px solid var(--line);background:#fafbfa"><td style="padding:5px 6px;padding-left:${6+d*16}px"><b>${esc(a.naam)}</b> <span class="small muted">${esc(lvName(a))}</span></td><td>${cbadge(ag.cond)}</td><td class="small">${ag.uitkomst?ag.uitkomst.toFixed(3).replace('.',','):''}</td><td class="small">${ag.vw?'€ '+ag.vw.toLocaleString('nl-NL'):''}</td>
+    return `<tr style="border-top:1px solid var(--line);background:#fafbfa"><td style="padding:5px 6px;padding-left:${6+d*16}px"><b>${esc(a.naam)}</b> <span class="small muted">${esc(lvName(a))}</span></td><td>${cbadge(ag.cond)}</td><td>${(x=>x.cond?cbadge(x.cond):'')(aggregeerScore(bouwdelenOnder(a.id),'verz'))}</td><td class="small">${ag.uitkomst?ag.uitkomst.toFixed(3).replace('.',','):''}</td><td class="small">${ag.vw?'€ '+ag.vw.toLocaleString('nl-NL'):''}</td>
       <td class="small muted">${ag.n} van ${ag.totaal} bouwdelen meegeteld${ag.zonderCond?` · ${ag.zonderCond} zonder conditie`:''}${ag.zonderVw?` · <span style="color:#b5651d">${ag.zonderVw} zonder vervangingswaarde</span>`:''}</td></tr>`; }).join('');
   const cl = items('clusters').map(c=>{ const ag = aggregeer([...new Set((c.objecten||[]).flatMap(bouwdelenOnder))]); return `<div class="card"><h3>${esc(c.naam)}</h3><div style="display:flex;gap:8px;align-items:center">${cbadge(ag.cond)}<span class="small muted">${ag.uitkomst?'uitkomst '+ag.uitkomst.toFixed(3).replace('.',',')+' · ':''}${ag.n} van ${ag.totaal} bouwdelen</span></div></div>`; }).join('');
   return `<div class="note small">Aggregatie (§5.5, Bijlage B): per bouwdeel geldt de laatste inspectie. Omhoog wordt gewogen naar <b>vervangingswaarde</b> × correctiefactor (bij een met Bijlage B berekend bouwdeel de uitkomst zelf, anders tabel B.1), gedeeld door de totale vervangingswaarde en herleid met tabel B.2. Bouwdelen zonder vervangingswaarde of conditie tellen niet mee.</div>
     <div class="panel">${distBar}</div>
     ${cl?`<h3 style="margin-top:16px">Per cluster (NEN 8026)</h3><div class="cards">${cl}</div>`:''}
-    <div class="panel" style="margin-top:14px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Niveau</th><th>Conditie</th><th>Factor / uitkomst</th><th>Vervangingswaarde</th><th>Toelichting</th></tr>${tree||'<tr><td class="muted">Nog geen objecten.</td></tr>'}</table></div>`;
+    <div class="panel" style="margin-top:14px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Niveau</th><th>Conditie</th><th>Verzorging</th><th>Factor / uitkomst</th><th>Vervangingswaarde</th><th>Toelichting</th></tr>${tree||'<tr><td class="muted">Nog geen objecten.</td></tr>'}</table></div>`;
 }
 
 /* ---------- Tab: verouderingskromme (figuur 2, interactief) ---------- */
@@ -2100,13 +2102,101 @@ function refreshCalc(){ const o = document.getElementById('calcout'); if(!o) ret
 
 /* ---------- Verificatie van instandhoudingseisen met gemeten condities ---------- */
 function eisVerificatie2767(it){
-  if(!/2767|conditie/i.test((it.maatstaf||'')+' '+(it.eis||'')) || !isNum(parseInt(it.niveau))) return null;
+  const txt = (it.maatstaf||'')+' '+(it.eis||'');
+  if(/beeldkwal|crow/i.test(txt) && crowRank(it.niveau)){ const c = items('clusters').find(x=>x.id===it.cluster); if(!c) return null;
+    const bds = [...new Set((c.objecten||[]).flatMap(bouwdelenOnder))]; const met = bds.map(b=>[b, extraWaarde(b,'crowbk')]).filter(([,x])=>x&&crowRank(x.v));
+    if(!met.length) return {geen:true, soort:'CROW-beeldkwaliteit'}; const slecht = met.filter(([,x])=>crowRank(x.v)<crowRank(it.niveau)).map(([b,x])=>[b,{res:{cond:x.v}}]);
+    return {max:'minimaal '+it.niveau, ok:!slecht.length, slecht, n:met.length, totaal:bds.length, ag:{}, soort:'CROW-beeldkwaliteit'}; }
+  if(/verzorg/i.test(txt) && isNum(parseInt(it.niveau))){ const c = items('clusters').find(x=>x.id===it.cluster); if(!c) return null;
+    const max = parseInt(it.niveau); const bds = [...new Set((c.objecten||[]).flatMap(bouwdelenOnder))]; const met = bds.map(b=>[b, extraWaarde(b,'verz')]).filter(([,x])=>x);
+    if(!met.length) return {geen:true, soort:'verzorgingsscore'}; const slecht = met.filter(([,x])=>+x.v>max).map(([b,x])=>[b,{res:{cond:x.v}}]);
+    return {max:'≤ '+max, ok:!slecht.length, slecht, n:met.length, totaal:bds.length, ag:aggregeerScore(bds,'verz'), soort:'verzorgingsscore'}; }
+  if(!/2767|conditie/i.test(txt) || !isNum(parseInt(it.niveau))) return null;
   const c = items('clusters').find(x=>x.id===it.cluster); if(!c || !tabellenCompleet()) return null;
   const max = parseInt(it.niveau); const bds = [...new Set((c.objecten||[]).flatMap(bouwdelenOnder))];
   const metC = bds.map(b=>[b, bdConditie(b)]).filter(([,x])=>x);
   if(!metC.length) return {geen:true, max};
   const slecht = metC.filter(([,x])=>x.res.cond>max); const ag = aggregeer(bds);
-  return {max, ok:!slecht.length, slecht, n:metC.length, totaal:bds.length, ag};
+  return {max:'≤ '+max, ok:!slecht.length, slecht, n:metC.length, totaal:bds.length, ag, soort:'conditiescore'};
+}
+
+/* ==================================================================
+   NEN 2767-1 BIJLAGE C — facultatieve inspecties en verzorgingsscore
+   ================================================================== */
+const AANV = [
+  ['verz','Verzorgingsscore','Verzorgingsgebreken (vuil, graffiti, begroeiing, onkruid) — geen veroudering, dus apart van de conditie. Zespuntsschaal per bouwdeel.','zes','Esthetica'],
+  ['energie','Energieprestatie','Score op energiezuinigheid van bouwdelen (bijv. RgdBOEI-methodiek).','zes','Energieverbruik'],
+  ['brand','Brandveiligheid','Mate waarin bouwdelen aan de brandveiligheidseisen (blijven) voldoen.','zes','Veiligheid'],
+  ['wet','Wet- en regelgeving','Documentatietoets: certificaten, rapporten, tekeningen, logboeken — volledig, geldig, deskundig, rechtsgeldig.','zes','Compliance'],
+  ['arbo','Arboveiligheid','Veiligheids- en gezondheidsrisico\'s voor werknemers, aannemers en inspecteurs op en rond de werkplek.','zes','Gezondheid'],
+  ['crowbk','Beeldkwaliteit (CROW)','Beeldmeetlatten met kwaliteitsniveaus A+ t/m D voor de openbare ruimte.','crow','Esthetica'],
+  ['crowweg','Wegverharding (CROW)','Globale visuele inspectie; met een vertaaltabel om te zetten naar een NEN 2767-conditiescore.','weg','Beschikbaarheid'],
+  ['spec','Specialistisch onderzoek','Nader onderzoek met hoger kennisniveau of destructief (bijv. asbest, legionella): gewenst of vereist.','spec','Veiligheid'],
+];
+const CROW = ['A+','A','B','C','D']; const crowRank = l => ({'A+':5,'A':4,'B':3,'C':2,'D':1})[String(l||'').trim().toUpperCase()]||0;
+const crowKleur = l => ({'A+':'#2e7d32','A':'#7cb342','B':'#f1c40f','C':'#e67e22','D':'#c0392b'})[l]||'#ccd3cf';
+const inspAanv = i => i ? (i.aanvullend || (i.verzorging==='Ja'?['Verzorgingsscore']:[])) : [];
+function verzScore(bd, op){
+  const v = op?.extra?.verz; if(!v) return null;
+  if(v.mode==='gebreken'){ if(!(v.gebreken||[]).length) return {cond:1, res:null}; const r = berekenBouwdeel({vw:bd.vervangingswaarde, gebreken:v.gebreken}); return r.error?null:{cond:r.cond, res:r}; }
+  return isNum(v.score) ? {cond:+v.score, res:null} : null;
+}
+function extraWaarde(bd, key){
+  const insps = items('inspecties').slice().sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
+  for(const i of insps){ const op = opnames()[i.id]?.[bd.id]; if(!op?.extra) continue;
+    if(key==='verz'){ const s = verzScore(bd, op); if(s) return {v:s.cond, insp:i}; }
+    else { const x = op.extra[key]; if(x!==undefined && x!=='' && x!==null && !(typeof x==='object' && !x.status)) return {v:x, insp:i}; } }
+  return null;
+}
+function aggregeerScore(bds, key){
+  let som = 0, vw = 0, n = 0;
+  for(const bd of bds){ const w = extraWaarde(bd, key); const v = num(bd.vervangingswaarde); if(!w || !v || !isNum(w.v)) continue; som += v*factorB1(+w.v); vw += v; n++; }
+  return vw && tabellenCompleet() ? {cond:condB2(som/vw), n} : {n};
+}
+function extraPanel(bd, op, insp){
+  const aan = inspAanv(insp); const E = (op.extra ||= {});
+  if(!aan.length) return `<div class="panel small muted" style="margin-top:12px">Aanvullende inspecties (Bijlage C): geen geselecteerd bij deze inspectie. Vink ze aan bij <a href="#conditie" data-ctab="inspecties">Inspecties</a> — advies: neem in elk geval de verzorgingsscore mee.</div>`;
+  const zes = (k) => `<select data-ex="${k}"><option value="">—</option>${[1,2,3,4,5,6].map(c=>`<option ${+E[k]===c?'selected':''}>${c}</option>`).join('')}</select>`;
+  const V = (E.verz ||= {mode:'direct', score:'', gebreken:[]}); const vs = verzScore(bd, op);
+  const blok = ([k,n,o,type,asp]) => { if(!aan.includes(n)) return '';
+    let inp = '';
+    if(k==='verz') inp = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select data-exv="mode"><option value="direct" ${V.mode!=='gebreken'?'selected':''}>Score direct invullen</option><option value="gebreken" ${V.mode==='gebreken'?'selected':''}>Berekenen uit verzorgingsgebreken</option></select>
+        ${V.mode!=='gebreken'?`<select data-exv="score"><option value="">—</option>${[1,2,3,4,5,6].map(c=>`<option ${+V.score===c?'selected':''}>${c}</option>`).join('')}</select>`:''} ${vs?cbadge(vs.cond):''}</div>
+      ${V.mode==='gebreken'?`<div style="margin-top:8px">${V.gebreken.map(g=>`<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(90px,1fr) minmax(130px,1.2fr) 60px 34px;gap:6px;margin-bottom:4px">
+          <input data-vg="oms" data-vid="${g.id}" value="${esc(g.oms)}" placeholder="bijv. graffiti, onkruid, vuil">
+          <select data-vg="ernst" data-vid="${g.id}"><option value="">ernst</option>${ERNST.map(([a,b])=>`<option value="${a}" ${g.ernst===a?'selected':''}>${b}</option>`).join('')}</select>
+          <select data-vg="int" data-vid="${g.id}"><option value="">intensiteit</option>${[1,2,3].map(i=>`<option value="${i}" ${+g.int===i?'selected':''}>${INTENS[i]}</option>`).join('')}</select>
+          <input data-vg="omv" data-vid="${g.id}" value="${esc(g.omv)}" placeholder="%"><button class="danger" data-vdel="${g.id}">×</button></div>`).join('')}
+        <button data-vadd="1">+ verzorgingsgebrek</button><div class="small muted" style="margin-top:4px">Berekend op dezelfde wijze als de conditie (begrip 3.24), maar telt níet mee in de technische conditiescore.</div></div>`:''}`;
+    else if(type==='zes') inp = zes(k);
+    else if(type==='crow') inp = `<select data-ex="${k}"><option value="">—</option>${CROW.map(c=>`<option ${E[k]===c?'selected':''}>${c}</option>`).join('')}</select>`;
+    else if(type==='weg') inp = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">Uitkomst CROW <input data-ex="crowwegRuw" value="${esc(E.crowwegRuw)}" style="width:110px" placeholder="bijv. matig"> → conditiescore volgens vertaaltabel ${zes('crowweg')}</div>`;
+    else if(type==='spec'){ const S = (E.spec ||= {}); inp = `<div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px"><select data-exs="status"><option value="">niet nodig</option>${['Gewenst','Vereist','Uitgevoerd'].map(o=>`<option ${S.status===o?'selected':''}>${o}</option>`).join('')}</select>
+      <input data-exs="type" value="${esc(S.type)}" placeholder="soort onderzoek, bijv. asbest, legionella"><span></span><input data-exs="toel" value="${esc(S.toel)}" placeholder="toelichting / resultaat"></div>`; }
+    return `<div style="border-top:1px solid var(--line);padding:8px 0;display:grid;grid-template-columns:minmax(160px,220px) minmax(0,1fr);gap:10px">
+      <div><b class="small">${n}</b><div class="small muted">${o}</div><div class="small muted">↔ NEN 8026: ${asp}</div></div><div>${inp}</div></div>`; };
+  return `<div class="panel" style="margin-top:12px"><h3>Aanvullende inspecties (Bijlage C)</h3><p class="small muted" style="margin-top:0">Deze scores veranderen de conditiescore niet; ze worden apart vastgelegd en getoetst aan de eisen van NEN 8026.</p>${AANV.map(blok).join('')}</div>`;
+}
+function tAanvullend(){
+  const ins = items('inspecties'); if(!ins.length) return `<div class="panel"><p class="muted" style="margin:0">Maak eerst een inspectie aan.</p></div>`;
+  const insp = ins.find(x=>x.id===ui.oinsp) || ins[0]; ui.oinsp = insp.id; const aan = AANV.filter(a=>inspAanv(insp).includes(a[1]));
+  const ops = opnames()[insp.id]||{}; const bds = state.data.assets.filter(a=>a.niveau===4 && ops[a.id]);
+  const cel = (bd, a) => { const op = ops[bd.id]; const E = op?.extra||{};
+    if(a[0]==='verz'){ const s = verzScore(bd, op); return s?cbadge(s.cond):''; }
+    if(a[3]==='zes') return isNum(E[a[0]])?cbadge(+E[a[0]]):'';
+    if(a[3]==='weg') return isNum(E.crowweg)?cbadge(+E.crowweg):'';
+    if(a[3]==='crow') return E.crowbk?`<span class="cb" style="background:${crowKleur(E.crowbk)}">${E.crowbk}</span>`:'';
+    if(a[3]==='spec') return E.spec?.status?`<span class="badge" style="${E.spec.status==='Vereist'?'background:#fdecea;color:#c0392b':''}">${esc(E.spec.status)}${E.spec.type?': '+esc(E.spec.type):''}</span>`:''; };
+  const specs = items('inspecties').flatMap(i=>Object.entries(opnames()[i.id]||{}).filter(([,o])=>['Gewenst','Vereist'].includes(o.extra?.spec?.status)).map(([bid,o])=>[i, state.data.assets.find(a=>a.id===bid), o.extra.spec]));
+  return `<div class="note small">Bijlage C (informatief): naast de technische conditiemeting kan de inspecteur aanvullende opnamen doen. De eigenaar of beheerder kiest welke. Advies van de norm: neem minimaal de <b>verzorgingsscore</b> mee — esthetische gebreken zoals graffiti, vuil en begroeiing tellen niet meer mee in de conditie. Je legt de scores vast per bouwdeel in de Gebrekenregistratie.</div>
+    <div style="display:flex;gap:10px;align-items:end;margin-bottom:12px"><div class="ctl"><label>Inspectie</label><select data-oinsp="1">${ins.map(i=>`<option value="${i.id}" ${i.id===insp.id?'selected':''}>${esc(i.titel||'(naamloos)')}${i.datum?' · '+i.datum:''}</option>`).join('')}</select></div>
+      <span class="small muted">Meegenomen: ${aan.length?aan.map(a=>a[1]).join(', '):'geen — selecteer bij de inspectie'}</span></div>
+    ${specs.length?`<div class="warn small"><b>Openstaand specialistisch onderzoek</b>${specs.map(([i,b,s])=>`<div>${s.status==='Vereist'?'⚠':'○'} ${esc(b?.naam||'?')} — ${esc(s.type||'onderzoek')} (${esc(s.status.toLowerCase())}) · ${esc(i.titel||'')}</div>`).join('')}</div>`:''}
+    <div class="panel" style="overflow:auto">${bds.length&&aan.length?`<table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Bouwdeel</th><th>Conditie</th>${aan.map(a=>`<th>${a[1]}</th>`).join('')}</tr>
+      ${bds.map(b=>{ const r = ops[b.id].status&&ops[b.id].status!=='niet' ? berekenBouwdeel(bdInput(b, ops[b.id], insp)) : null; return `<tr style="border-top:1px solid var(--line)"><td style="padding:6px"><a href="#conditie" data-ctab="gebreken" data-obdgo="${b.id}">${esc(b.naam)}</a></td><td>${r&&!r.error?cbadge(r.cond):''}</td>${aan.map(a=>`<td>${cel(b,a)||''}</td>`).join('')}</tr>`; }).join('')}</table>`
+      :'<p class="muted small" style="margin:0">Nog geen bouwdelen opgenomen in deze inspectie, of geen aanvullende inspecties geselecteerd.</p>'}</div>
+    <div class="panel" style="margin-top:12px"><h3>Koppeling met NEN 8026</h3><table style="width:100%;border-collapse:collapse;font-size:13px">${AANV.map(a=>`<tr style="border-top:1px solid var(--line)"><td style="padding:5px"><b>${a[1]}</b></td><td class="small">${a[2]}</td><td class="small">waardeaspect <b>${a[4]}</b></td></tr>`).join('')}</table>
+      <p class="small muted" style="margin:8px 0 0">Een instandhoudingseis met maatstaf "verzorgingsscore" of "CROW beeldkwaliteit" wordt automatisch getoetst aan deze scores, net als conditie-eisen aan de conditiescore.</p></div>`;
 }
 
 /* ---------------- Overige modules (nog te bouwen) ---------------- */
@@ -2130,9 +2220,12 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.vadd){ opnames()[ui.oinsp][ui.obd].extra.verz.gebreken.push({id:uid(), oms:'', ernst:'', int:'', omv:''}); save(); rerender(); return; }
+    if(d.vdel){ const V = opnames()[ui.oinsp][ui.obd].extra.verz; V.gebreken = V.gebreken.filter(g=>g.id!==d.vdel); save(); rerender(); return; }
+    if(d.obdgo){ ui.obd = d.obdgo; ui.ctab = 'gebreken'; window.scrollTo(0,0); route(); return; }
     if(d.bibimp){ const f = document.getElementById('bibfile'); f.onchange = async ()=>{ try{ importBib(await f.files[0].text(), f.files[0].name); rerender(); }catch(err){ console.log('Ongeldig bibliotheekbestand', err); } }; f.click(); return; }
     if(d.bibcsv){ exportBibCSV(); return; }
     if(d.bibdel){ if(ui.bibarmed){ delete state.data.bib; bibIndex = null; ui.bibarmed = false; save(); } else { ui.bibarmed = true; r.textContent = 'Klik nogmaals om te verwijderen'; return; } rerender(); return; }
@@ -2225,6 +2318,10 @@ main.addEventListener('input', e=>{
   if(d.oinsp){ ui.oinsp = el.value; ui.obd = null; rerender(); return; }
   if(d.ost){ opnames()[ui.oinsp][ui.obd].status = el.value; save(); rerender(); return; }
   if(d.ovo){ opnames()[ui.oinsp][ui.obd].vervalOmv = el.value; save(); refreshCalc(); return; }
+  if(d.ex){ opnames()[ui.oinsp][ui.obd].extra[d.ex] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(d.exs){ const E = opnames()[ui.oinsp][ui.obd].extra; (E.spec ||= {})[d.exs] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(d.exv){ opnames()[ui.oinsp][ui.obd].extra.verz[d.exv] = el.value; save(); rerender(); return; }
+  if(d.vg){ const g = opnames()[ui.oinsp][ui.obd].extra.verz.gebreken.find(x=>x.id===d.vid); g[d.vg] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(el.id==='bq'){ ui.bq = el.value; const pos = el.selectionStart; rerender(); const i2 = document.getElementById('bq'); i2.focus(); i2.setSelectionRange(pos,pos); return; }
   if(d.gpick){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gpick); const bd = state.data.assets.find(a=>a.id===ui.obd); const sec = bibSectie(bd.code);
     const x = el.value===''?null:sec.gebreken[+el.value];

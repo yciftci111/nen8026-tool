@@ -7,48 +7,145 @@
 <style>
   :root{
     --bg:#f5f6f4; --panel:#ffffff; --ink:#1d2321; --muted:#5f6b66; --line:#dde2df;
-    --accent:#1f6f5c; --accent-soft:#e3f0ec;
+    --accent:#1f6f5c; --accent-soft:#e3f0ec; --scope:#6aa84f;
     --l1:#7a4b8c; --l2:#2d5f9a; --l3:#1f6f5c; --l4:#b5651d;
+    --l1s:#f3ecf6; --l2s:#e8eff8; --l3s:#e3f0ec; --l4s:#f9eee3;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
-  header{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header{background:var(--panel);border-bottom:1px solid var(--line);padding:12px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
   header h1{font-size:18px;margin:0;font-weight:650}
   header .sub{color:var(--muted);font-size:13px}
   header .spacer{flex:1}
-  select,button{font:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+  .ctl{display:flex;flex-direction:column;gap:2px}
+  .ctl label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  select,button,input,textarea{font:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  button{cursor:pointer}
+  button:hover{border-color:#b9c3be}
   button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 62px)}
-  nav{background:var(--panel);border-right:1px solid var(--line);padding:16px 0}
+  button.danger{color:#a3322a}
+  button.danger.armed{background:#a3322a;color:#fff;border-color:#a3322a}
+  .layout{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 64px)}
+  nav{background:var(--panel);border-right:1px solid var(--line);padding:12px 0}
   nav .group{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:14px 20px 6px}
-  nav a{display:flex;align-items:center;gap:10px;padding:8px 20px;color:var(--ink);text-decoration:none;font-size:14px;border-left:3px solid transparent}
+  nav a{display:flex;align-items:center;gap:10px;padding:7px 20px;color:var(--ink);text-decoration:none;font-size:14px;border-left:3px solid transparent}
   nav a:hover{background:var(--bg)}
   nav a.active{background:var(--accent-soft);border-left-color:var(--accent);font-weight:600}
+  nav a.dim{opacity:.38}
   nav .dot{width:9px;height:9px;border-radius:50%;flex:none}
-  main{padding:28px 36px;max-width:1000px}
+  main{padding:26px 34px;max-width:1150px}
   main h2{margin:0 0 4px;font-size:24px}
-  .ref{color:var(--muted);font-size:13px;margin-bottom:20px}
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
-  .card h3{margin:0 0 6px;font-size:15px}
+  h3{font-size:16px;margin:0 0 6px}
+  .ref{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
   .card p{margin:0;color:var(--muted);font-size:13px}
-  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:#eee;color:var(--muted);margin-top:10px}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:#eee;color:var(--muted)}
   .badge.todo{background:#fff3e0;color:#9a5b00}
-  .note{background:var(--accent-soft);border-radius:10px;padding:14px 16px;margin-bottom:22px;font-size:14px}
-  @media (max-width:760px){.layout{grid-template-columns:1fr}nav{border-right:none;border-bottom:1px solid var(--line)}main{padding:20px}}
+  .badge.ok{background:var(--accent-soft);color:var(--accent)}
+  .note{background:var(--accent-soft);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:14px}
+  .warn{background:#fff6e5;border:1px solid #f0d9a8;border-radius:10px;padding:12px 16px;margin:14px 0;font-size:14px}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:8px 0 18px;flex-wrap:wrap}
+  .tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 12px;color:var(--muted)}
+  .tabs button.on{border-bottom-color:var(--accent);color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .info{margin-top:14px;min-height:60px}
+  .info .panel{border-left:4px solid var(--accent)}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+
+  /* ---------- Methodekaart (eigen weergave van de stappen) ---------- */
+  .map{display:grid;grid-template-columns:38px 1fr 38px;gap:8px}
+  .side{border-radius:8px;background:#eef1ef;color:var(--muted);writing-mode:vertical-rl;transform:rotate(180deg);
+        display:flex;align-items:center;justify-content:center;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;cursor:pointer}
+  .side.right{transform:none}
+  .side:hover{background:#e2e8e5;color:var(--ink)}
+  .bands{display:flex;flex-direction:column;gap:6px;position:relative}
+  .band{border-radius:10px;padding:10px 12px 12px;position:relative}
+  .band .bh{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:8px}
+  .band .bh span:last-child{font-weight:500;color:var(--muted)}
+  .b1{background:var(--l1s)} .b2{background:var(--l2s)} .b3{background:var(--l3s)} .b4{background:var(--l4s)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .col{display:flex;flex-direction:column;gap:6px}
+  .colh{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;font-weight:600}
+  .step{background:#fff;border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:13px;cursor:pointer;text-align:left;width:100%;display:flex;justify-content:space-between;gap:6px;align-items:center}
+  .step:hover{border-color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .step.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .step.out{border-style:dashed;color:var(--muted)}
+  .step.dim{opacity:.35}
+  .step .r{font-size:11px;color:var(--muted);white-space:nowrap}
+  .step.phase{background:var(--l2);color:#fff;border-color:var(--l2);font-weight:600;justify-content:center}
+  .step.phase .r{color:#dfe8f3}
+  .scopebox{border:2px solid var(--scope);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;position:relative}
+  .scopetag{position:absolute;top:-11px;right:14px;background:var(--scope);color:#fff;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+  .legend i{display:inline-block;width:18px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+
+  /* ---------- Levensfasen ---------- */
+  .phases{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .ph{flex:1;min-width:120px;padding:14px 8px;text-align:center;border-radius:8px;border:2px solid var(--l2);font-weight:600;font-size:13px;cursor:pointer;background:#fff;color:var(--l2)}
+  .ph.in{background:var(--l2);color:#fff}
+  .ph.sel{outline:3px solid var(--scope);outline-offset:2px}
+  .arrow{color:var(--muted)}
+
+  /* ---------- Rollenpiramide ---------- */
+  .pyr{display:grid;grid-template-columns:130px 1fr 1fr 150px;gap:8px;align-items:stretch}
+  .pyr .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+  .tier{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;min-height:56px;cursor:pointer;text-align:center;padding:4px 6px}
+  .lvl{border-radius:8px;display:flex;align-items:center;padding:8px 10px;font-size:13px;font-weight:600}
+  .tasks{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px}
+  .prod{border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;text-align:center}
+  .pyr .rowsel .tasks{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+
+  /* ---------- Begrippen ---------- */
+  .gl-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .gl-tools input{flex:1;min-width:220px}
+  .gl{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+  .term{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .term b{font-size:14px}
+  .term .tag{float:right;font-size:11px;color:var(--muted)}
+  .term p{margin:6px 0 0;font-size:13px}
+  .chip{font-size:12px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);background:#fff;cursor:pointer}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  /* ---------- Assetstructuur ---------- */
+  .tree-wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:16px}
+  .tree{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;min-height:300px}
+  .node{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:14px}
+  .node:hover{background:var(--bg)}
+  .node.sel{background:var(--accent-soft)}
+  .node .lv{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;white-space:nowrap}
+  .fase{font-size:11px;padding:1px 7px;border-radius:99px;margin-left:auto;white-space:nowrap}
+  .f-gebruik{background:#e8eff8;color:#2d5f9a}
+  .f-op{background:#e7f4e1;color:#3d7a26}
+  .f-af{background:#fdeee0;color:#9a5b00}
+  .f-weg{background:#eee;color:#777}
+  .form{display:grid;gap:10px}
+  .form label{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+  .form input,.form select,.form textarea{width:100%}
+  .krit{display:flex;gap:4px}
+  .krit button{flex:1;padding:6px 0}
+  .krit button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  footer{color:var(--muted);font-size:12px;padding:30px 0 10px}
+
+  @media (max-width:860px){
+    .layout{grid-template-columns:1fr} nav{border-right:none;border-bottom:1px solid var(--line)}
+    main{padding:18px} .tree-wrap{grid-template-columns:1fr} .pyr{grid-template-columns:90px 1fr} .pyr .tasks,.pyr .prod,.pyr .h:nth-child(n+3){display:none}
+    .row{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.2</div>
   </div>
   <div class="spacer"></div>
-  <label class="sub" for="sector">Sectorsjabloon</label>
-  <select id="sector"></select>
-  <button id="btnExport">Exporteren</button>
-  <button id="btnImport">Importeren</button>
+  <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
+  <div class="ctl"><label for="sector">Sector</label><select id="sector"></select></div>
+  <div class="ctl"><label>&nbsp;</label><div style="display:flex;gap:6px">
+    <button id="btnExport">Exporteren</button><button id="btnImport">Importeren</button></div></div>
   <input type="file" id="fileImport" accept=".json" hidden>
 </header>
 
@@ -58,123 +155,440 @@
 </div>
 
 <script>
-/* ============================================================
-   Structuur van de tool (volgt de hoofdstukindeling van NEN 8026).
-   Let op: hier staat GEEN normtekst, alleen verwijzingen naar paragrafen.
-   ============================================================ */
+/* ==================================================================
+   NB: Deze tool bevat GEEN tekst of figuren uit NEN 8026.
+   Omschrijvingen zijn eigen samenvattingen; figuren zijn eigen
+   weergaven. Raadpleeg altijd de norm zelf (verwijzingen per §).
+   ================================================================== */
+
+/* ---------------- Rollen ---------------- */
+const ROLLEN = {
+  alle:{naam:'Alle rollen'},
+  AO:{naam:'Asset owner (AO)', niveaus:['bestuurlijk']},
+  GAO:{naam:'Gemandateerd asset owner', niveaus:['strategisch']},
+  AM:{naam:'Assetmanager (AM)', niveaus:['strategisch','tactisch']},
+  SP:{naam:'Serviceprovider (SP)', niveaus:['operationeel']},
+};
+
+/* ---------------- Modules (menu) ---------------- */
 const MODULES = [
-  { id:'start', group:'Basis', title:'Start', ref:'', color:'var(--accent)',
-    intro:'Overzicht van de tool en de vier niveaus van de methode.',
-    parts:[] },
-  { id:'basis', group:'Basis', title:'Begrippen & methode', ref:'H3 en H4', color:'var(--accent)',
-    parts:[
-      ['Begrippenlijst','§3'], ['Levensfasen van assets','§4.4'],
-      ['Assetmanagementorganisatie','§4.7'], ['Methode op hoofdlijnen','§4.8']
-    ]},
-  { id:'bestuurlijk', group:'Niveaus', title:'Bestuurlijk niveau', ref:'H5', color:'var(--l1)',
-    parts:[
-      ['Belangen stakeholders','§5.3.1'], ['Organisatiedoelstellingen','§5.3.2'],
-      ['Randvoorwaarden','§5.3.3'], ['Perspectief en besluit','§5.3.4'],
-      ['Dilemma\'s','§5.3.5'], ['Tijdige communicatie','§5.3.6'],
-      ['Assessment','§5.4'], ['Informatiebehoefte','§5.5']
-    ]},
-  { id:'strategisch', group:'Niveaus', title:'Strategisch niveau', ref:'H6', color:'var(--l2)',
-    parts:[
-      ['Assetmanagementdoelstellingen','§6.3.1'], ['Levensfasen vaststellen','§6.3.2'],
-      ['Consequenties inzichtelijk','§6.3.3'], ['Dilemma\'s','§6.3.4'],
-      ['Vastlegging','§6.3.5'], ['Assessment','§6.4'], ['Informatiebehoefte','§6.5']
-    ]},
-  { id:'tactisch', group:'Niveaus', title:'Tactisch niveau', ref:'H7', color:'var(--l3)',
-    parts:[
-      ['Waardekompassen opstellen','§7.3.1'], ['Waardekompassen bijstellen','§7.3.2'],
-      ['Instandhoudingseisen','§7.3.3'], ['Risicoanalyse','§7.3.4'],
-      ['Instandhoudingsconcepten opstellen','§7.3.5'], ['Instandhoudingsconcepten bijstellen','§7.3.6'],
-      ['Uitvoeringseisen','§7.3.7'], ['Plannen en begrotingen','§7.3.8'],
-      ['Advies aan asset owner','§7.3.9'], ['Dilemma\'s','§7.3.10'],
-      ['Vastlegging','§7.3.11'], ['Assessment','§7.4'], ['Informatiebehoefte','§7.5']
-    ]},
-  { id:'operationeel', group:'Niveaus', title:'Operationeel niveau', ref:'H8', color:'var(--l4)',
-    parts:[
-      ['Werkzaamheden instandhouding','§8.2.1'], ['Observaties','§8.2.2'],
-      ['Assetportfolio inventariseren','§8.2.3'], ['Vastlegging','§8.2.4'],
-      ['Assessment','§8.3'], ['Informatiebehoefte','§8.4']
-    ]},
-  { id:'waardeaspecten', group:'Instellingen', title:'Waardeaspectentabel', ref:'Bijlage A', color:'var(--muted)',
+  { id:'start', group:'Basis', title:'Methodekaart', color:'var(--accent)' },
+  { id:'basis', group:'Basis', title:'Begrippen & methode', ref:'H3 en H4', color:'var(--accent)' },
+  { id:'bestuurlijk', group:'Niveaus', title:'Bestuurlijk niveau', ref:'H5', color:'var(--l1)', product:'Kaders',
+    parts:[['Belangen stakeholders','§5.3.1'],['Organisatiedoelstellingen','§5.3.2'],['Randvoorwaarden','§5.3.3'],
+      ['Perspectief en besluit','§5.3.4'],['Dilemma\'s','§5.3.5'],['Tijdige communicatie','§5.3.6'],['Assessment','§5.4'],['Informatiebehoefte','§5.5']]},
+  { id:'strategisch', group:'Niveaus', title:'Strategisch niveau', ref:'H6', color:'var(--l2)', product:'SAMP',
+    parts:[['Waardeaspecten bijeenbrengen','§4.8 fig. 5 / H6'],['Assetmanagementdoelstellingen','§6.3.1'],['Levensfasen vaststellen','§6.3.2'],
+      ['Consequenties inzichtelijk','§6.3.3'],['Dilemma\'s','§6.3.4'],['Vastlegging','§6.3.5'],['Assessment','§6.4'],['Informatiebehoefte','§6.5']]},
+  { id:'tactisch', group:'Niveaus', title:'Tactisch niveau', ref:'H7', color:'var(--l3)', product:'AMP',
+    parts:[['Waardekompassen opstellen','§7.3.1'],['Waardekompassen bijstellen','§7.3.2'],['Instandhoudingseisen','§7.3.3'],['Risicoanalyse','§7.3.4'],
+      ['Instandhoudingsconcepten opstellen','§7.3.5'],['Instandhoudingsconcepten bijstellen','§7.3.6'],['Uitvoeringseisen','§7.3.7'],
+      ['Plannen en begrotingen','§7.3.8'],['Advies aan asset owner','§7.3.9'],['Dilemma\'s','§7.3.10'],['Vastlegging','§7.3.11'],['Assessment','§7.4'],['Informatiebehoefte','§7.5']]},
+  { id:'operationeel', group:'Niveaus', title:'Operationeel niveau', ref:'H8', color:'var(--l4)', product:'Uitvoeringsplannen',
+    parts:[['Werkzaamheden instandhouding','§8.2.1'],['Observaties','§8.2.2'],['Assetportfolio inventariseren','§8.2.3'],
+      ['Vastlegging','§8.2.4'],['Assessment','§8.3'],['Informatiebehoefte','§8.4']]},
+  { id:'assets', group:'Inrichting', title:'Assetstructuur', ref:'§3.10–3.14, §4.4', color:'var(--muted)' },
+  { id:'waardeaspecten', group:'Inrichting', title:'Waardeaspectentabel', ref:'Bijlage A', color:'var(--muted)',
     parts:[['Waardeaspecten beheren','Bijlage A']] },
 ];
 
-/* Sectorsjablonen: worden later gevuld (Bijlage B en C als eerste voorbeelden). */
+/* ---------------- Sectoren (doelgroepen uit §4.2) ---------------- */
 const SECTOREN = [
-  {id:'leeg', naam:'Leeg (zelf inrichten)'},
-  {id:'onderwijs', naam:'Vastgoed – onderwijs (Bijlage B)'},
-  {id:'infra', naam:'Infrastructuur (Bijlage C)'},
+  {id:'leeg', naam:'Algemeen / zelf inrichten', niveaus:['Assetportfolio','Assetsysteem','Beheerobject','Onderdeel'], vb:'bijv. portfolio → systeem → object → onderdeel'},
+  {id:'overheid', naam:'Rijk, provincie of gemeente', niveaus:['Assetportfolio','Assetsysteem','Beheerobject','Onderdeel'], vb:'bijv. Infra → Wegennet → Brug N201 → Lager'},
+  {id:'waterschap', naam:'Waterschap of drinkwaterbedrijf', niveaus:['Assetportfolio','Watersysteem','Kunstwerk','Onderdeel'], vb:'bijv. Watersysteem → Polder X → Gemaal Y → Pomp 1'},
+  {id:'haven', naam:'Havenbedrijf of luchthaven', niveaus:['Assetportfolio','Assetsysteem','Beheerobject','Onderdeel'], vb:'bijv. Kades → Kade 7 → Bolder'},
+  {id:'commercieel', naam:'Commerciële of particuliere eigenaar', niveaus:['Vastgoedportefeuille','Complex','Gebouw','Bouwdeel'], vb:'bijv. Kantoren → Complex A → Gebouw 1 → Installaties'},
+  {id:'woning', naam:'Woningcorporatie', niveaus:['Woningbezit','Complex','Woongebouw','Bouwdeel'], vb:'bijv. Bezit → Complex 120 → Flat → Dak'},
+  {id:'zorg', naam:'Zorginstelling', niveaus:['Zorgvastgoed','Locatie','Gebouw','Bouwdeel'], vb:'bijv. Locatie Noord → Hoofdgebouw → Liften'},
+  {id:'onderwijs', naam:'Onderwijsinstelling', niveaus:['Onderwijsvastgoed','Locatie','Gebouw','Bouwdeel'], vb:'bijv. Campus → Gebouw B → Gevel'},
 ];
 
-/* ---------- Opslag in de browser (met back-up via export) ---------- */
-const STORE_KEY = 'nen8026-tool-v1';
-function load(){
-  try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {sector:'leeg', data:{}}; }
-  catch(e){ return {sector:'leeg', data:{}}; }
-}
-function save(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
-}
-let state = load();
+/* ---------------- Methodekaart: stappen (eigen weergave van §4.8) ---------------- */
+const STAPPEN = {
+  b1:{t:'Organisatiedoelen, AM-beleid en portfolio samenstellen', lv:'bestuurlijk', rol:'AO', ref:'§5.3.2', mod:'bestuurlijk', scope:false,
+      u:'De asset owner bepaalt waar de organisatie voor staat, geeft richting met assetmanagementbeleid en bepaalt welke assets tot het portfolio horen.'},
+  b2:{t:'Portfolioperspectief formuleren', lv:'bestuurlijk', rol:'AO', ref:'§5.3.4', mod:'bestuurlijk', scope:false,
+      u:'Een beeld van de gewenste toekomst van het portfolio. Dit voedt (indirect) de keuze voor gebruiksfase.'},
+  b3:{t:'Portfoliobesluit nemen', lv:'bestuurlijk', rol:'AO', ref:'§5.3.4', mod:'bestuurlijk', scope:false,
+      u:'Een besluit tot wijzigen (op- of afwaarderen, afstoten) brengt assets in de transitiefase.'},
+  s1:{t:'Waardeaspecten bijeenbrengen', lv:'strategisch', rol:'AM', ref:'§4.6, H6', mod:'strategisch', scope:true,
+      u:'De organisatie stelt haar eigen lijst van waardeaspecten samen. Die is het hulpmiddel om AM-doelstellingen op te stellen.'},
+  s2:{t:'Assetmanagementdoelstellingen formuleren', lv:'strategisch', rol:'AM', ref:'§6.3.1', mod:'strategisch', scope:true,
+      u:'Organisatiedoelen worden vertaald naar doelen voor de assets, vastgelegd in het SAMP.'},
+  s3:{t:'Levensfasen vaststellen', lv:'strategisch', rol:'AM', ref:'§6.3.2', mod:'strategisch', scope:true,
+      u:'Per assetsysteem of beheerobject: zit het in de gebruiksfase of in de transitiefase? Dat bepaalt welk spoor hieronder gevolgd wordt.'},
+  pg:{t:'Gebruiksfase', lv:'strategisch', phase:true, ref:'§3.21, §4.4', mod:'basis', scope:true,
+      u:'De asset is in gebruik en vervult de vereiste functie. Volg het linkerspoor: opstellen.'},
+  pt:{t:'Transitiefase', lv:'strategisch', phase:true, ref:'§3.43, §4.4', mod:'basis', scope:true,
+      u:'Er is besloten tot een wijziging die nog niet is uitgevoerd. Volg het rechterspoor: aanpassen en bijstellen.'},
+  g1:{t:'Waardekompassen opstellen', lv:'tactisch', rol:'AM', ref:'§7.3.1', mod:'tactisch', scope:true,
+      u:'Het hart van de methode: welke waardeaspecten spelen bij dit beheerobject of assettype, en hoe zwaar?'},
+  g2:{t:'Instandhoudingseisen formuleren', lv:'tactisch', rol:'AM', ref:'§7.3.3', mod:'tactisch', scope:true,
+      u:'Prestatie-eisen, eisen aan de fysieke staat en eisen aan esthetica/verzorging. Iteratief met de risicoanalyse.'},
+  g3:{t:'Risicoanalyse uitvoeren', lv:'tactisch', rol:'AM', ref:'§7.3.4', mod:'tactisch', scope:true,
+      u:'Wat gebeurt er als niet aan de eisen wordt voldaan? Uitkomst kan de eisen weer bijstellen (terugkoppeling).'},
+  g4:{t:'Instandhoudingsconcepten opstellen', lv:'tactisch', rol:'AM', ref:'§7.3.5', mod:'tactisch', scope:true,
+      u:'Hoe houden we het in stand: onderhoud (SAO/GAO/TAO), observaties, instructies, incident- en calamiteitenmanagement.'},
+  g5:{t:'Uitvoeringseisen formuleren', lv:'tactisch', rol:'AM', ref:'§7.3.7', mod:'tactisch', scope:true,
+      u:'Eisen aan de uitvoering, als basis voor de opdracht aan de serviceprovider.'},
+  g6:{t:'Instandhoudingsplannen en begroting opstellen', lv:'tactisch', rol:'AM', ref:'§7.3.8', mod:'tactisch', scope:false,
+      u:'Plannen en begroting volgen uit de eisen en concepten. Valt buiten het kader van de methode zelf.'},
+  t1:{t:'Waardekompas aanpassen', lv:'tactisch', rol:'AM', ref:'§7.3.2', mod:'tactisch', scope:true,
+      u:'Bij een op- of afwaarderingsbesluit wordt het waardekompas (tijdelijk) bijgesteld.'},
+  t2:{t:'Instandhoudingseisen aanpassen', lv:'tactisch', rol:'AM', ref:'§7.3.3', mod:'tactisch', scope:true,
+      u:'Eisen kunnen per levensfase verschillen, bijv. lagere eisen aan een gebouw dat wordt afgestoten.'},
+  t3:{t:'Risicoanalyse actualiseren', lv:'tactisch', rol:'AM', ref:'§7.3.4', mod:'tactisch', scope:true,
+      u:'Risico\'s opnieuw beoordelen in het licht van de komende wijziging.'},
+  t4:{t:'Instandhoudingsconcepten bijstellen', lv:'tactisch', rol:'AM', ref:'§7.3.6', mod:'tactisch', scope:true,
+      u:'Concept aanpassen aan de transitie, bijv. van TAO naar SAO bij naderende sloop.'},
+  t5:{t:'Uitvoeringseisen bijstellen', lv:'tactisch', rol:'AM', ref:'§7.3.7', mod:'tactisch', scope:true,
+      u:'Uitvoeringseisen in lijn brengen met de bijgestelde concepten.'},
+  t6:{t:'Plannen en begroting bijstellen', lv:'tactisch', rol:'AM', ref:'§7.3.8', mod:'tactisch', scope:false,
+      u:'Plannen en begroting aanpassen aan de transitie.'},
+  o1:{t:'Uitvoering', lv:'operationeel', rol:'SP', ref:'§8.2', mod:'operationeel', scope:false,
+      u:'De serviceprovider voert werkzaamheden en observaties uit en rapporteert terug.'},
+  check:{t:'Check: assessment', lv:'alle', ref:'§4.8', mod:'basis', scope:false,
+      u:'Op elk niveau: observeren, verifiëren (voldoen we aan wat is afgesproken?) en valideren (doen we de juiste dingen?).'},
+  act:{t:'Act: evalueren en bijsturen', lv:'alle', ref:'§4.8', mod:'basis', scope:false,
+      u:'Op basis van de assessments wordt op elk niveau bijgestuurd. Zo sluit de PDCA-cirkel.'},
+};
 
-/* ---------- Weergave ---------- */
+/* ---------------- Begrippen: eigen korte omschrijvingen ---------------- */
+const BOUWSTENEN = ['Rollen','Assetstructuur','Sturing en doelen','Eisen en concepten','Levensfasen','Risico','Uitvoering en meting','Toetsen en verbeteren'];
+const BEGRIPPEN = [
+  ['3.1','afschrijven','','Levensfasen','Jaarlijkse boekhoudkundige waardevermindering omdat een asset een beperkte levensduur heeft.'],
+  ['3.2','afwaarderen','','Levensfasen','Bewust verlagen van de verwachte waarde van een asset, bijv. door functie te verminderen, levensduur niet te verlengen of risico\'s te accepteren (leegstand, afstoten, slopen).'],
+  ['3.3','assessment','','Toetsen en verbeteren','Systematisch data verzamelen en analyseren om de status van iets vast te stellen.'],
+  ['3.4','asset','','Assetstructuur','Alles wat (mogelijk) waarde heeft voor de organisatie. Deze methode richt zich op fysieke assets.'],
+  ['3.5','assetmanagement','','Sturing en doelen','Gecoördineerd werken om waarde uit assets te halen, in balans tussen kosten, risico\'s, kansen en prestaties.'],
+  ['3.6','assetmanagementplan','AMP','Sturing en doelen','Plan met activiteiten, mensen, middelen en planning per asset(groep) om de AM-doelstellingen te halen; afgeleid van het SAMP.'],
+  ['3.7','assetmanagementsysteem','','Sturing en doelen','Managementsysteem dat het assetmanagementbeleid en de AM-doelstellingen vaststelt.'],
+  ['3.8','assetmanager','AM','Rollen','Rol die beleid en plannen ontwikkelt om de AM-doelstellingen te realiseren en werk uitbesteedt aan de serviceprovider.'],
+  ['3.9','asset owner','AO','Rollen','Eigenaar van het assetportfolio; bepaalt waardeaspecten en AM-doelen. Meestal bestuur of directie.'],
+  ['3.10','assetportfolio','','Assetstructuur','Alle assets die onder het assetmanagementsysteem vallen.'],
+  ['3.11','assetsysteem','','Assetstructuur','Samenhangend stelsel van assets op portfolioniveau, bijv. een wegennet of watersysteem.'],
+  ['3.12','assettype','','Assetstructuur','Groep assets met gemeenschappelijke kenmerken, bijv. lineaire assets of ICT-assets.'],
+  ['3.13','beleid','','Sturing en doelen','De door de directie formeel uitgesproken bedoelingen en richting van de organisatie.'],
+  ['3.14','beheerobject','','Assetstructuur','Afgebakende eenheid met een eigen gebruiksfunctie, bijv. een brug, sluis of school.'],
+  ['3.15','compliance','','Toetsen en verbeteren','Voldoen aan alle verplichtingen waaraan de organisatie gebonden is.'],
+  ['3.16','data','','Uitvoering en meting','Feiten over een object, fysiek of niet-fysiek.'],
+  ['3.17','data- en informatiemanagement','','Uitvoering en meting','Alle activiteiten om informatie te verzamelen, verwerken, toetsen en beheren ter ondersteuning van besluiten over fysieke assets.'],
+  ['3.18','doelstelling','','Sturing en doelen','Een te behalen resultaat, op strategisch, tactisch of operationeel niveau.'],
+  ['3.19','gebouwde omgeving','','Assetstructuur','Door mensen gemaakte of onderhouden omgeving: gebouwen, infra, water, groen en nutsvoorzieningen.'],
+  ['3.20','gebruiksduurafhankelijk onderhoud','GAO','Eisen en concepten','Onderhoud op basis van de verstreken gebruiksduur.'],
+  ['3.21','gebruiksfase','','Levensfasen','De asset is in gebruik én vervult de vereiste functie.'],
+  ['3.22','gemandateerd asset owner','','Rollen','Iemand in de organisatie die namens de asset owner optreedt, vaak een directielid.'],
+  ['3.23','informatie','','Uitvoering en meting','Data die verwerkt en betekenisvol gemaakt is.'],
+  ['3.24','in stand houden','','Uitvoering en meting','Alle uitvoeringsactiviteiten om een asset te laten functioneren in lijn met de organisatiedoelen, in gebruiks- en transitiefase.'],
+  ['3.25','instandhoudingsconcept','','Eisen en concepten','De manier waarop assets in stand worden gehouden: onderhoud, observaties, instructies en incident-/calamiteitenmanagement.'],
+  ['3.26','instandhoudingseisen','','Eisen en concepten','Eisen aan assets: prestatie-eisen, eisen aan de fysieke staat en aan esthetica/verzorging. Opgesteld door de assetmanager.'],
+  ['3.27','investeren','','Levensfasen','Prestaties van een asset vergroten met een kapitaalinjectie.'],
+  ['3.28','kriticiteit','','Risico','Hoe belangrijk een asset is voor het halen van de organisatiedoelen; helpt risico\'s te rangschikken.'],
+  ['3.29','kritieke asset','','Risico','Asset waarvan falen grote gevolgen kan hebben, bijv. voor veiligheid, milieu of prestaties.'],
+  ['3.30','observatie','','Uitvoering en meting','Vaststellen van eigenschappen of toestand van een asset, bijv. schouw, inspectie, meting of destructief onderzoek.'],
+  ['3.31','onderhoud','','Uitvoering en meting','Activiteiten om een asset te behouden of te herstellen zodat hij zijn functie kan vervullen; preventief of correctief.'],
+  ['3.32','onderhoudsconcept','','Eisen en concepten','Het deel van het instandhoudingsconcept dat alleen over onderhoud gaat.'],
+  ['3.33','opwaarderen','','Levensfasen','De waarde van een asset verhogen, bijv. renovatie, uitbreiding van functies of vervanging.'],
+  ['3.34','organisatie','','Rollen','Persoon of groep met eigen functies, verantwoordelijkheden en doelen.'],
+  ['3.35','plan-do-check-act','PDCA','Toetsen en verbeteren','Verbetercyclus: plannen, uitvoeren, controleren, bijsturen.'],
+  ['3.36','prestatie','','Uitvoering en meting','De mate waarin assets aan de (instandhoudings)eisen of doelen voldoen.'],
+  ['3.37','risico','','Risico','Effect van onzekerheid op doelen, beschreven via bron, gebeurtenis, gevolg en kans.'],
+  ['3.38','serviceprovider','SP','Rollen','Rol die in opdracht van AM of AO werkzaamheden uitvoert en terugrapporteert; intern of extern.'],
+  ['3.39','stakeholder','','Rollen','Wie een besluit kan beïnvloeden of erdoor geraakt wordt (belanghebbende).'],
+  ['3.40','storingsafhankelijk onderhoud','SAO','Eisen en concepten','Pas ingrijpen na een storing; meestal alleen voor niet-kritieke assets.'],
+  ['3.41','strategisch assetmanagementplan','SAMP','Sturing en doelen','Plan dat organisatiedoelen vertaalt naar AM-doelstellingen en de aanpak voor de AMP\'s.'],
+  ['3.42','toestandsafhankelijk onderhoud','TAO','Eisen en concepten','Ingrijpen vóór het verwachte moment van falen, op basis van de toestand.'],
+  ['3.43','transitiefase','','Levensfasen','Periode tussen het besluit tot op- of afwaarderen en de uitvoering daarvan, inclusief de aanloop.'],
+  ['3.44','validatie','','Toetsen en verbeteren','Aantonen dat iets geschikt is voor het beoogde doel: doen we de juiste dingen?'],
+  ['3.45','verantwoording','','Toetsen en verbeteren','Rekenschap afleggen aan de directie over activiteiten en resultaten.'],
+  ['3.46','verificatie','','Toetsen en verbeteren','Aantonen dat aan de gestelde eisen is voldaan: doen we wat we hebben afgesproken?'],
+  ['3.47','waardeaspecten','','Sturing en doelen','Onderwerpen waarop de organisatie stuurt om waarde te realiseren; elke organisatie stelt haar eigen lijst samen.'],
+  ['3.48','waardekompas','','Sturing en doelen','Model dat aangeeft in welke mate de instandhoudingseisen bijdragen aan de waardeaspecten en doelen.'],
+];
+
+/* ---------------- Opslag ---------------- */
+const STORE_KEY = 'nen8026-tool-v1';
+const DEFAULT = {sector:'leeg', rol:'alle', data:{assets:[]}};
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); return s ? {...DEFAULT, ...s, data:{...DEFAULT.data, ...(s.data||{})}} : structuredClone(DEFAULT); }
+  catch(e){ return structuredClone(DEFAULT); }
+}
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+let state = load();
+let ui = {step:'g1', tab:'begrippen', phase:'gebruik', schil:'instandhouding', tier:'tactisch', glq:'', glb:'', node:null, armed:false};
+
+const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sector = () => SECTOREN.find(s=>s.id===state.sector) || SECTOREN[0];
+const rolNiveaus = () => ROLLEN[state.rol]?.niveaus || null;
 const nav = document.getElementById('nav');
 const main = document.getElementById('main');
 
+/* ---------------- Navigatie ---------------- */
 function renderNav(active){
+  const nv = rolNiveaus();
   let html = '', group = '';
   for(const m of MODULES){
     if(m.group !== group){ group = m.group; html += `<div class="group">${group}</div>`; }
-    html += `<a href="#${m.id}" class="${m.id===active?'active':''}">
+    const dim = nv && m.group==='Niveaus' && !nv.includes(m.id);
+    html += `<a href="#${m.id}" class="${m.id===active?'active':''} ${dim?'dim':''}">
       <span class="dot" style="background:${m.color}"></span>${m.title}</a>`;
   }
   nav.innerHTML = html;
 }
 
+/* ---------------- Methodekaart ---------------- */
+function stepBtn(id){
+  const s = STAPPEN[id]; const nv = rolNiveaus();
+  const dim = nv && !s.phase && s.lv!=='alle' && !nv.includes(s.lv);
+  return `<button class="step ${s.phase?'phase':''} ${s.scope===false&&!s.phase?'out':''} ${ui.step===id?'sel':''} ${dim?'dim':''}" data-step="${id}">
+    <span>${s.t}</span><span class="r">${s.ref}</span></button>`;
+}
 function renderStart(){
-  const levels = MODULES.filter(m=>m.group==='Niveaus');
-  return `<h2>Welkom</h2>
-    <div class="ref">Versie 0.1 – basisstructuur</div>
-    <div class="note">Deze tool ondersteunt de methode voor het waardegestuurd in stand houden
-    van assets in de gebouwde omgeving. Kies rechtsboven een sectorsjabloon en werk de vier
-    niveaus van boven naar beneden uit.</div>
-    <div class="cards">${levels.map(m=>`
-      <a href="#${m.id}" style="text-decoration:none;color:inherit">
-      <div class="card" style="border-top:4px solid ${m.color}">
-        <h3>${m.title}</h3><p>${m.ref} · ${m.parts.length} onderdelen</p>
-      </div></a>`).join('')}
-    </div>`;
+  const s = STAPPEN[ui.step];
+  const lvl = {bestuurlijk:'Bestuurlijk',strategisch:'Strategisch',tactisch:'Tactisch',operationeel:'Operationeel',alle:'Alle niveaus'}[s.lv];
+  return `<h2>Methodekaart</h2>
+  <div class="ref">Eigen weergave van de stappen in de methode · zie NEN 8026 §4.8</div>
+  <div class="note small">Klik op een stap voor uitleg en om naar het onderdeel te gaan. Het <b style="color:var(--scope)">groene kader</b> is de kern van de methode. Kies bovenin je rol om te zien welke stappen bij jou horen.</div>
+  <div class="map">
+    <div class="side" data-step="act">Act · evalueren en bijsturen</div>
+    <div class="bands">
+      <div class="band b1"><div class="bh"><span style="color:var(--l1)">Bestuurlijk · H5</span><span>asset owner · product: Kaders</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:8px">${stepBtn('b2')}${stepBtn('b1')}${stepBtn('b3')}</div>
+      </div>
+      <div class="scopebox"><span class="scopetag">KERN VAN DE METHODE</span>
+        <div class="band b2"><div class="bh"><span style="color:var(--l2)">Strategisch · H6</span><span>assetmanager · product: SAMP</span></div>
+          <div style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:6px">${stepBtn('s1')}${stepBtn('s2')}${stepBtn('s3')}</div>
+          <div class="row" style="margin-top:8px">${stepBtn('pg')}${stepBtn('pt')}</div>
+        </div>
+        <div class="band b3"><div class="bh"><span style="color:var(--l3)">Tactisch · H7</span><span>assetmanager · product: AMP</span></div>
+          <div class="row">
+            <div class="col"><div class="colh">Spoor gebruiksfase: opstellen</div>${['g1','g2','g3','g4','g5'].map(stepBtn).join('')}</div>
+            <div class="col"><div class="colh">Spoor transitiefase: aanpassen</div>${['t1','t2','t3','t4','t5'].map(stepBtn).join('')}</div>
+          </div>
+        </div>
+      </div>
+      <div class="band b3" style="padding-top:8px"><div class="row">${stepBtn('g6')}${stepBtn('t6')}</div></div>
+      <div class="band b4"><div class="bh"><span style="color:var(--l4)">Operationeel · H8</span><span>serviceprovider · product: Uitvoeringsplannen</span></div>
+        <div style="max-width:420px;margin:0 auto">${stepBtn('o1')}</div>
+      </div>
+    </div>
+    <div class="side right" data-step="check">Check · assessment</div>
+  </div>
+  <div class="legend"><span><i style="border:2px solid var(--scope)"></i>kern van de methode</span><span><i style="border:1px dashed #999"></i>buiten de kern, wel in de keten</span><span><i style="background:var(--l2)"></i>levensfase</span></div>
+  <div class="info"><div class="panel">
+    <div class="small muted">${lvl}${s.rol?' · '+ROLLEN[s.rol].naam:''} · ${s.ref}</div>
+    <h3 style="margin-top:4px">${s.t}</h3>
+    <p style="margin:6px 0 12px">${s.u}</p>
+    <a href="#${s.mod}"><button class="primary">Ga naar ${MODULES.find(m=>m.id===s.mod).title} →</button></a>
+  </div></div>`;
 }
 
+/* ---------------- Begrippen & methode (tabs) ---------------- */
+const TABS = [['begrippen','Begrippen'],['levensfasen','Levensfasen'],['schillen','AM · instandhouding · onderhoud'],['waarde','Waarde & scope'],['organisatie','Rollen & producten']];
+function renderBasis(){
+  const body = {begrippen:tabBegrippen, levensfasen:tabLevensfasen, schillen:tabSchillen, waarde:tabWaarde, organisatie:tabOrganisatie}[ui.tab]();
+  return `<h2>Begrippen & methode</h2><div class="ref">NEN 8026 H3 en H4 · omschrijvingen in eigen woorden, raadpleeg de norm voor de officiële tekst</div>
+    <div class="tabs">${TABS.map(([id,t])=>`<button data-tab="${id}" class="${ui.tab===id?'on':''}">${t}</button>`).join('')}</div>${body}`;
+}
+function tabBegrippen(){
+  const q = ui.glq.toLowerCase();
+  const list = BEGRIPPEN.filter(b=>(!ui.glb||b[3]===ui.glb) && (!q || (b[1]+' '+b[2]+' '+b[4]).toLowerCase().includes(q)));
+  return `<div class="gl-tools"><input id="glq" placeholder="Zoek een begrip…" value="${esc(ui.glq)}"></div>
+    <div class="gl-tools"><button class="chip ${!ui.glb?'on':''}" data-glb="">Alle (${BEGRIPPEN.length})</button>
+    ${BOUWSTENEN.map(b=>`<button class="chip ${ui.glb===b?'on':''}" data-glb="${b}">${b}</button>`).join('')}</div>
+    <div class="gl" id="glist">${list.map(b=>`<div class="term"><span class="tag">§${b[0]}</span><b>${b[1]}</b>${b[2]?` <span class="muted">(${b[2]})</span>`:''}
+      <p>${b[4]}</p><div style="margin-top:6px"><span class="badge">${b[3]}</span></div></div>`).join('') || '<p class="muted">Geen begrippen gevonden.</p>'}</div>`;
+}
+const FASEN = {
+  concept:{t:'Concept',in:false,u:'Buiten de scope. Ontwerpkeuzes beïnvloeden de instandhouding wel.'},
+  ontwikkeling:{t:'Ontwikkeling',in:false,u:'Buiten de scope.'},
+  realisatie:{t:'Realisatie',in:false,u:'Buiten de scope. In stand houden begint bij oplevering en ingebruikname.'},
+  gebruik:{t:'Gebruik',in:true,u:'Binnen de scope. De asset is in gebruik en vervult zijn functie. Instandhoudingseisen en -concepten worden opgesteld.'},
+  transitie:{t:'Transitie',in:true,u:'Binnen de scope. Er is besloten tot op- of afwaarderen; de transitiefase omvat ook de aanloop. Daarna terug naar gebruik, tenzij afgestoten of gesloopt. Eisen kunnen in deze fase anders zijn (zie §7.3.3).'},
+};
+function tabLevensfasen(){
+  const f = FASEN[ui.phase];
+  return `<div class="panel">
+    <div class="phases">${Object.entries(FASEN).map(([id,x],i)=>`${i?'<span class="arrow">›</span>':''}<div class="ph ${x.in?'in':''} ${ui.phase===id?'sel':''}" data-phase="${id}">${x.t}</div>`).join('')}</div>
+    <p class="small muted" style="text-align:right;margin:6px 0 0">↺ na de transitie terug naar gebruik · alleen gebruik en transitie vallen binnen NEN 8026 (§4.4)</p>
+    <div class="info"><div class="panel"><h3>${f.t} ${f.in?'<span class="badge ok">binnen scope</span>':'<span class="badge">buiten scope</span>'}</h3><p style="margin:0">${f.u}</p></div></div>
+  </div>
+  <div class="cards" style="margin-top:14px">
+    <div class="card"><h3>Opwaarderen (voorbeelden)</h3><p>Functie aanpassen (kantoor → woningen, weg naar hogere categorie), renovatie, verduurzamen, modernisering.</p></div>
+    <div class="card"><h3>Afwaarderen (voorbeelden)</h3><p>Functie verminderen (beweegbare brug → vaste brug), leegstand richting afstoten/slopen, versneld afschrijven.</p></div>
+    <div class="card"><h3>In de tool</h3><p>Elk object in de <a href="#assets">assetstructuur</a> krijgt een levensfase. Bij "transitie" volg je in de methodekaart het rechterspoor.</p></div>
+  </div>`;
+}
+const SCHILLEN = {
+  am:{t:'Assetmanagement', u:'Alle gecoördineerde activiteiten in alle levensfasen om waarde te realiseren uit assets.', l:['Assetmanagementdoelstellingen','Beleid','Rollen, verantwoordelijkheden, bevoegdheden','Risico\'s en kansen','Informatiemanagement','Alignment','Uitbesteding']},
+  instandhouding:{t:'Instandhouding (focus van NEN 8026)', u:'Alle uitvoeringsactiviteiten in gebruiks- en transitiefase om assets te laten functioneren in lijn met de organisatiedoelen.', l:['Operationele planning en beheersing','Monitoren, meten, analyseren, evalueren','Wijzigingen, modificaties, modernisaties','Incident- en calamiteitenmanagement','Begeleiding, bewaking, bediening']},
+  onderhoud:{t:'Onderhoud', u:'Activiteiten om een asset te behouden of te herstellen naar een staat waarin hij zijn functie vervult.', l:['Preventief','Correctief']},
+};
+function tabSchillen(){
+  const s = SCHILLEN[ui.schil];
+  const c = id => ui.schil===id ? 'stroke="var(--scope)" stroke-width="4"' : 'stroke="#fff" stroke-width="2"';
+  return `<div style="display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:20px;align-items:center">
+    <svg viewBox="0 0 300 300" style="width:100%;cursor:pointer" role="img" aria-label="Schillenmodel">
+      <circle data-schil="am" cx="150" cy="150" r="145" fill="#2d5f9a" ${c('am')}/>
+      <text x="150" y="48" text-anchor="middle" fill="#fff" font-size="15" font-weight="600" pointer-events="none">Assetmanagement</text>
+      <circle data-schil="instandhouding" cx="150" cy="180" r="100" fill="#8fb5dc" ${c('instandhouding')}/>
+      <text x="150" y="128" text-anchor="middle" fill="#123" font-size="14" font-weight="600" pointer-events="none">Instandhouding</text>
+      <circle data-schil="onderhoud" cx="150" cy="225" r="50" fill="#dbe8f5" ${c('onderhoud')}/>
+      <text x="150" y="230" text-anchor="middle" fill="#123" font-size="13" font-weight="600" pointer-events="none">Onderhoud</text>
+    </svg>
+    <div class="panel" style="border-left:4px solid var(--l2)"><h3>${s.t}</h3><p style="margin:0 0 8px">${s.u}</p>
+      <ul style="margin:0;padding-left:18px">${s.l.map(x=>`<li class="small">${x}</li>`).join('')}</ul>
+      <p class="small muted" style="margin:10px 0 0">Klik op een cirkel · zie §4.5. De lijst is niet uitputtend en mag per organisatie worden aangevuld.</p></div>
+  </div>`;
+}
+function tabWaarde(){
+  const box = (t,c='') => `<div style="background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:13px;text-align:center;${c}">${t}</div>`;
+  return `<div class="panel">
+    <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:12px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:8px">${box('Organisatiedoel en context')}${box('Organisatiedoelstellingen')}
+        <div style="flex:1;background:var(--l2);color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;text-align:center;padding:10px">Specificatie van waarde</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px">${box('Beslissingscriteria en assetmanagementbeleid','color:var(--muted);border-style:dashed')}
+        <div class="scopebox" style="padding:14px 10px 10px"><span class="scopetag">NEN 8026</span>
+          ${box('Assetmanagementdoelstellingen')}${box('Besluitvormingsprocessen')}
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">${box('Planning om AM-plannen en -doelen te bereiken')}${box('Uitvoering')}</div></div></div>
+      <div style="background:var(--l2);color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;text-align:center;padding:10px">Realisatie van waarde voor organisatie en stakeholders</div>
+    </div>
+    <p class="small muted" style="margin:10px 0 0">Vereenvoudigde eigen weergave; zie NEN 8026 §4.6 (afgeleid van NEN-ISO 55002).</p></div>
+  <div class="cards" style="margin-top:14px">
+    <div class="card"><h3>Waarden vs. waarde</h3><p><b>Organisatiewaarden</b>: principes die gedrag sturen. <b>Waarde</b>: wat een asset waard is, bepaald door organisatie en stakeholders.</p></div>
+    <div class="card"><h3>Waardegestuurd in stand houden</h3><p>Alle instandhoudingsactiviteiten dragen bewust bij aan de waarden van de organisatie. Waardeaspecten zijn het hulpmiddel.</p></div>
+    <div class="card" style="border-color:#f0d9a8"><h3>Buiten de methode</h3><p>Beslissingscriteria bepalen en tegenstrijdige eisen prioriteren · gerealiseerde waarde specificeren · waardegestuurd ontwerpen · monitoren, evalueren en bijsturen (§4.1, §4.6).</p></div>
+  </div>`;
+}
+const TIERS = [
+  {id:'bestuurlijk', lv:'Bestuurlijk', rol:'Asset owner', w:30, c:'var(--l1)', s:'var(--l1s)', taken:['Richting geven met assetmanagementbeleid','Samenstellen assetportfolio','Nemen van assetportfoliobesluiten'], prod:'Kaders'},
+  {id:'strategisch', lv:'Strategisch', rol:'(Gemandateerd) asset owner', w:52, c:'var(--l2)', s:'var(--l2s)', taken:['Formuleren assetmanagementdoelstellingen','Vaststellen levensfasen'], prod:'SAMP'},
+  {id:'tactisch', lv:'Tactisch', rol:'Assetmanager', w:76, c:'var(--l3)', s:'var(--l3s)', taken:['Per assetsysteem: ontwerpeisen','Instandhoudingseisen en -concepten','Uitvoeringseisen','Financiën','Data- en informatiemanagement','Organisatie'], prod:'AMP'},
+  {id:'operationeel', lv:'Operationeel', rol:'Serviceprovider', w:100, c:'var(--l4)', s:'var(--l4s)', taken:['Uitvoeren instandhoudingswerkzaamheden'], prod:'Uitvoeringsplannen'},
+];
+function tabOrganisatie(){
+  return `<div class="panel"><div class="pyr">
+    <div class="h">Niveau</div><div class="h" style="text-align:center">Rol</div><div class="h">Taken</div><div class="h">Product</div>
+    ${TIERS.map(t=>`
+      <div class="lvl" style="background:${t.s};color:${t.c}">${t.lv}</div>
+      <div style="display:flex;justify-content:center"><div class="tier" data-tier="${t.id}" style="width:${t.w}%;background:${t.c};border-radius:6px;${ui.tier===t.id?'outline:3px solid var(--scope);outline-offset:2px':''}">${t.rol}</div></div>
+      <div class="tasks" style="${ui.tier===t.id?'border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)':''}">${t.taken.join(' · ')}</div>
+      <div class="prod" style="background:${t.s};color:${t.c}">${t.prod}</div>`).join('')}
+  </div>
+  <p class="small muted" style="margin:12px 0 0">Eigen weergave · zie NEN 8026 §4.7. Dit zijn <b>rollen</b>, geen functies: één persoon kan meerdere rollen hebben, en taken kunnen (deels) worden uitbesteed. In vastgoed vullen bijv. vastgoed- of facilitymanagers de rol van assetmanager in.</p></div>
+  <div class="warn small"><b>Let op, voor jouw controle:</b> in deze verdeling ligt het strategisch niveau bij de (gemandateerd) asset owner, terwijl de stappenfiguur in §4.8 op strategisch niveau de <i>assetmanager</i> noemt. De tool laat beide rollen het strategisch niveau zien. Wil je dat anders?</div>`;
+}
+
+/* ---------------- Assetstructuur ---------------- */
+const FASE_OPT = [['gebruik','Gebruiksfase','f-gebruik'],['op','Transitie – opwaarderen','f-op'],['af','Transitie – afwaarderen','f-af'],['weg','Afgestoten / gesloopt','f-weg']];
+const uid = () => Math.random().toString(36).slice(2,9);
+function children(pid){ return state.data.assets.filter(a=>a.parent===pid); }
+function renderTree(pid, depth){
+  return children(pid).map(a=>{
+    const f = FASE_OPT.find(x=>x[0]===a.fase)||FASE_OPT[0];
+    const lv = sector().niveaus[Math.min(a.niveau,3)];
+    return `<div class="node ${ui.node===a.id?'sel':''}" data-node="${a.id}" style="padding-left:${8+depth*20}px">
+      <span class="lv">${esc(lv)}</span><span>${esc(a.naam)||'<i class="muted">(naamloos)</i>'}</span>
+      ${a.krit?`<span class="small muted">K${a.krit}</span>`:''}<span class="fase ${f[2]}">${f[1].replace('Transitie – ','↗ ').replace('↗ afwaarderen','↘ afwaarderen')}</span></div>`
+      + renderTree(a.id, depth+1);
+  }).join('');
+}
+function renderAssets(){
+  const s = sector();
+  const a = state.data.assets.find(x=>x.id===ui.node);
+  const form = a ? `<div class="panel form">
+      <h3>${esc(s.niveaus[Math.min(a.niveau,3)])}</h3>
+      <div><label>Naam</label><input data-f="naam" value="${esc(a.naam)}"></div>
+      <div><label>Assettype (§3.12)</label><input data-f="assettype" value="${esc(a.assettype||'')}" placeholder="bijv. kunstwerk, gebouw, installatie, lineair"></div>
+      <div><label>Levensfase (§4.4)</label><select data-f="fase">${FASE_OPT.map(o=>`<option value="${o[0]}" ${a.fase===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>
+      ${a.fase==='op'||a.fase==='af'?`<div><label>Toelichting besluit / aanleiding transitie</label><textarea data-f="toelichting" rows="2">${esc(a.toelichting||'')}</textarea></div>`:''}
+      <div><label>Kriticiteit (§3.28) – 1 laag … 5 zeer kritiek</label><div class="krit">${[1,2,3,4,5].map(k=>`<button data-krit="${k}" class="${a.krit===k?'on':''}">${k}</button>`).join('')}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${a.niveau<3?`<button class="primary" data-add="${a.id}">+ ${esc(s.niveaus[a.niveau+1])} toevoegen</button>`:''}
+        <button class="danger ${ui.armed?'armed':''}" data-del="${a.id}">${ui.armed?'Klik nogmaals om te verwijderen (incl. onderliggend)':'Verwijderen'}</button>
+      </div></div>`
+    : `<div class="panel"><p class="muted" style="margin:0">Selecteer links een object, of begin met een nieuw ${esc(s.niveaus[0].toLowerCase())}.</p></div>`;
+  return `<h2>Assetstructuur</h2>
+    <div class="ref">Portfolio → systeem → beheerobject → onderdeel · zie NEN 8026 §3.10–3.14 · sector: ${esc(s.naam)} (${esc(s.vb)})</div>
+    <div class="tree-wrap">
+      <div><div class="tree">${renderTree(null,0) || '<p class="muted small" style="padding:8px">Nog geen objecten.</p>'}</div>
+        <div style="margin-top:8px"><button data-add="">+ ${esc(s.niveaus[0])} toevoegen</button></div></div>
+      <div>${form}</div>
+    </div>
+    <p class="small muted">De benaming van de niveaus past zich aan aan de gekozen sector. Kriticiteit en levensfase worden later gebruikt in het waardekompas en de risicoanalyse.</p>`;
+}
+
+/* ---------------- Overige modules (nog te bouwen) ---------------- */
 function renderModule(m){
-  return `<h2>${m.title}</h2>
-    <div class="ref">NEN 8026 ${m.ref}</div>
-    <div class="cards">${m.parts.map(([t,ref])=>`
-      <div class="card" style="border-left:4px solid ${m.color}">
-        <h3>${t}</h3><p>${ref}</p>
-        <span class="badge todo">Nog te bouwen</span>
-      </div>`).join('')}
-    </div>`;
+  return `<h2>${m.title}</h2><div class="ref">NEN 8026 ${m.ref}${m.product?' · product: <b>'+m.product+'</b>':''}</div>
+    <div class="cards">${(m.parts||[]).map(([t,ref])=>`
+      <div class="card" style="border-left:4px solid ${m.color}"><h3>${t}</h3><p>${ref}</p>
+      <div style="margin-top:8px"><span class="badge todo">Nog te bouwen</span></div></div>`).join('')}</div>`;
 }
 
+/* ---------------- Router ---------------- */
 function route(){
   const id = location.hash.slice(1) || 'start';
   const m = MODULES.find(x=>x.id===id) || MODULES[0];
   renderNav(m.id);
-  main.innerHTML = m.id==='start' ? renderStart() : renderModule(m);
+  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets})[m.id]?.() ?? renderModule(m);
+  main.innerHTML += `<footer>Deze tool bevat geen normtekst of figuren uit NEN 8026; omschrijvingen en figuren zijn eigen samenvattingen. Raadpleeg de norm voor de officiële inhoud.</footer>`;
 }
+function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
-/* ---------- Sectorkeuze ---------- */
+/* ---------------- Interactie (event delegation) ---------------- */
+main.addEventListener('click', e=>{
+  const t = e.target.closest('[data-step],[data-tab],[data-phase],[data-schil],[data-tier],[data-glb],[data-node],[data-add],[data-del],[data-krit]');
+  if(!t) return;
+  const d = t.dataset;
+  if(d.step){ ui.step = d.step; }
+  else if(d.tab){ ui.tab = d.tab; }
+  else if(d.phase){ ui.phase = d.phase; }
+  else if(d.schil){ ui.schil = d.schil; }
+  else if(d.tier){ ui.tier = d.tier; }
+  else if(d.glb!==undefined){ ui.glb = d.glb; }
+  else if(d.node){ ui.node = d.node; ui.armed=false; }
+  else if(d.add!==undefined){
+    const parent = d.add || null;
+    const p = state.data.assets.find(x=>x.id===parent);
+    const a = {id:uid(), parent, niveau:p?p.niveau+1:0, naam:'', assettype:'', fase:p?p.fase:'gebruik', krit:null};
+    state.data.assets.push(a); ui.node = a.id; ui.armed=false; save();
+    rerender(); main.querySelector('[data-f="naam"]')?.focus(); return;
+  }
+  else if(d.del){
+    if(!ui.armed){ ui.armed = true; }
+    else{
+      const kill = new Set([d.del]); let grew = true;
+      while(grew){ grew=false; for(const a of state.data.assets) if(!kill.has(a.id)&&kill.has(a.parent)){kill.add(a.id);grew=true;} }
+      state.data.assets = state.data.assets.filter(a=>!kill.has(a.id)); ui.node=null; ui.armed=false; save();
+    }
+  }
+  else if(d.krit){ const a = state.data.assets.find(x=>x.id===ui.node); a.krit = a.krit===+d.krit?null:+d.krit; save(); }
+  rerender();
+});
+main.addEventListener('input', e=>{
+  if(e.target.id==='glq'){
+    ui.glq = e.target.value; const pos = e.target.selectionStart; rerender();
+    const i = document.getElementById('glq'); i.focus(); i.setSelectionRange(pos,pos); return;
+  }
+  const f = e.target.dataset.f; if(!f) return;
+  const a = state.data.assets.find(x=>x.id===ui.node); if(!a) return;
+  a[f] = e.target.value; save();
+  if(f==='fase') rerender();
+  else { const n = main.querySelector(`[data-node="${a.id}"] span:nth-child(2)`); if(n && f==='naam') n.innerHTML = esc(a.naam)||'<i class="muted">(naamloos)</i>'; }
+});
+
+/* ---------------- Header: rol, sector, export/import ---------------- */
+const rolSel = document.getElementById('rol');
+rolSel.innerHTML = Object.entries(ROLLEN).map(([k,r])=>`<option value="${k}">${r.naam}</option>`).join('');
+rolSel.value = state.rol;
+rolSel.onchange = ()=>{ state.rol = rolSel.value; save(); rerender(); };
 const sel = document.getElementById('sector');
 sel.innerHTML = SECTOREN.map(s=>`<option value="${s.id}">${s.naam}</option>`).join('');
 sel.value = state.sector;
-sel.onchange = ()=>{ state.sector = sel.value; save(); };
+sel.onchange = ()=>{ state.sector = sel.value; save(); rerender(); };
 
-/* ---------- Export / import ---------- */
 document.getElementById('btnExport').onclick = ()=>{
   const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a = document.createElement('a');
@@ -186,11 +600,13 @@ const fileInput = document.getElementById('fileImport');
 document.getElementById('btnImport').onclick = ()=>fileInput.click();
 fileInput.onchange = async ()=>{
   const f = fileInput.files[0]; if(!f) return;
-  try{ state = JSON.parse(await f.text()); save(); sel.value = state.sector; route(); }
+  try{ const s = JSON.parse(await f.text()); state = {...DEFAULT, ...s, data:{...DEFAULT.data, ...(s.data||{})}}; save();
+       sel.value = state.sector; rolSel.value = state.rol; route(); }
   catch(e){ console.log('Ongeldig bestand'); }
+  fileInput.value='';
 };
 
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', ()=>{ window.scrollTo(0,0); route(); });
 route();
 </script>
 </body>

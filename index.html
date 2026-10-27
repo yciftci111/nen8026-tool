@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.12</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.13</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -1629,7 +1629,7 @@ Object.assign(REG, {
   ]},
 });
 Object.assign(MV, {inspecties:'inspecties', datasets:'gebrekendatasets'});
-const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['prioriteit','Gevolgen & prioriteit','Bijlage D'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['gevolgen','⚙ Gevolgen-aspecten','Bijlage D'],['tabellen','⚙ Rekentabellen','']];
+const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['prioriteit','Gevolgen & prioriteit','Bijlage D'],['mjop','MJOP','Bijlage E'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['gevolgen','⚙ Gevolgen-aspecten','Bijlage D'],['tabellen','⚙ Rekentabellen','']];
 const lvName = a => sector().niveaus[Math.min(a.niveau,5)];
 
 function renderConditie(){
@@ -1693,6 +1693,7 @@ function renderConditie(){
   else if(t==='condities') body = tCondities();
   else if(t==='aanvullend') body = tAanvullend();
   else if(t==='prioriteit') body = tPrioriteit();
+  else if(t==='mjop') body = tMjop();
   else if(t==='gevolgen') body = tGevolgen();
   else if(t==='kromme') body = tKromme();
   else if(t==='rekenhulp') body = tRekenhulp();
@@ -1928,6 +1929,12 @@ function gebrekKaart(g, i, gs, comps, sec){
     </div>
     ${uitLijst?`<div class="small muted" style="margin-top:6px">Uit lijst ${esc(uitLijst.code)} · ${esc(uitLijst.soort)}${uitLijst.int?` · intensiteit voorgeschreven: <b>${INTENS[uitLijst.int].toLowerCase()}</b>`:''}${uitLijst.omvang?` · omvang: <b>${esc(uitLijst.omvang)}</b>`:''}${intAfw?' <span style="color:#b5651d">— afwijkende intensiteit gekozen</span>':''}</div>`:''}
     ${gevolgenBlok(g)}
+    <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)"><div class="small muted" style="margin-bottom:4px">Herstelvoorstel (Bijlage E stap 4, optioneel)</div>
+      <div style="display:grid;grid-template-columns:minmax(0,2fr) 110px 90px auto;gap:6px;align-items:center">
+        <input data-gh="oms" data-gid="${g.id}" value="${esc(g.herstel?.oms)}" placeholder="bijv. naden herstellen, dakbedekking plaatselijk vervangen">
+        <input data-gh="kosten" data-gid="${g.id}" value="${esc(g.herstel?.kosten)}" placeholder="kosten €">
+        <input data-gh="jaar" data-gid="${g.id}" value="${esc(g.herstel?.jaar)}" placeholder="jaar">
+        <label class="small" style="white-space:nowrap"><input type="checkbox" data-gh="uitv" data-gid="${g.id}" ${g.herstel?.uitv?'checked':''}> meenemen in MJOP</label></div></div>
   </div>`;
 }
 function tBibliotheek(){
@@ -2012,7 +2019,7 @@ function tGebreken(){
       ${gs.map((g,i)=>gebrekKaart(g, i, gs, comps, bibSectie(bd.code))).join('') || '<p class="small muted" style="margin:0">Geen gebreken vastgelegd — het bouwdeel krijgt conditie 1.</p>'}
       <button data-gadd="1" style="margin-top:8px">+ gebrek</button>
       <p class="small muted" style="margin:8px 0 0">Bij een component is de omvang die op de component (stap 3c); de tool rekent hem om naar het bouwdeel via de vervangingswaarden (stap 3a–3d). "Zelfde gedeelte als" = gestapeld gebrek (§5.3 situatie 1): alleen het gebrek met de slechtste conditie telt.</p></div>
-      <div id="calcout" style="margin-top:12px">${calcPanel(berekenBouwdeel(bdInput(bd, op, insp)))}</div>${extraPanel(bd, op, insp)}`:''}`;
+      <div id="calcout" style="margin-top:12px">${calcPanel(berekenBouwdeel(bdInput(bd, op, insp)))}</div>${(()=>{ if(!gs.some(g=>g.herstel?.uitv)) return ''; const voor = berekenBouwdeel(bdInput(bd, op, insp)); const na = condNaOnderhoud(bd, op, insp); if(voor.error||!na) return ''; const eis = eisMaxVoor(bd); return `<div class="panel" style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>Conditie na onderhoud (Bijlage E stap 5):</b> ${cbadge(voor.cond)} → ${cbadge(na)} <span class="small muted">${gs.filter(g=>g.herstel?.uitv).length} gebrek(en) hersteld${eis?` · eis ≤ ${eis}: ${na<=eis?'<b style="color:#2e7d32">voldoet na herstel</b>':'<b style="color:#c0392b">voldoet ook na herstel niet</b>'}`:''}</span></div>`; })()}${extraPanel(bd, op, insp)}`:''}`;
   }
   return `<div style="display:flex;gap:10px;align-items:end;margin-bottom:12px;flex-wrap:wrap"><div class="ctl"><label>Inspectie</label><select data-oinsp="1">${ins.map(i=>`<option value="${i.id}" ${i.id===insp.id?'selected':''}>${esc(i.titel||'(naamloos)')}${i.datum?' · '+i.datum:''}</option>`).join('')}</select></div>
     ${tabellenCompleet()?'':'<div class="warn small" style="margin:0">Rekentabellen nog niet compleet — <a href="#conditie" data-ctab="tabellen">vul ze in</a>.</div>'}</div>
@@ -2316,6 +2323,153 @@ function maakVanGebrek(kind, key){
   save(); location.hash = 'tactisch'; route(); window.scrollTo(0,0);
 }
 
+/* ==================================================================
+   NEN 2767-1 BIJLAGE E — conditiemeting als input voor een MJOP
+   ================================================================== */
+const VERTRAGING = {1:0, 2:1, 3:2, 4:4, 0:5};   // voorstel: jaren uitstel per prioriteitsklasse
+function condNaOnderhoud(bd, op, insp){
+  const inp = bdInput(bd, op, insp); inp.gebreken = inp.gebreken.filter(g=>!(g.herstel && g.herstel.uitv));
+  const r = berekenBouwdeel(inp); return r.error ? null : r.cond;
+}
+function laatsteOpname(bd){ const c = bdConditie(bd); if(!c) return null; return {c, op:opnames()[c.insp.id]?.[bd.id], insp:c.insp}; }
+function eisMaxVoor(bd){ const c = clusterVan(bd); if(!c) return null;
+  const ns = items('eisen').filter(e=>e.cluster===c.id && /2767|conditie/i.test((e.maatstaf||'')+' '+(e.eis||'')) && !/verzorg/i.test((e.maatstaf||'')+(e.eis||'')) && isNum(parseInt(e.niveau))).map(e=>parseInt(e.niveau));
+  return ns.length ? Math.min(...ns) : null; }
+function planBouwdeel(bd, start, eind){
+  const acts = []; const L = num(bd.levensduur), vw = num(bd.vervangingswaarde); const lo = laatsteOpname(bd);
+  // stap 4: herstelmaatregelen uit de inspectie
+  if(lo?.op) for(const g of (lo.op.gebreken||[])){ const h = g.herstel; if(!h || !h.uitv) continue; const p = prioriteit(g, bd);
+    let j = isNum(h.jaar) ? +h.jaar : start + (VERTRAGING[p.klasse]??2); const achter = j < start; j = Math.max(j, start);
+    acts.push({jaar:j, soort:'herstel', oms:h.oms||('Herstel: '+(g.oms||'gebrek')), kosten:num(h.kosten), bron:`${bd.id}|h|${g.id}`, extra:`prioriteit ${PKLASSE[p.klasse][1].toLowerCase()}`+(achter?' · achterstallig':'')}); }
+  // stap 6/7: vervanging op basis van levensduur, bijgesteld met gemeten conditie
+  let vj = null, basis = '';
+  if(L){ if(lo && bd.mjStap7!=='nee'){ const C = lo.c.res.cond; const rest = L - krommeT(C, L); const ij = lo.insp.datum ? +lo.insp.datum.slice(0,4) : start;
+      vj = Math.round(ij + rest); basis = `gemeten conditie ${C} → theoretische restlevensduur ${Math.round(rest)} jr (bouwjaar + levensduur: ${num(bd.bouwjaar)?num(bd.bouwjaar)+L:'onbekend'})`; }
+    else if(num(bd.bouwjaar)){ vj = num(bd.bouwjaar) + L; basis = `bouwjaar ${bd.bouwjaar} + levensduur ${L} jr`; } }
+  if(vj){ const achter = vj < start; let j = Math.max(vj, start);
+    while(j<=eind){ acts.push({jaar:j, soort:'vervanging', oms:'Vervanging '+(bd.naam||'bouwdeel'), kosten:vw, bron:`${bd.id}|v|${j}`, extra:basis+(achter&&j===start?' · achterstallig':'')}); j += L||999; } }
+  // stap 6: cyclisch onderhoud met kostenkengetallen
+  for(const c of (bd.cycli||[])){ const I = num(c.interval); if(!I) continue; let j = isNum(c.start) ? +c.start : start;
+    while(j<start) j += I; for(; j<=eind; j+=I) acts.push({jaar:j, soort:'cyclisch', oms:c.oms||'Cyclisch onderhoud', kosten:num(c.kosten), bron:`${bd.id}|c|${c.id}|${j}`, extra:`elke ${I} jaar`}); }
+  return {acts:acts.filter(a=>a.jaar<=eind), vj, basis, lo};
+}
+const SOORTKLEUR = {herstel:'#c0392b', vervanging:'#2d5f9a', cyclisch:'#1f6f5c'};
+function mjopGrafiek(acts, start, eind){
+  const ys = []; for(let y=start;y<=eind;y++) ys.push(y);
+  const per = Object.fromEntries(ys.map(y=>[y,{herstel:0,vervanging:0,cyclisch:0}])); acts.forEach(a=>{ if(per[a.jaar]) per[a.jaar][a.soort] += a.kosten||0; });
+  const tot = ys.map(y=>Object.values(per[y]).reduce((s,v)=>s+v,0)); const max = Math.max(1,...tot); const gem = tot.reduce((s,v)=>s+v,0)/ys.length;
+  const W = 680, H = 240, x0 = 64, bw = (W-x0-10)/ys.length, Y = v => H-28 - v/max*(H-50);
+  let g = '';
+  [0,0.5,1].forEach(f=>{ const v = max*f; g += `<line x1="${x0}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eef1ef"/><text x="${x0-6}" y="${Y(v)+4}" text-anchor="end" font-size="10" fill="#5f6b66">€ ${Math.round(v/1000).toLocaleString('nl-NL')}k</text>`; });
+  ys.forEach((y,i)=>{ let base = 0; const x = x0+i*bw+3;
+    for(const s of ['vervanging','herstel','cyclisch']){ const v = per[y][s]; if(!v) continue; g += `<rect x="${x}" y="${Y(base+v)}" width="${bw-6}" height="${Y(base)-Y(base+v)}" fill="${SOORTKLEUR[s]}"><title>${y} · ${s}: € ${v.toLocaleString('nl-NL')}</title></rect>`; base += v; }
+    if(tot[i]>1.5*gem && tot[i]>0) g += `<text x="${x+(bw-6)/2}" y="${Y(tot[i])-5}" text-anchor="middle" font-size="11" fill="#b5651d">▲</text>`;
+    g += `<text x="${x+(bw-6)/2}" y="${H-10}" text-anchor="middle" font-size="10" fill="#5f6b66">${y}</text>`; });
+  if(gem) g += `<line x1="${x0}" x2="${W}" y1="${Y(gem)}" y2="${Y(gem)}" stroke="#1d2321" stroke-dasharray="4 3"/><text x="${x0+4}" y="${Y(gem)-4}" font-size="10" fill="#1d2321">gemiddeld € ${Math.round(gem).toLocaleString('nl-NL')}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">${g}</svg>
+    <div class="legend">${Object.entries(SOORTKLEUR).map(([s,c])=>`<span><i style="background:${c}"></i>${s==='herstel'?'herstelmaatregelen (stap 4)':s==='vervanging'?'vervanging op levensduur (stap 6–7)':'cyclisch onderhoud (stap 6)'}</span>`).join('')}<span style="color:#b5651d">▲ piek &gt; 1,5 × gemiddeld</span></div>`;
+}
+
+/* ---------- Figuur E.1, interactief (eigen weergave) ---------- */
+function e1Stappen(bds){
+  const n = bds.length || 1; const pct = (k,t) => t ? Math.round(k/t*100) : 0;
+  const ops = bds.map(b=>{ const lo = laatsteOpname(b); return lo?{...lo, bd:b}:null; }).filter(Boolean); const gebr = ops.flatMap(o=>(o.op?.gebreken||[]).map(g=>[g,o]));
+  const clusters = [...new Set(bds.map(clusterVan).filter(Boolean))];
+  const eisen = items('eisen').filter(e=>clusters.some(c=>c.id===e.cluster) && /2767|conditie/i.test((e.maatstaf||'')+(e.eis||'')));
+  const teSlecht = bds.filter(b=>{ const m = eisMaxVoor(b); const c = bdConditie(b); return m && c && c.res.cond>m; });
+  const st = (ok, deels, txt) => [ok?'ok':deels?'deels':'leeg', txt];
+  return {
+    beleid:{l:['Beleidsplan areaal/portefeuille','Scope bepalen'], z:'8026', link:['strategisch',null], i:'Het beleid en de scope van het areaal bepalen waarvoor de planning wordt gemaakt. In deze tool: organisatie- en AM-doelstellingen en de clusters.', s:st(items('amdoelen').length&&clusters.length, items('amdoelen').length||clusters.length, `${items('amdoelen').length} AM-doelstellingen · scope in ${clusters.length} cluster(s)`)},
+    onderzoek:{l:['Onderzoeken en','risicoanalyses'], z:'8026', link:['tactisch','risicos'], i:'Voorafgaande onderzoeken en risicoanalyses, inclusief specialistisch onderzoek (Bijlage C).', s:st(items('risicos').filter(r=>clusters.some(c=>c.id===r.cluster)).length, false, `${items('risicos').filter(r=>clusters.some(c=>c.id===r.cluster)).length} risico('s) in de clusters van deze scope`)},
+    inventarisatie:{l:['Inventarisatie'], z:'', link:['conditie','decompositie'], i:'Een volledig overzicht van alle bouwdelen met juiste hoeveelheden — onjuiste hoeveelheden geven grote verschillen tussen begroting en werkelijke kosten.', s:(()=>{ const k = bds.filter(b=>num(b.hoeveelheid)&&num(b.vervangingswaarde)&&num(b.levensduur)).length; return st(k===bds.length&&k, k, `${k} van ${bds.length} bouwdelen met hoeveelheid, vervangingswaarde en levensduur`); })()},
+    gebreken:{l:['Vaststellen gebreken:','ernst · intensiteit · omvang'], z:'2767', link:['conditie','gebreken'], i:'Stap 1: het bouwdeel wordt onderzocht op gebreken. De ernst volgt uit de gebrekenlijst; de inspecteur legt intensiteit en omvang vast. Niet te beoordelen → vangnet (§5.4, Bijlage F).', s:st(ops.length===bds.length&&ops.length, ops.length, `${ops.length} van ${bds.length} bouwdelen geïnspecteerd · ${gebr.length} gebreken`)},
+    conditie:{l:['Bepalen conditiescore'], z:'2767', link:['conditie','condities'], i:'Stap 2: de conditiescore voor onderhoud, zonder rekening te houden met uit te voeren herstelmaatregelen.', s:st(ops.length===bds.length&&ops.length, ops.length, ops.length?`conditie bekend voor ${ops.length} bouwdelen`:'nog geen condities')},
+    niveaus:{l:['Gewenste onderhoudsniveaus','Differentiatie normeren'], z:'8026', link:['tactisch','eisen'], i:'Het beleidsmatig gewenste onderhoudsniveau, gedifferentieerd per cluster. In deze tool: instandhoudingseisen (toegelaten conditiescore) uit het waardekompas, en de toegelaten aspectwaarden (Bijlage D).', s:st(eisen.length>=clusters.length&&eisen.length, eisen.length, `${eisen.length} conditie-eis(en) voor ${clusters.length} cluster(s)`)},
+    aspecten:{l:['Invullen aspecten','van gebreken'], z:'2767', link:['conditie','gebreken'], i:'Stap 3: de inspecteur legt het effect vast van het niet oplossen van gebreken, per organisatiespecifiek aspect (Bijlage D).', s:(()=>{ const k = gebr.filter(([g])=>Object.values(g.eff||{}).some(Boolean)).length; return st(k===gebr.length&&k, k, `${k} van ${gebr.length} gebreken met gevolgen`); })()},
+    afstemming:{l:['Afstemming gewenste niveau','↔ feitelijke situatie'], z:'', link:['tactisch','eisen'], i:'De gemeten conditie wordt vergeleken met het gewenste niveau. Waar de conditie slechter is dan de eis, is ingrijpen nodig.', s:st(ops.length&&!teSlecht.length&&eisen.length, ops.length&&eisen.length, eisen.length&&ops.length?(teSlecht.length?`${teSlecht.length} bouwdeel/-delen slechter dan het gewenste niveau`:'alle gemeten bouwdelen binnen het gewenste niveau'):'eisen of condities ontbreken')},
+    kosten:{l:['Afwegen onderhoudskosten'], z:'', link:['conditie','prioriteit'], i:'Afweging van kosten tegen prioriteit (waardegestuurd, Bijlage D) en het gewenste niveau. Niet alle gebreken hoeven op korte termijn te worden aangepakt.', s:(()=>{ const k = gebr.filter(([g,o])=>prioriteit(g, o.bd).klasse).length; return st(k&&k===gebr.length, k, `${k} gebreken met een prioriteit`); })()},
+    herstel:{l:['Bepalen herstelmaatregelen'], z:'', link:['conditie','gebreken'], i:'Stap 4 (optioneel): een voorstel voor herstel per gebrek, met kosten en jaar. Leg het vast bij het gebrek in de Gebrekenregistratie en vink "meenemen in MJOP" aan.', s:(()=>{ const k = gebr.filter(([g])=>g.herstel?.uitv).length; return st(k&&k===gebr.length, k, `${k} van ${gebr.length} gebreken met herstelvoorstel`); })()},
+    na:{l:['Bepalen conditie','na onderhoud'], z:'', link:['conditie','mjop'], i:'Stap 5: de conditiescore op basis van de gebreken die na herstel resteren. Zo bepaal je of het voorstel voldoende verbetering oplevert.', s:(()=>{ const vb = ops.filter(o=>o.op?.gebreken?.some(g=>g.herstel?.uitv)); return st(vb.length, false, vb.length?`berekend voor ${vb.length} bouwdeel/-delen`:'nog geen herstelvoorstellen'); })()},
+    planning:{l:['Invullen planning m.b.v.','levensduur · kostenkengetallen'], z:'', link:['conditie','mjop'], i:'Stap 6: de planning met herstel, cyclisch onderhoud (kostenkengetallen) en vervanging (levensduur). Stap 7: met regelmatige conditiemetingen wordt de levensduur gevolgd — de tool verschuift het vervangingsjaar naar de gemeten conditie.', s:(()=>{ const k = bds.filter(b=>num(b.levensduur)||(b.cycli||[]).length).length; return st(k===bds.length&&k, k, `${k} van ${bds.length} bouwdelen met levensduur of cyclisch onderhoud`); })()},
+  };
+}
+function e1Svg(S){
+  const box = (id, x, y, w, h) => { const s = S[id]; const sel = ui.e1===id; const fill = s.z==='2767'?'#e9e0f3':'#fff'; const dot = {ok:'#2e7d32',deels:'#e6a23c',leeg:'#c9cfcc'}[s.s[0]];
+    return `<g data-e1="${id}" style="cursor:pointer"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${sel?'#1f6f5c':s.z==='2767'?'#8e44ad':'#9aa5a0'}" stroke-width="${sel?3:1.4}"/>
+      ${s.l.map((t,i)=>`<text x="${x+w/2}" y="${y+h/2+4+(i-(s.l.length-1)/2)*17}" text-anchor="middle" font-size="14" fill="#1d2321" pointer-events="none">${esc(t)}</text>`).join('')}
+      <circle cx="${x+w-12}" cy="${y+12}" r="6" fill="${dot}" pointer-events="none"/></g>`; };
+  const A = (d) => `<path d="${d}" fill="none" stroke="#5f6b66" stroke-width="1.5" marker-end="url(#e1a)"/>`;
+  const L = {x:30,w:250}, R = {x:470,w:250}, C = {x:250,w:250};
+  return `<svg viewBox="0 0 750 800" style="width:100%;max-width:750px">
+    <defs><marker id="e1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5f6b66"/></marker></defs>
+    <rect x="18" y="210" width="714" height="190" rx="18" fill="#f6f1fa" stroke="#d7c4e6" stroke-dasharray="5 4"/><text x="375" y="392" text-anchor="middle" font-size="12" fill="#8e44ad" font-weight="600">Werkgebied NEN 2767</text>
+    ${A(`M155 92V130`)}${A(`M155 192V228`)}${A(`M155 318V338`)}${A(`M280 61H592V22`)}${A(`M595 70V130`)}${A(`M595 192V238`)}${A(`M280 273H468`)}
+    ${A(`M280 368H595V300`)}${A(`M375 368V426`)}${A(`M375 476V510`)}${A(`M375 556V590`)}${A(`M375 636V670`)}${A(`M375 716V740`)}
+    ${box('onderzoek',L.x,40,L.w,52)}${box('beleid',R.x,0,R.w,70)}
+    ${box('inventarisatie',L.x,140,L.w,52)}${box('niveaus',R.x,140,R.w,52)}
+    ${box('gebreken',L.x,232,L.w,86)}${box('aspecten',R.x,240,R.w,60)}
+    ${box('conditie',L.x,342,L.w,52)}
+    ${box('afstemming',C.x,428,C.w,48)}${box('kosten',C.x,512,C.w,44)}${box('herstel',C.x,592,C.w,44)}${box('na',C.x,672,C.w,44)}${box('planning',C.x,742,C.w,52)}
+  </svg>`;
+}
+
+/* ---------- Tab: MJOP (Bijlage E) ---------- */
+function tMjop(){
+  const kand = state.data.assets.filter(a=>a.niveau>=2 && a.niveau<=4);
+  if(!kand.length) return `<div class="panel"><p class="muted" style="margin:0">Nog geen objecten. Bouw eerst je assetstructuur op.</p></div>`;
+  const scope = kand.find(a=>a.id===ui.mjs) || kand.find(a=>a.niveau===2) || kand[0]; ui.mjs = scope.id;
+  const bds = bouwdelenOnder(scope.id); const start = +(ui.mjstart || new Date().getFullYear()); const hor = +(ui.mjhor||10); const eind = start + hor - 1;
+  const S = e1Stappen(bds); const sel = S[ui.e1||'planning'];
+  const plans = bds.map(b=>[b, planBouwdeel(b, start, eind)]); const acts = plans.flatMap(([,p])=>p.acts);
+  const totaal = acts.reduce((s,a)=>s+(a.kosten||0),0);
+  const pad = a => { const p = []; let x = state.data.assets.find(y=>y.id===a.parent); while(x && x.niveau>=2){ p.unshift(x.naam); x = state.data.assets.find(y=>y.id===x.parent); } return p.join(' › '); };
+  const ys = []; for(let y=start;y<=eind;y++) ys.push(y);
+  const bdTabel = plans.map(([b,p])=>{ const lo = p.lo; const na = lo ? condNaOnderhoud(b, lo.op, lo.insp) : null; const eis = eisMaxVoor(b);
+    const per = Object.fromEntries(ys.map(y=>[y,0])); p.acts.forEach(a=>per[a.jaar]+=a.kosten||0);
+    return `<tr style="border-top:1px solid var(--line);vertical-align:top">
+      <td style="padding:6px"><b>${esc(b.naam)}</b><div class="small muted">${esc(pad(b))}</div></td>
+      <td>${lo?cbadge(lo.c.res.cond):'<span class="small muted">–</span>'}${na&&na!==lo.c.res.cond?` → ${cbadge(na)}`:''}${eis?`<div class="small ${lo&&(na??lo.c.res.cond)>eis?'':'muted'}" style="${lo&&(na??lo.c.res.cond)>eis?'color:#c0392b':''}">eis ≤ ${eis}</div>`:''}</td>
+      <td class="small">${p.vj?`<b>${p.vj}</b><div class="muted" style="max-width:190px">${esc(p.basis)}</div>`:'<span class="muted">levensduur ontbreekt</span>'}${lo?`<div><label class="muted"><input type="checkbox" data-mj7="${b.id}" ${b.mjStap7!=='nee'?'checked':''}> stap 7</label></div>`:''}</td>
+      ${ys.map(y=>`<td class="small" style="text-align:right;${per[y]?'font-weight:600':''};color:${per[y]?'#1d2321':'#c9cfcc'}">${per[y]?Math.round(per[y]/1000).toLocaleString('nl-NL')+'k':'·'}</td>`).join('')}</tr>`; }).join('');
+  const cycli = bds.map(b=>`<div style="border-top:1px solid var(--line);padding:6px 0"><b class="small">${esc(b.naam)}</b>
+      ${(b.cycli||[]).map(c=>`<div style="display:grid;grid-template-columns:minmax(0,2fr) 90px 110px 90px 34px;gap:6px;margin-top:4px">
+        <input data-cy="oms" data-bid="${b.id}" data-cid="${c.id}" value="${esc(c.oms)}" placeholder="bijv. schilderwerk buiten, onderhoud dakbedekking">
+        <input data-cy="interval" data-bid="${b.id}" data-cid="${c.id}" value="${esc(c.interval)}" placeholder="elke … jr">
+        <input data-cy="kosten" data-bid="${b.id}" data-cid="${c.id}" value="${esc(c.kosten)}" placeholder="€ per keer">
+        <input data-cy="start" data-bid="${b.id}" data-cid="${c.id}" value="${esc(c.start)}" placeholder="eerste jaar">
+        <button class="danger" data-cydel="${b.id}|${c.id}">×</button></div>`).join('')}
+      <button data-cyadd="${b.id}" style="font-size:12px;padding:3px 8px;margin-top:4px">+ cyclische activiteit</button></div>`).join('');
+  return `<div class="note small">Bijlage E (informatief): hoe de conditiemeting input levert voor een meerjarenonderhoudsplanning. Klik op een stap in het schema voor uitleg, de status voor de gekozen scope en een link naar het onderdeel. Het opstellen van de planning valt buiten NEN 2767-1; de rekenregels voor uitstel en vervanging hieronder zijn voorstellen van de tool.</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
+      <div class="ctl"><label>Scope: beheerobject, element of bouwdeel</label><select data-mjs="1">${kand.map(a=>`<option value="${a.id}" ${a.id===scope.id?'selected':''}>${'· '.repeat(a.niveau-2)}${esc(a.naam)||'(naamloos)'} (${esc(lvName(a).toLowerCase())})</option>`).join('')}</select></div>
+      <div class="ctl"><label>Startjaar</label><input data-mjstart="1" value="${start}" style="width:80px"></div>
+      <div class="ctl"><label>Horizon</label><select data-mjhor="1">${[5,10,15,20,25].map(h=>`<option ${hor===h?'selected':''}>${h}</option>`).join('')}</select></div>
+      <span class="small muted">${bds.length} bouwdeel/-delen in scope · prijspeil ${start}, excl. indexering</span></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:16px;align-items:start">
+      <div class="panel">${e1Svg(S)}<p class="small muted" style="margin:4px 0 0">Eigen weergave van figuur E.1. Paars = werkgebied NEN 2767. Lampje: groen = compleet, oranje = deels, grijs = nog niets.</p></div>
+      <div class="panel" style="border-left:5px solid ${sel.s[0]==='ok'?'#2e7d32':sel.s[0]==='deels'?'#e6a23c':'#c9cfcc'}"><div class="small muted">${sel.z==='2767'?'Werkgebied NEN 2767':sel.z==='8026'?'Assetmanagement (NEN 8026)':'Planning'}</div>
+        <h3 style="margin-top:2px">${esc(sel.l.join(' '))}</h3><p style="margin:0 0 8px">${sel.i}</p>
+        <p class="small"><b>Status voor ${esc(scope.naam)}:</b> ${esc(sel.s[1])}</p>
+        <button class="primary" data-e1go="${sel.link[0]}|${sel.link[1]||''}">Ga naar dit onderdeel →</button></div></div>
+    <div class="panel" style="margin-top:14px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center"><h3 style="margin:0">MJOP ${esc(scope.naam)} · ${start}–${eind}</h3>
+        <span><b>Totaal € ${totaal.toLocaleString('nl-NL')}</b> <span class="small muted">· gemiddeld € ${Math.round(totaal/hor).toLocaleString('nl-NL')} per jaar</span></span></div>
+      ${mjopGrafiek(acts, start, eind)}
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="primary" data-mjover="1">Overnemen in Plannen & begroting (${acts.length} activiteiten)</button><button data-print="1">Afdrukken / PDF</button></div></div>
+    <div class="panel printdoc" style="margin-top:14px;overflow:auto"><h3>Per bouwdeel (bedragen × € 1.000)</h3><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <tr class="small muted" style="text-align:left"><th style="padding:6px">Bouwdeel</th><th>Conditie → na herstel</th><th>Vervangingsjaar</th>${ys.map(y=>`<th style="text-align:right">${String(y).slice(2)}'</th>`).join('')}</tr>${bdTabel}</table>
+      <details style="margin-top:10px"><summary class="small"><b>Alle activiteiten (${acts.length})</b></summary><table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px">${acts.slice().sort((a,b)=>a.jaar-b.jaar).map(a=>`<tr style="border-top:1px solid var(--line)"><td style="padding:3px">${a.jaar}</td><td><span class="cb" style="background:${SOORTKLEUR[a.soort]}">${a.soort}</span></td><td>${esc(a.oms)}</td><td class="small muted">${esc(a.extra||'')}</td><td style="text-align:right">€ ${(a.kosten||0).toLocaleString('nl-NL')}</td></tr>`).join('')}</table></details></div>
+    <div class="panel" style="margin-top:14px"><h3>Cyclisch onderhoud met kostenkengetallen (stap 6)</h3><p class="small muted" style="margin-top:0">Terugkerende activiteiten per bouwdeel: omschrijving, interval, kosten per keer (kengetal × hoeveelheid) en eerste jaar.</p>${cycli||'<p class="small muted">Geen bouwdelen in scope.</p>'}</div>
+    <div class="panel small muted" style="margin-top:14px"><b>Rekenregels (voorstel van de tool)</b> · Herstel zonder jaar: uitstel naar prioriteitsklasse (zeer hoog 0, hoog 1, middel 2, laag 4, geen 5 jaar). · Vervanging: met gemeten conditie (stap 7) = inspectiejaar + theoretische restlevensduur volgens formule (2) bij de gemeten conditie (lokaal herstel maakt een bouwdeel niet nieuw; de conditie na herstel wordt alleen getoetst aan de eis); anders bouwjaar + levensduur; daarna elke levensduur opnieuw. · Achterstallig wordt in het startjaar gezet. · Bedragen excl. btw en indexering.</div>`;
+}
+function mjopOvernemen(){
+  const scope = state.data.assets.find(a=>a.id===ui.mjs); const bds = bouwdelenOnder(scope.id);
+  const start = +(ui.mjstart || new Date().getFullYear()); const eind = start + +(ui.mjhor||10) - 1; let n = 0;
+  for(const b of bds) for(const a of planBouwdeel(b, start, eind).acts){
+    if(items('maatregelen').some(m=>m.bron===a.bron)) continue;
+    items('maatregelen').push({id:uid(), _t:Date.now(), bron:a.bron, titel:a.oms, cluster:clusterVan(b)?.id||'', assets:[b.id], soort:a.soort==='herstel'?'Correctief onderhoud':a.soort==='vervanging'?'Vervanging':'Preventief onderhoud', plan:'Meerjarenplan', jaar:String(a.jaar), kosten:String(a.kosten||''), status:'Gepland', toelichting:`Uit MJOP (Bijlage E) · ${a.extra||''}`}); n++; }
+  save(); return n;
+}
+
 /* ---------------- Overige modules (nog te bouwen) ---------------- */
 function renderModule(m){
   return `<h2>${m.title}</h2><div class="ref">NEN 8026 ${m.ref}${m.product?' · product: <b>'+m.product+'</b>':''}</div>
@@ -2337,9 +2491,14 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.e1){ ui.e1 = d.e1; rerender(); return; }
+    if(d.e1go!==undefined){ const [h,tb] = d.e1go.split('|'); if(h==='conditie'&&tb) ui.ctab = tb; if(h==='tactisch'&&tb) ui.ttab = tb; location.hash = h; route(); window.scrollTo(0,0); return; }
+    if(d.mjover){ const n = mjopOvernemen(); r.textContent = `✓ ${n} nieuwe activiteit(en) overgenomen`; return; }
+    if(d.cyadd){ const b = state.data.assets.find(a=>a.id===d.cyadd); (b.cycli ||= []).push({id:uid(), oms:'', interval:'', kosten:'', start:''}); save(); rerender(); return; }
+    if(d.cydel){ const [bid,cid] = d.cydel.split('|'); const b = state.data.assets.find(a=>a.id===bid); b.cycli = b.cycli.filter(c=>c.id!==cid); save(); rerender(); return; }
     if(d.mkm){ maakVanGebrek('m', d.mkm); return; }
     if(d.mkr){ maakVanGebrek('r', d.mkr); return; }
     if(d.gvset){ GV().aspecten = (d.gvset==='rams'?ASP_RAMS:ASP_STD).map(([naam,letter,wa,oms])=>({id:uid(), naam, letter, wa, oms})); GV().matrix = {}; save(); rerender(); return; }
@@ -2440,6 +2599,12 @@ main.addEventListener('input', e=>{
   if(d.oinsp){ ui.oinsp = el.value; ui.obd = null; rerender(); return; }
   if(d.ost){ opnames()[ui.oinsp][ui.obd].status = el.value; save(); rerender(); return; }
   if(d.ovo){ opnames()[ui.oinsp][ui.obd].vervalOmv = el.value; save(); refreshCalc(); return; }
+  if(d.gh){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gid); const h = (g.herstel ||= {}); h[d.gh] = el.type==='checkbox' ? el.checked : el.value; save(); if(el.type==='checkbox') rerender(); return; }
+  if(d.mjs){ ui.mjs = el.value; rerender(); return; }
+  if(d.mjhor){ ui.mjhor = el.value; rerender(); return; }
+  if(d.mjstart){ if(/^\d{4}$/.test(el.value)){ ui.mjstart = el.value; rerender(); } return; }
+  if(d.mj7){ const b = state.data.assets.find(a=>a.id===d.mj7); b.mjStap7 = el.checked?'':'nee'; save(); rerender(); return; }
+  if(d.cy){ const b = state.data.assets.find(a=>a.id===d.bid); const c = b.cycli.find(x=>x.id===d.cid); c[d.cy] = el.value; save(); return; }
   if(d.geff){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gid); (g.eff ||= {})[d.geff] = el.value; save(); rerender(); return; }
   if(d.pcl){ ui.pcl = el.value; rerender(); return; }
   if(d.gva){ const a = GV().aspecten.find(x=>x.id===d.gaid); a[d.gva] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }

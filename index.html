@@ -148,7 +148,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.4</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.6</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -584,6 +584,7 @@ const REG = {
     {k:'naam',l:'Waardeaspect',type:'text',ph:'bijv. een organisatiespecifiek aspect'},
     {k:'thema',l:'Hoofdthema',type:'select',opts:['Functionaliteit','Leefomgeving en maatschappij','Organisatiespecifiek']},
     {k:'omschrijving',l:'Wat verstaan wij hieronder?',type:'textarea',hint:'Startomschrijvingen zijn eigen tekst van deze tool; pas ze aan op je organisatie. Voor de aspecten onder Functionaliteit: zie de RAMS-methode (Bijlage A, opm. 4).'},
+    {k:'beleid',l:'Beleid van de organisatie op dit aspect',type:'textarea',ph:'bijv. In 2040 zijn we CO₂-neutraal (leeg = geen beleid)'},
     {k:'relevant',l:'Van toepassing op ons portfolio?',type:'select',opts:['Ja','Nee'],hint:'Compliance wordt altijd opgenomen en vormt de ondergrens; strengere eisen dan de wet zijn altijd mogelijk (Bijlage A, opm. 3).'},
     {k:'systemen',l:'Relevant voor assetsystemen',type:'assets',max:1,if:x=>x.relevant!=='Nee'},
   ]},
@@ -659,6 +660,8 @@ const REG = {
   ]},
 };
 const items = key => (state.data.reg[key] ||= []);
+const MV = {doelen:'organisatiedoelstellingen',amdoelen:'AM-doelstellingen',criteria:'beslissingscriteria',personen:'personen of afdelingen',besluiten:'perspectieven of besluiten',consequenties:'consequenties',randvoorwaarden:'randvoorwaarden',communicatie:'meldingen'};
+const mv = key => MV[key] || REG[key].t+'s';
 const labelOf = (key,id) => { const x = items(key).find(i=>i.id===id); return x ? REG[key].label(x) : ''; };
 function gecombineerd(persoonId){
   const p = items('personen').find(x=>x.id===persoonId); const r = p?.rollen||[];
@@ -676,15 +679,15 @@ function fieldHtml(key, it, f){
   if(f.type==='text') inp = `<input ${a} value="${esc(v)}" placeholder="${esc(f.ph||'')}">`;
   else if(f.type==='textarea') inp = `<textarea ${a} rows="3">${esc(v)}</textarea>`;
   else if(f.type==='date') inp = `<input type="date" ${a} value="${esc(v)}">`;
-  else if(f.type==='select') inp = `<select ${a} ${it.vast&&f.k==='relevant'?'disabled':''}><option value="">— kies —</option>${f.opts.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  else if(f.type==='select') inp = `<select ${a} ${it.vast&&f.k==='relevant'?'disabled':''}><option value="">— kies —</option>${(f.optsFn?f.optsFn():f.opts).map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
   else if(f.type==='checks') inp = `<div class="pick">${f.opts.map(o=>`<label><input type="checkbox" ${a} data-rv="${esc(o)}" ${(v||[]).includes(o)?'checked':''}> ${esc(o)}</label>`).join('')}</div>`;
   else if(f.type==='assets') inp = assetPicker(v, a, f.max);
   else if(f.type==='refsel'){ const src = items(f.ref);
     inp = `<select ${a}><option value="">— kies —</option>${src.map(o=>`<option value="${o.id}" ${v===o.id?'selected':''}>${esc(REG[f.ref].label(o)||'(naamloos)')}</option>`).join('')}</select>`
-      + (src.length?'':`<div class="small muted">Nog niets ingevoerd bij ${REG[f.ref].t}s.</div>`); }
+      + (src.length?'':`<div class="small muted">Nog niets ingevoerd bij ${mv(f.ref)}.</div>`); }
   else if(f.type==='ref'){ const src = items(f.ref);
     inp = src.length ? `<div class="pick">${src.map(o=>`<label><input type="checkbox" ${a} data-rv="${o.id}" ${(v||[]).includes(o.id)?'checked':''}> ${esc(REG[f.ref].label(o)||'(naamloos)')}</label>`).join('')}</div>`
-      : `<p class="small muted" style="margin:0">Nog niets ingevoerd bij ${REG[f.ref].t}s.</p>`; }
+      : `<p class="small muted" style="margin:0">Nog niets ingevoerd bij ${mv(f.ref)}.</p>`; }
   return `<div><label>${f.l}</label>${inp}${f.hint?`<div class="small muted" style="margin-top:3px">${f.hint}</div>`:''}</div>`;
 }
 function renderRegister(key, extraForm){
@@ -692,7 +695,7 @@ function renderRegister(key, extraForm){
   return `<div class="tree-wrap">
     <div><div class="tree">${list.map(x=>`<div class="node ${it&&it.id===x.id?'sel':''}" data-rsel="${key}:${x.id}">
         <span class="rl">${esc(R.label(x))||'<i class="muted">(naamloos)</i>'}</span><span class="small muted" style="margin-left:auto;text-align:right">${esc(R.meta(x)||'')}</span></div>`).join('')
-        || `<p class="muted small" style="padding:8px">Nog geen ${R.t}s.</p>`}</div>
+        || `<p class="muted small" style="padding:8px">Nog geen ${mv(key)}.</p>`}</div>
       <div style="margin-top:8px"><button data-radd="${key}">+ ${R.t} toevoegen</button></div></div>
     <div>${it ? `<div class="panel form">${R.fields.filter(f=>!f.if||f.if(it)).map(f=>fieldHtml(key,it,f)).join('')}
         ${extraForm?extraForm(it):''}
@@ -959,11 +962,12 @@ function waTabel(){
   const open = list.filter(w=>!w.relevant).length;
   const view = ui.wview||'tabel';
   const tabel = `<div class="panel" style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">
-    <tr class="small muted" style="text-align:left"><th style="padding:6px;width:170px">Hoofdthema</th><th>Waardeaspect</th><th style="width:150px">Van toepassing?</th><th>Assetmanagementdoelstelling(en)</th></tr>
+    <tr class="small muted" style="text-align:left"><th style="padding:6px;width:150px">Hoofdthema</th><th>Waardeaspect</th><th>Beleid</th><th style="width:150px">Van toepassing?</th><th>Assetmanagementdoelstelling(en)</th></tr>
     ${groups.map(([t,ws])=>ws.map((w,i)=>{ const doelen = items('amdoelen').filter(d=>d.aspect===w.id);
       return `<tr style="border-top:1px solid var(--line);vertical-align:top;${w.relevant==='Nee'?'opacity:.5':''}">
         ${i===0?`<td rowspan="${ws.length}" style="padding:8px 6px;font-weight:600;background:#fafbfa">${esc(t)}</td>`:''}
         <td style="padding:8px 6px"><b>${esc(w.naam)}</b>${w.vast?' 🔒':''}<div class="small muted">${esc(w.omschrijving||'')}</div></td>
+        <td class="small" style="padding:8px 6px">${w.beleid?esc(w.beleid):'<span class="muted">—</span>'}</td>
         <td><select data-rk="waardeaspecten" data-rid="${w.id}" data-rf="relevant" ${w.vast?'disabled':''} style="${!w.relevant?'border-color:#e0a95c':''}">
           <option value="">— kies —</option>${['Ja','Nee'].map(o=>`<option ${w.relevant===o?'selected':''}>${o}</option>`).join('')}</select></td>
         <td style="padding:6px">${doelen.map(d=>`<div class="small" style="cursor:pointer" data-gotodoel="${d.id}">• ${esc(d.titel)||'(naamloos)'}</div>`).join('')}
@@ -992,6 +996,284 @@ function renderRollen(){
     ${renderRegister('personen')}`;
 }
 
+/* ==================================================================
+   TACTISCH NIVEAU (H7) — deel 1: clusters, waardekompas, eisen, risico
+   ================================================================== */
+const KFASEN = [['gebruik','Gebruiksfase'],['op','Transitie – opwaarderen'],['af','Transitie – afwaarderen']];
+const BIJDRAGE = ['0 · n.v.t.','1 · laag','2 · gangbaar','3 · hoog'];
+const EISSOORT = ['Prestatie-eis','Eis aan de fysieke technische staat','Eis aan esthetica / verzorging (beeldkwaliteit)','Compliance-eis'];
+const FASE_SEL = ['Gebruiksfase','Transitie – opwaarderen','Transitie – afwaarderen'];
+const faseKey = l => ({'Gebruiksfase':'gebruik','Transitie – opwaarderen':'op','Transitie – afwaarderen':'af'})[l] || 'gebruik';
+const relevanteAspecten = () => { const order = ['Functionaliteit','Leefomgeving en maatschappij','Organisatiespecifiek'];
+  return items('waardeaspecten').filter(w=>w.relevant==='Ja').sort((a,b)=>order.indexOf(a.thema||'Organisatiespecifiek')-order.indexOf(b.thema||'Organisatiespecifiek')); };
+function aspectsFor(c){ return relevanteAspecten().filter(a=>!c?.aspecten || c.aspecten.includes(a.id)); }
+function kompas(c, f){ return ((c.kompas ||= {})[f]); }
+function bijdrage(c, aspectId, f){
+  const k = c && (kompas(c,f) || (f!=='gebruik' ? kompas(c,'gebruik') : null));
+  const v = k?.[aspectId]?.w; return (v===undefined||v===null||v==='') ? 2 : +v;
+}
+function niveauData(){ return (state.data.niveau ||= [
+  {id:'n1', naam:'NEN 2767 conditiescore (maximaal toegestaan)', v:['n.v.t.','4','3','2']},
+  {id:'n2', naam:'CROW beeldkwaliteit (minimaal)', v:['n.v.t.','C','B','A']},
+]); }
+function rgrens(){ return (state.data.rgrens ||= {1:12, 2:8, 3:4}); }
+
+Object.assign(REG, {
+  clusters:{ t:'cluster', label:x=>x.naam, meta:x=>{ const o=(x.objecten||[]).length; return `${o} object(en)${x.assettypen?' · '+x.assettypen:''}`; }, fields:[
+    {k:'naam',l:'Naam van het cluster',type:'text',ph:'bijv. Onderwijsfaciliteiten, Verhardingen A-wegen'},
+    {k:'omschrijving',l:'Omschrijving / afbakening',type:'textarea'},
+    {k:'assettypen',l:'Assettype(n)',type:'text',ph:'bijv. verhardingen, kunstwerken, onderwijsgebouwen'},
+    {k:'objecten',l:'Beheerobjecten in dit cluster',type:'assets'},
+    {k:'basis',l:'Kompas vooral ingegeven door',type:'select',opts:['Assetportfoliobesluiten (typisch vastgoed)','Kriticiteit voor het assetsysteem (typisch infra)','Combinatie'],
+      hint:'Bij vastgoed volgen de kompassen vooral uit portfoliobesluiten, bij infra vooral uit de kriticiteit (§7.3.1). Houd het aantal clusters beheersbaar.'},
+  ]},
+  eisen:{ t:'instandhoudingseis', label:x=>x.eis, meta:x=>[labelOf('clusters',x.cluster), labelOf('waardeaspecten',x.aspect)].filter(Boolean).join(' · '), fields:[
+    {k:'eis',l:'Instandhoudingseis',type:'text',ph:'bijv. Conditiescore dakbedekking maximaal 3'},
+    {k:'cluster',l:'Cluster',type:'refsel',ref:'clusters'},
+    {k:'fase',l:'Geldt in',type:'select',opts:FASE_SEL},
+    {k:'aspect',l:'Waardeaspect',type:'refsel',ref:'waardeaspecten'},
+    {k:'soort',l:'Soort eis (§7.3.3)',type:'select',opts:EISSOORT},
+    {k:'maatstaf',l:'Maatstaf uit de niveautabel (optioneel)',type:'select',optsFn:()=>niveauData().map(n=>n.naam)},
+    {k:'niveau',l:'Eisniveau',type:'text',ph:'bijv. 3, of B, of ≥ 98 %'},
+    {k:'bron',l:'Standaard / richtlijn',type:'text',ph:'bijv. NEN 2767, CROW 323, BBL, NEN 3140'},
+    {k:'toelichting',l:'Toelichting (vakkennis)',type:'textarea',hint:'Eisen worden vastgesteld op basis van vakkennis en assetspecifieke standaarden. De tool stelt voor, jij beslist.'},
+  ]},
+  risicos:{ t:'risico', label:x=>x.titel, meta:x=>{ const r=risicoEval(x); return r?`${r.max} · ${r.ok?'acceptabel':'niet acceptabel'}`:''; }, fields:[
+    {k:'titel',l:'Ongewenste gebeurtenis / faalwijze',type:'text',ph:'bijv. Lekkage dakbedekking'},
+    {k:'cluster',l:'Cluster',type:'refsel',ref:'clusters'},
+    {k:'fase',l:'Fase',type:'select',opts:FASE_SEL},
+    {k:'methode',l:'Methode',type:'select',opts:['Risicomatrix in deze tool','FMECA (NEN-EN 16602-30-02)','Risman','RAMS','Anders'],
+      hint:'Gebruik je een andere methode, verwijs dan hieronder naar het rapport.'},
+    {k:'oorzaak',l:'Oorzaak',type:'textarea'},
+    {k:'gevolg',l:'Gevolg',type:'textarea'},
+    {k:'kans',l:'Kans (1 zeer klein … 5 zeer groot)',type:'select',opts:['1','2','3','4','5']},
+    {k:'maatregel',l:'Beheersmaatregel',type:'textarea'},
+    {k:'eisen',l:'Leidt tot (bijstelling van) eisen',type:'ref',ref:'eisen',hint:'De terugkoppeling tussen eisen en risicoanalyse (figuur 8).'},
+    {k:'rapport',l:'Verwijzing naar rapport',type:'text'},
+  ]},
+});
+Object.assign(MV, {clusters:'clusters', eisen:'instandhoudingseisen', risicos:'risico\'s'});
+
+/* ---------- Risico-evaluatie: kans × effect per waardeaspect, getoetst aan grens per bijdrage ---------- */
+function risicoEval(r){
+  const c = items('clusters').find(x=>x.id===r.cluster); const k = +r.kans; if(!k) return null;
+  const f = faseKey(r.fase); let max = 0, ok = true, kritiek = null;
+  for(const [aid, e] of Object.entries(r.effect||{})){ if(!e) continue;
+    const b = bijdrage(c, aid, f); const s = k*+e; if(s>max){max=s;}
+    if(b===0) continue; const g = rgrens()[b]; if(s>g){ ok=false; if(!kritiek||s>kritiek.s) kritiek={aid,s,g,b}; } }
+  return max ? {max, ok, kritiek} : null;
+}
+const kleur = s => s>=15?'#c0392b':s>=8?'#e67e22':s>=4?'#f1c40f':'#7cb342';
+
+/* ---------- Spinwebdiagram (eigen weergave) ---------- */
+function radar(axes, series, size=340){
+  const n = axes.length; if(n<3) return `<p class="small muted">Minimaal 3 relevante waardeaspecten nodig voor een spinweb.</p>`;
+  const padX = 90, W = size+2*padX; const cx=W/2, cy=size/2, R=size/2-45;
+  const pt = (i,v)=>{ const a = -Math.PI/2 + i*2*Math.PI/n; return [cx+Math.cos(a)*R*v/3, cy+Math.sin(a)*R*v/3]; };
+  let g = '';
+  for(let l=1;l<=3;l++) g += `<polygon points="${axes.map((_,i)=>pt(i,l).join(',')).join(' ')}" fill="none" stroke="#dde2df"/>`;
+  axes.forEach((a,i)=>{ const [x,y]=pt(i,3); const [lx,ly]=pt(i,3.35);
+    g += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#e6eae8"/>`;
+    g += `<text x="${lx}" y="${ly}" font-size="11" text-anchor="${Math.abs(lx-cx)<8?'middle':lx>cx?'start':'end'}" dominant-baseline="middle" fill="#3b4642">${esc(a)}</text>`; });
+  for(let l=0;l<=3;l++) g += `<text x="${cx+3}" y="${cy-R*l/3-2}" font-size="9" fill="#9aa5a0">${l}</text>`;
+  for(const s of series){
+    g += `<polygon points="${s.vals.map((v,i)=>pt(i,v).join(',')).join(' ')}" fill="${s.fill||'none'}" stroke="${s.color}" stroke-width="2.2" ${s.dash?'stroke-dasharray="5 4"':''}/>`;
+    s.vals.forEach((v,i)=>{ const [x,y]=pt(i,v); g += `<circle cx="${x}" cy="${y}" r="3" fill="${s.color}"/>`; });
+  }
+  return `<svg viewBox="0 0 ${W} ${size}" style="width:100%;max-width:${W}px">${g}</svg>`;
+}
+function kompasRadar(c, f, compare, size){
+  const asp = aspectsFor(c); const series = [];
+  if(compare && f!=='gebruik') series.push({vals:asp.map(a=>bijdrage(c,a.id,'gebruik')), color:'#9aa5a0', dash:true});
+  series.push({vals:asp.map(a=>bijdrage(c,a.id,f)), color: f==='gebruik'?'#2d5f9a':f==='op'?'#3d7a26':'#b5651d', fill: f==='gebruik'?'rgba(45,95,154,.12)':f==='op'?'rgba(61,122,38,.12)':'rgba(181,101,29,.12)'});
+  return radar(asp.map(a=>a.naam), series, size);
+}
+
+/* ---------- Signalen "kompas bijstellen" (§7.3.2) ---------- */
+function kompasSignalen(c){
+  const s = []; const meta = c.kmeta||{};
+  if(!meta.gebruik) s.push('Waardekompas voor de gebruiksfase is nog niet vastgesteld.');
+  const objs = state.data.assets.filter(a=>(c.objecten||[]).includes(a.id));
+  for(const f of ['op','af']) if(objs.some(a=>a.fase===f) && !meta[f]) s.push(`Er zijn objecten in transitie (${f==='op'?'opwaarderen':'afwaarderen'}) maar er is geen vastgesteld transitiekompas.`);
+  const laatst = Math.min(...Object.values(meta).map(m=>m.ts).filter(Boolean));
+  if(isFinite(laatst)){
+    if(items('amdoelen').some(d=>(d._t||0)>laatst) || items('doelen').some(d=>(d._t||0)>laatst) || items('waardeaspecten').filter(w=>aspectsFor(c).some(a=>a.id===w.id)).some(d=>(d._t||0)>laatst))
+      s.push('Er zijn nieuwe of aangepaste doelstellingen of waardeaspecten sinds de laatste vaststelling.');
+    if(objs.some(a=>(a._ft||0)>laatst)) s.push('Een object in dit cluster is van levensfase gewisseld sinds de laatste vaststelling.');
+  }
+  return s;
+}
+
+/* ---------- Tabs ---------- */
+const TTABS = [
+  ['overzicht','Overzicht',''],['clusters','Clusters','§7.2'],['kompas','Waardekompassen','§7.3.1–7.3.2'],
+  ['eisen','Instandhoudingseisen','§7.3.3'],['risicos','Risicoanalyse','§7.3.4'],['instellingen','Niveaus & risicogrenzen',''],
+  ['v07','Concepten, plannen, AMP …','§7.3.5–7.5'],
+];
+function renderTactisch(){
+  const t = ui.ttab||'overzicht'; let body;
+  if(t==='overzicht') body = tOverzicht();
+  else if(t==='kompas') body = tKompas();
+  else if(t==='instellingen') body = tInstellingen();
+  else if(t==='risicos') body = `<div class="note small">Een risicoanalyse maakt inzichtelijk wat de kritieke assets zijn, hoe ze kunnen falen en wat de impact is. Je scoort het effect <b>per waardeaspect</b>; de bijdrage uit het waardekompas bepaalt hoeveel risico acceptabel is (zie Niveaus & risicogrenzen).</div>${risicoMatrix()}${renderRegister('risicos', risicoExtra)}`;
+  else if(t==='eisen') body = `<div class="note small">Instandhoudingseisen volgen uit het waardekompas en de AM-doelstellingen: hoe hoger de bijdrage, hoe hoger de eisen. Vier soorten: prestatie, fysieke technische staat, esthetica/verzorging en compliance.</div>${renderRegister('eisen', eisExtra)}`;
+  else if(t==='clusters') body = `<div class="note small">Op tactisch niveau wordt het portfolio verdeeld in clusters van logisch samenhangende beheerobjecten en assettypen. Elk cluster krijgt een waardekompas.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button data-voorbeeld="B">Voorbeeld laden: onderwijsvastgoed (Bijlage B)</button><button data-voorbeeld="C">Voorbeeld laden: provinciale wegen (Bijlage C)</button></div>${renderRegister('clusters')}`;
+  else body = `<div class="panel"><h3>Volgt in versie 0.7</h3><p class="muted" style="margin:0">Instandhoudingsconcepten (§7.3.5–7.3.6), uitvoeringseisen (§7.3.7), plannen en begroting (§7.3.8), advies aan asset owner (§7.3.9), dilemma's en prioritering (§7.3.10), AMP per cluster (§7.3.11), assessment (§7.4) en informatiebehoefte (§7.5).</p></div>`;
+  return `<h2>Tactisch niveau</h2><div class="ref">NEN 8026 H7 · verantwoordelijk: assetmanager · scope: clusters van beheerobjecten en assettypen · product: <b>AMP</b></div>
+    <div class="tabs">${TTABS.map(([id,n,r])=>`<button data-ttab="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
+}
+function tOverzicht(){
+  const cl = items('clusters');
+  return `<div class="panel" style="background:var(--l3s);border-color:transparent">
+    <div class="row">
+      <div class="col"><div class="colh">Gebruiksfase</div>${['Opstellen waardekompassen|kompas','Formuleren instandhoudingseisen|eisen','Uitvoeren risicoanalyse ↺ eisen|risicos','Opstellen instandhoudingsconcepten|v07','Formuleren uitvoeringseisen|v07','Opstellen plannen en begroting|v07'].map(x=>{const[t,b]=x.split('|');return `<button class="step" data-ttab="${b}"><span>${t}</span></button>`;}).join('')}</div>
+      <div class="col"><div class="colh">Transitiefase</div>${['Aanpassen waardekompas|kompas','Aanpassen instandhoudingseisen|eisen','Actualiseren risicoanalyse|risicos','Bijstellen instandhoudingsconcepten|v07','Bijstellen uitvoeringseisen|v07','Bijstellen plannen en begroting|v07'].map(x=>{const[t,b]=x.split('|');return `<button class="step" data-ttab="${b}"><span>${t}</span></button>`;}).join('')}</div>
+    </div><p class="small muted" style="text-align:center;margin:8px 0 0">Eigen weergave, zie §7.1. Na de transitie keert het object terug naar de gebruiksfase en gelden weer de bijbehorende eisen en concepten.</p></div>
+  <h3 style="margin-top:18px">Waardekompassen per cluster</h3>
+  ${cl.length?`<div class="cards">${cl.map(c=>{ const sig = kompasSignalen(c);
+    return `<div class="card" style="cursor:pointer" data-kopen="${c.id}"><h3>${esc(c.naam)||'(naamloos)'}</h3>${kompasRadar(c, kompas(c,'gebruik')?'gebruik':kompas(c,'op')?'op':kompas(c,'af')?'af':'gebruik', false, 260)}
+      ${(kompas(c,'gebruik')?'':'<span class="small muted" style="margin-right:4px">alleen transitiekompas</span>')}${['op','af'].filter(f=>kompas(c,f)).map(f=>`<span class="fase ${f==='op'?'f-op':'f-af'}" style="margin-right:4px">${f==='op'?'↗ opwaarderen':'↘ afwaarderen'}</span>`).join('')}
+      ${sig.length?`<div class="small" style="color:#b5651d;margin-top:6px">⚠ ${sig.length} signaal${sig.length>1?'en':''}</div>`:`<div class="small" style="color:var(--accent);margin-top:6px">✓ actueel</div>`}</div>`;}).join('')}</div>`
+    :`<div class="panel"><p class="muted" style="margin:0">Nog geen clusters. <a href="#tactisch" data-ttab="clusters">Maak een cluster aan</a> of laad een voorbeeld uit Bijlage B of C.</p></div>`}`;
+}
+function tKompas(){
+  const cl = items('clusters');
+  if(!cl.length) return `<div class="panel"><p class="muted" style="margin:0">Maak eerst een cluster aan (tab Clusters).</p></div>`;
+  const c = cl.find(x=>x.id===ui.kcluster) || cl[0]; ui.kcluster = c.id;
+  if(!ui.kfase && !kompas(c,'gebruik')) ui.kfase = kompas(c,'op')?'op':kompas(c,'af')?'af':'gebruik';
+  const f = ui.kfase||'gebruik'; const k = kompas(c,f);
+  const asp = aspectsFor(c);
+  const objs = state.data.assets.filter(a=>(c.objecten||[]).includes(a.id));
+  const sig = kompasSignalen(c); const meta = (c.kmeta||{})[f]; const hist = (c.khist||{})[f]||[];
+  const head = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
+      <div class="ctl"><label>Cluster</label><select data-kcluster="1">${cl.map(x=>`<option value="${x.id}" ${x.id===c.id?'selected':''}>${esc(x.naam)||'(naamloos)'}</option>`).join('')}</select></div>
+      <div class="tabs" style="margin:0;border:none">${KFASEN.map(([id,n])=>`<button data-kfase="${id}" class="${f===id?'on':''}">${n}${id!=='gebruik'&&!kompas(c,id)?' <span class="small muted">(leeg)</span>':''}</button>`).join('')}</div>
+    </div>`;
+  if(!asp.length) return head + `<div class="warn small">Er zijn nog geen waardeaspecten als "van toepassing" gemarkeerd. Alleen relevante waardeaspecten komen in het kompas (Bijlage B, opm. 2). <a href="#waardeaspecten">Naar de waardeaspectentabel</a>.</div>`;
+  if(f!=='gebruik' && !k) return head + `<div class="panel"><p style="margin-top:0">Er is nog geen kompas voor de <b>${f==='op'?'transitiefase – opwaarderen':'transitiefase – afwaarderen'}</b>. Het transitiekompas start als kopie van het gebruikskompas; daarna pas je de afwijkende aspecten aan.</p><button class="primary" data-kmaak="${f}">Maak transitiekompas</button></div>`;
+  const kriti = Math.max(0,...objs.map(a=>a.krit||0));
+  const context = `<div class="panel small" style="margin-bottom:12px"><b>Afleiden van de bijdrage</b> (§7.3.1) — kriticiteit, context, gebruik en levensfase.
+    <div class="muted" style="margin-top:4px">Objecten in dit cluster: ${objs.length?objs.map(a=>`${esc(a.naam)} <span class="fase ${FASE_OPT.find(o=>o[0]===a.fase)?.[2]||'f-gebruik'}">${a.fase==='op'?'↗':a.fase==='af'?'↘':'gebruik'}</span>${a.krit?` K${a.krit}`:''}`).join(' · '):'nog geen — koppel ze in de tab Clusters'}${kriti?` · hoogste kriticiteit: K${kriti}`:''}${c.basis?` · kompas vooral ingegeven door: ${esc(c.basis.split(' (')[0].toLowerCase())}`:''}</div></div>`;
+  const rows = asp.map(a=>{ const e = (k||{})[a.id]||{}; const w = bijdrage(c,a.id,f); const wg = bijdrage(c,a.id,'gebruik');
+    const changed = f!=='gebruik' && w!==wg; const needT = w!==2 && !(e.t||'').trim() && !(f!=='gebruik' && !changed && ((kompas(c,'gebruik')||{})[a.id]?.t));
+    const tval = e.t ?? (f!=='gebruik' ? ((kompas(c,'gebruik')||{})[a.id]?.t||'') : '');
+    return `<tr style="border-top:1px solid var(--line);${changed?'background:#e8f1fb':''}">
+      <td style="padding:6px"><b>${esc(a.naam)}</b><div class="small muted">${esc(a.thema||'')}</div></td>
+      <td><div class="krit" style="min-width:170px">${[0,1,2,3].map(v=>`<button data-kw="${a.id}" data-kv="${v}" class="${w===v?'on':''}" title="${BIJDRAGE[v]}">${v}</button>`).join('')}</div>
+        ${changed?`<div class="small" style="color:#2d5f9a">was ${wg} in gebruiksfase</div>`:''}</td>
+      <td><input data-kt="${a.id}" value="${esc(tval)}" placeholder="${w===2?'standaard — toelichting optioneel':'waarom wijkt dit af van 2?'}" style="width:100%;${needT?'border-color:#e0a95c':''}"></td></tr>`; }).join('');
+  return head + context + `<div style="display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start">
+    <div class="panel" style="text-align:center">${kompasRadar(c,f,ui.kcompare!==false,360)}
+      ${f!=='gebruik'?`<label class="small"><input type="checkbox" data-kcompare="1" ${ui.kcompare!==false?'checked':''}> vergelijk met gebruiksfase (grijs gestippeld)</label>`:''}
+      <p class="small muted" style="margin:6px 0 0">0 n.v.t. · 1 laag · 2 gangbaar (standaard) · 3 hoog</p></div>
+    <div>
+      <div class="panel" style="overflow:auto;padding:10px"><table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr class="small muted" style="text-align:left"><th style="padding:6px">Waardeaspect</th><th>Bijdrage aan instandhouding</th><th>Nadere toelichting</th></tr>${rows}</table>
+        <p class="small muted" style="margin:8px 0 0">Wijkt de bijdrage af van 2, licht dan toe waarom (oranje = toelichting ontbreekt). ${f!=='gebruik'?'Blauw = gewijzigd t.o.v. de gebruiksfase.':''}</p></div>
+      <div class="panel" style="margin-top:12px">
+        ${sig.length?`<div class="warn small" style="margin-top:0">${sig.map(x=>'⚠ '+x).join('<br>')}</div>`:''}
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+          <div><label class="small muted">Aanleiding (§7.3.2)</label><select id="kreden" style="width:100%">${['Eerste opstelling','Nieuwe of aangepaste organisatie- en/of AM-doelstellingen','Overgang gebruiks- ↔ transitiefase','Wijziging doorgevoerd zonder transitiefase (opm. 2)','Uitkomst assessment'].map(o=>`<option>${o}</option>`).join('')}</select>
+            <label class="small" style="display:block;margin-top:6px"><input type="checkbox" id="kao"> Asset owner geïnformeerd over consequenties en risico's van dit (bijgestelde) kompas</label></div>
+          <button class="primary" data-kvast="1">Kompas vaststellen</button></div>
+        ${meta?`<p class="small muted" style="margin:8px 0 0">Laatst vastgesteld: ${esc(meta.datum)} · ${esc(meta.reden)}${meta.ao?' · AO geïnformeerd':''}</p>`:''}
+        ${hist.length>1?`<details class="small" style="margin-top:6px"><summary>Historie (${hist.length})</summary>${hist.slice().reverse().map(h=>`<div>${esc(h.datum)} — ${esc(h.reden)}${h.ao?' · AO geïnformeerd':''}</div>`).join('')}</details>`:''}
+      </div></div></div>`;
+}
+function eisExtra(it){
+  const c = items('clusters').find(x=>x.id===it.cluster); if(!c || !it.aspect) return '';
+  const f = faseKey(it.fase); const b = bijdrage(c, it.aspect, f);
+  const n = niveauData().find(x=>x.naam===it.maatstaf); const voorstel = n ? n.v[b] : null;
+  const asp = items('waardeaspecten').find(w=>w.id===it.aspect);
+  return `<div class="panel small" style="background:var(--l3s);border-color:transparent">
+    Bijdrage in het waardekompas van <b>${esc(c.naam)}</b> (${esc(it.fase||'Gebruiksfase')}) voor <b>${esc(asp?.naam||'')}</b>: <b>${BIJDRAGE[b]}</b>.
+    ${b===0 && !/compliance/i.test(asp?.naam||'')?'<div style="color:#b5651d;margin-top:4px">Dit aspect is n.v.t. voor dit cluster — is deze eis nodig?</div>':''}
+    ${voorstel?`<div style="margin-top:6px">Voorstel volgens niveautabel (${esc(n.naam)}): <b>${esc(voorstel)}</b> ${it.niveau!==voorstel?`<button data-eisvoorstel="${it.id}" style="font-size:12px;padding:2px 8px;margin-left:6px">Neem over</button>`:'✓'}</div>`:''}
+    ${/compliance/i.test(asp?.naam||'')?'<div class="muted" style="margin-top:4px">Compliance is de ondergrens; strengere eisen zijn altijd toegestaan.</div>':''}</div>`;
+}
+function risicoExtra(it){
+  const c = items('clusters').find(x=>x.id===it.cluster);
+  if(!c) return `<div class="small muted">Kies een cluster om het effect per waardeaspect te scoren.</div>`;
+  const f = faseKey(it.fase); const asp = aspectsFor(c).filter(a=>bijdrage(c,a.id,f)>0); const ev = risicoEval(it); const g = rgrens();
+  return `<div><label>Effect per waardeaspect (1 verwaarloosbaar … 5 catastrofaal; leeg = geen effect)</label>
+    <div class="panel" style="padding:8px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <tr class="muted small" style="text-align:left"><th>Waardeaspect</th><th>Bijdrage</th><th>Effect</th><th>Risico</th><th>Grens</th></tr>
+      ${asp.map(a=>{ const e = (it.effect||{})[a.id]; const b = bijdrage(c,a.id,f); const s = e&&it.kans ? +e * +it.kans : null;
+        return `<tr style="border-top:1px solid var(--line)"><td style="padding:4px">${esc(a.naam)}</td><td>${b}</td>
+          <td><select data-reff="${a.id}" data-rid2="${it.id}" style="padding:2px 6px"><option value=""></option>${[1,2,3,4,5].map(v=>`<option ${+e===v?'selected':''}>${v}</option>`).join('')}</select></td>
+          <td>${s?`<span style="display:inline-block;min-width:26px;text-align:center;border-radius:4px;color:#fff;background:${kleur(s)}">${s}</span>`:''}</td>
+          <td class="muted">≤ ${g[b]} ${s&&s>g[b]?'<b style="color:#c0392b">✗</b>':s?'✓':''}</td></tr>`; }).join('')}
+    </table></div>
+    ${ev?`<div class="${ev.ok?'note':'warn'} small" style="margin:8px 0 0">${ev.ok?'✓ Risico acceptabel binnen de grenzen van het waardekompas.':`✗ Niet acceptabel: ${esc(labelOf('waardeaspecten',ev.kritiek.aid))} scoort ${ev.kritiek.s} bij een grens van ${ev.kritiek.g} (bijdrage ${ev.kritiek.b}). Leg een beheersmaatregel vast of stel de eisen bij.`}</div>`:''}</div>`;
+}
+function risicoMatrix(){
+  const rs = items('risicos').map(r=>({r, k:+r.kans, e:Math.max(0,...Object.values(r.effect||{}).map(Number).filter(Boolean))})).filter(x=>x.k&&x.e);
+  let cells = '';
+  for(let e=5;e>=1;e--){ cells += `<div class="small muted" style="display:flex;align-items:center;justify-content:end;padding-right:4px">${e}</div>`;
+    for(let k=1;k<=5;k++){ const here = rs.filter(x=>x.k===k&&x.e===e);
+      cells += `<div style="background:${kleur(k*e)}33;border:1px solid ${kleur(k*e)}66;border-radius:4px;min-height:34px;padding:2px;display:flex;flex-wrap:wrap;gap:2px;align-content:flex-start">${here.map(x=>`<span data-rsel="risicos:${x.r.id}" title="${esc(x.r.titel)}" style="cursor:pointer;font-size:10px;background:#fff;border-radius:3px;padding:0 4px;border:1px solid #ccc">${esc((x.r.titel||'?').slice(0,14))}</span>`).join('')}</div>`; } }
+  return `<div class="panel" style="margin-bottom:14px"><div style="display:grid;grid-template-columns:30px repeat(5,1fr);gap:3px;max-width:620px">${cells}
+    <div></div>${[1,2,3,4,5].map(k=>`<div class="small muted" style="text-align:center">${k}</div>`).join('')}</div>
+    <p class="small muted" style="margin:6px 0 0">Risicomatrix: horizontaal kans, verticaal hoogste effect. Klik op een risico om het te openen.</p></div>`;
+}
+function tInstellingen(){
+  const g = rgrens();
+  return `<div class="note small">Deze instellingen zijn een <b>voorstel van de tool</b>, niet uit de norm. Pas ze aan op jullie eigen standaarden en risicobereidheid.</div>
+  <div class="panel"><h3>Niveautabel: voorgesteld eisniveau per bijdrage</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:14px"><tr class="small muted" style="text-align:left"><th style="padding:6px">Maatstaf</th><th>0 n.v.t.</th><th>1 laag</th><th>2 gangbaar</th><th>3 hoog</th><th></th></tr>
+    ${niveauData().map(n=>`<tr style="border-top:1px solid var(--line)"><td style="padding:6px"><input data-nv="${n.id}" data-ni="naam" value="${esc(n.naam)}" style="width:100%"></td>
+      ${[0,1,2,3].map(i=>`<td><input data-nv="${n.id}" data-ni="${i}" value="${esc(n.v[i])}" style="width:80px"></td>`).join('')}<td><button class="danger" data-nvdel="${n.id}">×</button></td></tr>`).join('')}
+    </table><button data-nvadd="1" style="margin-top:8px">+ maatstaf toevoegen</button></div>
+  <div class="panel" style="margin-top:14px"><h3>Risicogrenzen: maximaal acceptabel risico (kans × effect) per bijdrage</h3>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">${[1,2,3].map(b=>`<label class="small">Bijdrage ${BIJDRAGE[b]}<br><input type="number" min="1" max="25" data-rg="${b}" value="${g[b]}" style="width:90px"></label>`).join('')}</div>
+    <p class="small muted" style="margin:8px 0 0">Hoe belangrijker het waardeaspect, hoe minder risico acceptabel. Bij bijdrage 0 (n.v.t.) wordt het aspect niet getoetst.</p></div>`;
+}
+
+/* ---------- Voorbeelden uit Bijlage B en C (waarden uit de norm, toelichtingen in eigen woorden) ---------- */
+const ALIAS = {'Circulariteit':'Circulair','Ecologie':'Ecologisch','Klimaatadaptief':'Klimaatadaptatie','Energiegebruik':'Energieverbruik'};
+function aspectId(naam, thema){
+  naam = ALIAS[naam]||naam; const list = items('waardeaspecten');
+  let w = list.find(x=>(x.naam||'').toLowerCase()===naam.toLowerCase());
+  if(!w){ w = {id:uid(), naam, thema:thema||'Organisatiespecifiek', relevant:'', _t:Date.now()}; list.push(w); }
+  return w;
+}
+const VB = {
+  B:{ relevant:{Ja:['Compliance','Veiligheid','Gezondheid','Bruikbaarheid','Beschikbaarheid','Betrouwbaarheid','Toegankelijkheid','Esthetica','Duurzaamheid','Circulair','Ecologisch','Energieverbruik','Klimaatadaptatie','Recreatie'], Nee:['Cultuurhistorisch','Leefbaarheid','Inclusiviteit']},
+    clusters:[{naam:'Voorbeeld B – Onderwijsfaciliteiten', assettypen:'onderwijsfaciliteiten', basis:'Assetportfoliobesluiten (typisch vastgoed)',
+      gebruik:{Compliance:2,Veiligheid:[3,'Onveilige situaties in onderwijsgebouwen accepteren we niet.'],Gezondheid:2,Bruikbaarheid:2,Beschikbaarheid:[3,'Goed onderwijs vraagt een hoge beschikbaarheid.'],Betrouwbaarheid:[3,'Goed onderwijs vraagt een hoge betrouwbaarheid.'],Toegankelijkheid:2,Esthetica:2,Duurzaamheid:2,Circulair:2,Ecologisch:[1,'Vooral van belang voor de buitenruimte, minder voor de gebouwen.'],Energieverbruik:2,Klimaatadaptatie:2,Recreatie:[1,'Weinig relatie tussen onderwijs en recreatie.']},
+      op:{Esthetica:[3,'De uitstraling van het gebouw moet omhoog.'],Energieverbruik:[3,'Het energieverbruik moet dalen; goede instandhouding helpt daarbij.']},
+      af:{Beschikbaarheid:[2,'In deze fase is een lagere beschikbaarheid aanvaardbaar.'],Betrouwbaarheid:[2,'In deze fase is een lagere betrouwbaarheid aanvaardbaar.'],Esthetica:[1,'Het mag zichtbaar zijn dat het object in transitie is.'],Circulair:[3,'Vrijkomend materiaal moet geschikt blijven voor hergebruik.'],Energieverbruik:[1,'Tijdelijk hoger energieverbruik is aanvaardbaar.'],Klimaatadaptatie:[1,'Tijdelijke overlast door klimaatverandering is aanvaardbaar.']},
+    }]},
+  C:{ relevant:{Ja:['Compliance','Veiligheid','Gezondheid','Beschikbaarheid','Esthetica','Leefbaarheid','Duurzaamheid','Circulair','Ecologisch','Energieverbruik','Klimaatadaptatie','Recreatie','Participatie'], Nee:['Bruikbaarheid','Betrouwbaarheid','Onderhoudbaarheid','Toegankelijkheid','Cultuurhistorisch','Bereikbaarheid','Inclusiviteit']},
+    clusters:[
+      {naam:'Voorbeeld C – Verhardingen A-wegen', assettypen:'verhardingen', basis:'Kriticiteit voor het assetsysteem (typisch infra)',
+        gebruik:{Compliance:2,Veiligheid:[3,'Onveiligheid op A-wegen heeft grote impact.'],Gezondheid:2,Beschikbaarheid:[3,'A-wegen zijn kritiek voor de regionale economie.'],Esthetica:2,Leefbaarheid:2,Duurzaamheid:2,Circulair:2,Ecologisch:2,Energieverbruik:2,Klimaatadaptatie:[3,'A-wegen mogen niet uitvallen door klimaatverandering.'],Recreatie:[0,'Geen recreatieve functie.'],Participatie:2}},
+      {naam:'Voorbeeld C – Verhardingen erftoegangswegen', assettypen:'verhardingen', basis:'Kriticiteit voor het assetsysteem (typisch infra)',
+        gebruik:{Compliance:2,Veiligheid:2,Gezondheid:2,Beschikbaarheid:[1,'Minder van belang voor de regionale economie.'],Esthetica:[1,'Uitstraling is hier minder van belang.'],Leefbaarheid:2,Duurzaamheid:2,Circulair:2,Ecologisch:2,Energieverbruik:2,Klimaatadaptatie:[1,'Impact van klimaatschade op het wegennet is beperkt.'],Recreatie:[3,'Onderdeel van recreatieve routes.'],Participatie:2}},
+      {naam:'Voorbeeld C – Verhardingen N-wegen', assettypen:'verhardingen', basis:'Kriticiteit voor het assetsysteem (typisch infra)', tfase:'af',
+        gebruik:{}, af:{Compliance:2,Veiligheid:2,Gezondheid:2,Beschikbaarheid:[1,'In transitie mag vaker onderhoud plaatsvinden, ten koste van beschikbaarheid.'],Esthetica:[1,'Alleen schoonhouden, geen activiteiten voor uitstraling.'],Leefbaarheid:2,Duurzaamheid:2,Circulair:2,Ecologisch:2,Energieverbruik:2,Klimaatadaptatie:[1,'Schade door klimaatverandering wordt in deze fase geaccepteerd.'],Recreatie:[0,'Geen recreatieve functie.'],Participatie:2}},
+    ]},
+};
+function laadVoorbeeld(key){
+  laadBijlageA(); const v = VB[key];
+  for(const [val, names] of Object.entries(v.relevant)) for(const n of names){ const w = aspectId(n); if(!w.relevant) w.relevant = val; if(w.vast) w.relevant='Ja'; }
+  const ts = Date.now(), datum = new Date().toISOString().slice(0,10);
+  for(const vc of v.clusters){
+    if(items('clusters').some(c=>c.naam===vc.naam)) continue;
+    const c = {id:uid(), naam:vc.naam, assettypen:vc.assettypen, basis:vc.basis, omschrijving:'Voorbeeld gebaseerd op NEN 8026 Bijlage '+key+' (waarden uit de norm, toelichtingen in eigen woorden).'+(vc.tfase?' De richting van de transitie wordt in het voorbeeld niet genoemd; hier opgenomen als afwaarderen.':''), objecten:[], kompas:{}, kmeta:{}, khist:{}};
+    for(const f of ['gebruik','op','af']){ if(!vc[f]) continue;
+      if(f!=='gebruik' && !Object.keys(vc[f]).length) continue;
+      c.kompas[f] = {}; for(const [n,val] of Object.entries(vc[f])){ const w = aspectId(n); const [x,t] = Array.isArray(val)?val:[val,'']; c.kompas[f][w.id] = {w:x, t}; }
+      if(Object.keys(c.kompas[f]).length){ c.kmeta[f] = {ts, datum, reden:'Voorbeeld uit Bijlage '+key, ao:false}; c.khist[f] = [c.kmeta[f]]; }
+    }
+    c.aspecten = [...new Set(Object.values(c.kompas).flatMap(k=>Object.keys(k)))];
+    if(vc.tfase && !Object.keys(c.kompas.gebruik||{}).length){ delete c.kompas.gebruik; delete c.kmeta.gebruik; }
+    items('clusters').push(c);
+  }
+  save();
+}
+
 /* ---------------- Overige modules (nog te bouwen) ---------------- */
 function renderModule(m){
   return `<h2>${m.title}</h2><div class="ref">NEN 8026 ${m.ref}${m.product?' · product: <b>'+m.product+'</b>':''}</div>
@@ -1005,26 +1287,54 @@ function route(){
   const id = location.hash.slice(1) || 'start';
   const m = MODULES.find(x=>x.id===id) || MODULES[0];
   renderNav(m.id);
-  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets, bestuurlijk:renderBestuurlijk, strategisch:renderStrategisch, waardeaspecten:renderWaardeaspecten, rollen:renderRollen})[m.id]?.() ?? renderModule(m);
+  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets, bestuurlijk:renderBestuurlijk, strategisch:renderStrategisch, tactisch:renderTactisch, waardeaspecten:renderWaardeaspecten, rollen:renderRollen})[m.id]?.() ?? renderModule(m);
   main.innerHTML += `<footer>Deze tool bevat geen normtekst of figuren uit NEN 8026; omschrijvingen en figuren zijn eigen samenvattingen. Raadpleeg de norm voor de officiële inhoud.</footer>`;
 }
 function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print]');
+  const r = e.target.closest('[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.ttab){ ui.ttab = d.ttab; if(location.hash!=='#tactisch'){ location.hash='tactisch'; } window.scrollTo(0,0); route(); return; }
+    if(d.kopen){ ui.kcluster = d.kopen; ui.kfase=null; ui.ttab='kompas'; window.scrollTo(0,0); route(); return; }
+    if(d.kfase){ ui.kfase = d.kfase; rerender(); return; }
+    if(d.kmaak){ const c = items('clusters').find(x=>x.id===ui.kcluster); c.kompas ||= {}; c.kompas[d.kmaak] = JSON.parse(JSON.stringify(c.kompas.gebruik||{})); c.kchanged=Date.now(); save(); rerender(); return; }
+    if(d.kw){ const c = items('clusters').find(x=>x.id===ui.kcluster); const f = ui.kfase||'gebruik'; c.kompas ||= {}; const k = (c.kompas[f] ||= {});
+      const prev = k[d.kw]||{}; k[d.kw] = {...prev, w:+d.kv}; if(prev.t===undefined && f!=='gebruik'){ k[d.kw].t = (c.kompas.gebruik||{})[d.kw]?.t||''; } c.kchanged=Date.now(); save(); rerender(); return; }
+    if(d.kvast){ const c = items('clusters').find(x=>x.id===ui.kcluster); const f = ui.kfase||'gebruik';
+      if(!c.kompas?.[f]) { c.kompas ||= {}; c.kompas[f] = {}; }
+      const m = {ts:Date.now(), datum:new Date().toISOString().slice(0,10), reden:document.getElementById('kreden').value, ao:document.getElementById('kao').checked};
+      (c.kmeta ||= {})[f] = m; ((c.khist ||= {})[f] ||= []).push(m); save(); rerender(); return; }
+    if(d.eisvoorstel){ const it = items('eisen').find(x=>x.id===d.eisvoorstel); const c = items('clusters').find(x=>x.id===it.cluster);
+      const n = niveauData().find(x=>x.naam===it.maatstaf); it.niveau = n.v[bijdrage(c,it.aspect,faseKey(it.fase))]; it._t=Date.now(); save(); rerender(); return; }
+    if(d.nvadd){ niveauData().push({id:uid(), naam:'Nieuwe maatstaf', v:['n.v.t.','','','']}); save(); rerender(); return; }
+    if(d.nvdel){ state.data.niveau = niveauData().filter(n=>n.id!==d.nvdel); save(); rerender(); return; }
+    if(d.voorbeeld){ laadVoorbeeld(d.voorbeeld); ui.ttab='overzicht'; rerender(); return; }
+    if(d.loada){ laadBijlageA(); ui.wview='tabel'; rerender(); return; }
+    if(d.wview){ ui.wview = d.wview; rerender(); return; }
+    if(d.newdoel||d.gotodoel){
+      let id = d.gotodoel;
+      if(d.newdoel){ const it = {id:uid(), aspect:d.newdoel, status:'Concept'}; items('amdoelen').push(it); id = it.id; save(); }
+      ui.sel.amdoelen = id; ui.stab = 'amdoelen'; location.hash = 'strategisch'; route(); window.scrollTo(0,0);
+      main.querySelector('[data-rf="titel"]')?.focus(); return;
+    }
+    if(d.signal){
+      items('consequenties').push({id:uid(), sig:'beleid', titel:'Geen (volledig) assetmanagementbeleid meegegeven', soort:'Gebrek aan sturing (geen besluit genomen)',
+        omschrijving:'Zonder beleid kan het in stand houden niet bewust sturen op alle relevante waardeaspecten; het beheer blijft beperkt tot functionele instandhouding en compliance. Verzoek aan de asset owner om sturing te geven.'});
+      save(); rerender(); return;
+    }
     if(d.btab){ ui.btab = d.btab; window.scrollTo(0,0); route(); return; }
     if(d.stab){ ui.stab = d.stab; window.scrollTo(0,0); route(); return; }
     if(d.print){ window.print(); return; }
     if(d.rsel){ const [k,id] = d.rsel.split(':'); ui.sel[k]=id; ui.rarmed=null; }
-    else if(d.radd){ const it = {id:uid()}; items(d.radd).push(it); ui.sel[d.radd]=it.id; ui.rarmed=null; save(); rerender();
+    else if(d.radd){ const it = {id:uid(), _t:Date.now()}; items(d.radd).push(it); ui.sel[d.radd]=it.id; ui.rarmed=null; save(); rerender();
       main.querySelector('.form input, .form select')?.focus(); return; }
     else if(d.rdel){ const [k,id] = d.rdel.split(':');
       if(ui.rarmed!==id){ ui.rarmed=id; } else { state.data.reg[k] = items(k).filter(x=>x.id!==id); ui.sel[k]=null; ui.rarmed=null; save(); } }
     else if(d.apply){ const b = items('besluiten').find(x=>x.id===d.apply); const f = b.richting==='Opwaarderen'?'op':'af';
-      for(const a of state.data.assets) if(b.assets.includes(a.id)){ a.fase=f; a.toelichting = (b.titel||'Besluit')+(b.datum?' ('+b.datum+')':''); }
+      for(const a of state.data.assets) if(b.assets.includes(a.id)){ a.fase=f; a._ft=Date.now(); a.toelichting = (b.titel||'Besluit')+(b.datum?' ('+b.datum+')':''); }
       save(); }
     rerender(); return;
   }
@@ -1058,10 +1368,18 @@ main.addEventListener('click', e=>{
 });
 main.addEventListener('input', e=>{
   const el = e.target, d = el.dataset;
+  if(d.kcluster){ ui.kcluster = el.value; ui.kfase=null; rerender(); return; }
+  if(d.kcompare){ ui.kcompare = el.checked; rerender(); return; }
+  if(d.kt){ const c = items('clusters').find(x=>x.id===ui.kcluster); const f = ui.kfase||'gebruik'; c.kompas ||= {}; const k = (c.kompas[f] ||= {});
+    k[d.kt] = {...(k[d.kt]||{w:bijdrage(c,d.kt,f)}), t:el.value}; c.kchanged=Date.now(); save(); return; }
+  if(d.reff){ const it = items('risicos').find(x=>x.id===d.rid2); (it.effect ||= {})[d.reff] = el.value; it._t=Date.now(); save(); rerender(); return; }
+  if(d.nv){ const n = niveauData().find(x=>x.id===d.nv); if(d.ni==='naam') n.naam = el.value; else n.v[+d.ni] = el.value; save(); return; }
+  if(d.rg){ rgrens()[d.rg] = +el.value || 1; save(); return; }
   if(d.rf){
     const it = items(d.rk).find(x=>x.id===d.rid); if(!it) return;
     if(el.type==='checkbox'){ const arr = new Set(it[d.rf]||[]); el.checked?arr.add(d.rv):arr.delete(d.rv); it[d.rf]=[...arr]; }
     else it[d.rf] = el.value;
+    it._t = Date.now();
     save();
     if(el.tagName==='SELECT' || el.type==='checkbox' || el.type==='date') rerender();
     else { const l = main.querySelector(`[data-rsel="${d.rk}:${d.rid}"] .rl`); if(l) l.innerHTML = esc(REG[d.rk].label(it))||'<i class="muted">(naamloos)</i>'; }
@@ -1071,6 +1389,7 @@ main.addEventListener('input', e=>{
     const a = state.data.assets.find(x=>x.id===d.af); if(!a) return;
     if(el.type==='checkbox'){ const s = new Set(a[d.ak]||[]); el.checked?s.add(d.rv):s.delete(d.rv); a[d.ak]=[...s]; }
     else a[d.ak] = el.value;
+    if(d.ak==='fase') a._ft = Date.now();
     save(); if(d.ak==='fase'||d.ak==='transEind') rerender(); return;
   }
   if(d.best){ state.data.best[d.best] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
@@ -1081,7 +1400,7 @@ main.addEventListener('input', e=>{
   }
   const f = e.target.dataset.f; if(!f) return;
   const a = state.data.assets.find(x=>x.id===ui.node); if(!a) return;
-  a[f] = e.target.value; save();
+  a[f] = e.target.value; if(f==='fase') a._ft = Date.now(); save();
   if(f==='fase') rerender();
   else { const n = main.querySelector(`[data-node="${a.id}"] span:nth-child(2)`); if(n && f==='naam') n.innerHTML = esc(a.naam)||'<i class="muted">(naamloos)</i>'; }
 });

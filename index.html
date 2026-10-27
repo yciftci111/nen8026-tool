@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.15</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.16</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -2514,6 +2514,138 @@ const nI = k => items(k).length;
 const pers = r => items('personen').filter(p=>(p.rollen||[]).includes(r));
 function ev(ok, txt, link){ return {ok, txt, link}; }
 const RACI_53 = [['a','Opstellen en actueel houden van het SAMP, incl. AM-doelstellingen'],['b','Zorgen dat het AM-systeem de realisatie van het SAMP ondersteunt'],['c','Zorgen dat het AM-systeem aan ISO 55001 voldoet'],['d','Geschiktheid, adequaatheid en doeltreffendheid van het AM-systeem'],['e','Opstellen en actueel houden van de assetmanagementplannen'],['f','Rapporteren over de prestaties van het AM-systeem aan de directie']];
+/* ---------- ISO 55001 H7 Ondersteuning: registers ---------- */
+const INFOTERREIN = ['Strategie en planning','Processen','Technische en fysieke eigenschappen','Dienstverlening en activiteiten','Onderhoudsmanagement','Prestatiemanagement en rapportage','Financieel en mensen/middelen','Risicomanagement','Calamiteiten en bedrijfscontinuïteit','Contractbeheer'];
+const BEWUST = ['Raadpleging personeel over het AM-systeem','Nieuwsbrief, briefing of introductieprogramma','Artikel op intranet / website','Agendapunt in werk- of MT-overleg','Briefing directie','Briefing leveranciers en serviceproviders'];
+Object.assign(REG, {
+  capaciteit:{ t:'capaciteitsregel', label:x=>x.activiteit, meta:x=>{ const g = num(x.nodig)-num(x.beschikbaar); return x.nodig?`nodig ${x.nodig} · beschikbaar ${x.beschikbaar||0}${g>0?' · tekort '+g:''}`:''; }, fields:[
+    {k:'activiteit',l:'Activiteit of rol',type:'text',ph:'bijv. conditiemetingen NEN 2767, assetmanager vastgoed, onderhoudsbudget'},
+    {k:'soortM',l:'Soort',type:'select',opts:['Mensen (fte)','Budget (€)','Hulpmiddelen / systemen / apparatuur']},
+    {k:'nodig',l:'Benodigd',type:'text'},{k:'beschikbaar',l:'Beschikbaar',type:'text'},
+    {k:'voorziening',l:'Wijze van voorzien in tekort',type:'select',opts:['Intern (werving, herverdeling)','Uitbesteden','Inhuur','Lease / huur','Aankoop','Prioriteren (activiteit schrappen of uitstellen)']},
+    {k:'duur',l:'Eenmalig of doorlopend',type:'select',opts:['Eenmalig','Doorlopend']},
+    {k:'cluster',l:'Voor cluster / AMP (optioneel)',type:'refsel',ref:'clusters'},
+    {k:'toelichting',l:'Toelichting',type:'textarea',hint:'Hulpmiddelen en apparatuur voor AM-activiteiten horen zelf als assets te worden beheerd (ISO 55002 §7.1).'},
+  ]},
+  competenties:{ t:'competentie', label:x=>x.naam, meta:x=>(x.rollen||[]).join(', '), fields:[
+    {k:'naam',l:'Competentie',type:'text',ph:'bijv. conditiemeting NEN 2767, risicoanalyse, levenscycluskosten, contractmanagement'},
+    {k:'rollen',l:'Vereist voor rol(len)',type:'checks',opts:['Asset owner','Gemandateerd asset owner','Assetmanager','Serviceprovider']},
+    {k:'niveau',l:'Vereist niveau (1 basis · 2 zelfstandig · 3 expert)',type:'select',opts:['1','2','3']},
+    {k:'oms',l:'Omschrijving: kennis, inzicht, vaardigheden, ervaring',type:'textarea'},
+  ]},
+  opleidingen:{ t:'opleiding of ontwikkelactie', label:x=>x.titel, meta:x=>[labelOf('personen',x.persoon), x.datum, x.status].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Opleiding, training, begeleiding of andere actie',type:'text'},
+    {k:'persoon',l:'Persoon',type:'refsel',ref:'personen'},
+    {k:'comp',l:'Voor competentie(s)',type:'ref',ref:'competenties'},
+    {k:'soortO',l:'Soort maatregel (ISO 55001 §7.2 opm.)',type:'select',opts:['Training / opleiding','Begeleiding / coaching','Andere functie toewijzen','Inhuren of contracteren','Kennisdeling','Opvolgingsplan']},
+    {k:'datum',l:'Datum',type:'date'},{k:'status',l:'Status',type:'select',opts:['Gepland','Afgerond']},
+    {k:'bewijs',l:'Bewijs (certificaat, diploma)',type:'text'},
+    {k:'evaluatie',l:'Evaluatie doeltreffendheid',type:'textarea'},
+  ]},
+  bewustzijn:{ t:'bewustzijnsactiviteit', label:x=>x.titel, meta:x=>[x.soortB, x.datum].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Activiteit',type:'text'},
+    {k:'soortB',l:'Soort (ISO 55002 §7.3.2)',type:'select',opts:BEWUST},
+    {k:'doelgroep',l:'Doelgroep',type:'checks',opts:['Medewerkers','Directie','Aannemers en serviceproviders','Leveranciers','Nieuwe medewerkers']},
+    {k:'thema',l:'Onderwerpen (ISO 55001 §7.3)',type:'checks',opts:['AM-beleid','Bijdrage aan doeltreffendheid AM-systeem','Werkzaamheden, risico\'s en kansen','Gevolgen van niet voldoen','Prestaties van de organisatie']},
+    {k:'datum',l:'Datum',type:'date'},
+  ]},
+  complan:{ t:'communicatieregel', label:x=>x.wat, meta:x=>[x.wanneer, x.hoe].filter(Boolean).join(' · '), fields:[
+    {k:'wat',l:'Waarover (wat)',type:'text',ph:'bijv. jaarlijkse staat van onderhoud, wegafsluitingen, MJOP'},
+    {k:'waarom',l:'Waarom / doel',type:'select',opts:['Bewustzijn opbouwen','Gevolgen implementatie duidelijk maken','Betrokkenheid en transparantie','Stakeholders met invloed informeren en beïnvloeden','Rapportage over prestaties']},
+    {k:'met',l:'Met wie',type:'ref',ref:'stakeholders'},
+    {k:'intern',l:'Intern of extern',type:'select',opts:['Intern','Extern','Beide']},
+    {k:'wanneer',l:'Wanneer / frequentie',type:'text',ph:'bijv. jaarlijks in april; bij elk besluit'},
+    {k:'hoe',l:'Hoe (middel en format)',type:'text',ph:'bijv. rapport, bewonersbrief, website, overleg'},
+    {k:'wie',l:'Wie communiceert',type:'refsel',ref:'personen'},
+    {k:'terug',l:'Terugkoppeling en rapportage',type:'textarea'},
+  ]},
+  infoeisen:{ t:'informatie-eis', label:x=>x.info, meta:x=>[x.terrein, x.bron].filter(Boolean).join(' · '), fields:[
+    {k:'info',l:'Informatie',type:'text',ph:'bijv. conditiescores per bouwdeel, vervangingswaarde, storingshistorie'},
+    {k:'terrein',l:'Terrein (ISO 55002 §7.5.2)',type:'select',opts:INFOTERREIN},
+    {k:'attr',l:'Attribuuteisen (welke kenmerken)',type:'textarea',ph:'bijv. elementcode, materiaal, hoeveelheid, eenheid, bouwjaar'},
+    {k:'kwal',l:'Kwaliteitseisen (volledigheid, juistheid, actualiteit, nauwkeurigheid)',type:'textarea'},
+    {k:'verzamel',l:'Hoe en wanneer verzameld, geanalyseerd en geëvalueerd',type:'text',ph:'bijv. 3-jaarlijkse NEN 2767-inspectie door serviceprovider'},
+    {k:'beheerder',l:'Beheerder van deze informatie',type:'refsel',ref:'personen'},
+    {k:'bron',l:'Systeem / bron',type:'text',ph:'bijv. deze tool, onderhoudssysteem, financiële administratie'},
+    {k:'belang',l:'Belang (afgestemd op risico, §7.5.3 b)',type:'select',opts:['Strategisch','Operationeel belangrijk','Ondersteunend']},
+    {k:'koppeling',l:'Koppeling financiële ↔ technische gegevens (ISO 55001 §7.5 e)',type:'textarea',ph:'bijv. vervangingswaarde per bouwdeel gelijk aan activaregister via elementcode'},
+  ]},
+  documenten:{ t:'document', label:x=>x.titel, meta:x=>[x.versie?'v'+x.versie:'', x.status].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Titel',type:'text'},{k:'ref',l:'Referentienummer',type:'text'},
+    {k:'grond',l:'Vereist door',type:'checks',opts:['ISO 55001','Wet- en regelgeving','Organisatie (doeltreffendheid AM-systeem)']},
+    {k:'oorsprong',l:'Oorsprong',type:'select',opts:['Intern','Extern']},
+    {k:'versie',l:'Versie',type:'text'},{k:'datum',l:'Datum',type:'date'},
+    {k:'auteur',l:'Auteur / eigenaar',type:'refsel',ref:'personen'},
+    {k:'status',l:'Status',type:'select',opts:['Concept','Ter beoordeling','Goedgekeurd','Vervallen']},
+    {k:'goedk',l:'Goedgekeurd door',type:'refsel',ref:'personen'},
+    {k:'format',l:'Format en medium',type:'text',ph:'bijv. PDF, digitaal in DMS'},
+    {k:'opslag',l:'Opslag / vindplaats',type:'text'},
+    {k:'toegang',l:'Toegang (inzien / wijzigen) en beveiliging',type:'text'},
+    {k:'bewaar',l:'Bewaartermijn en vernietiging',type:'text',ph:'bijv. 7 jaar na afstoten van de asset'},
+  ]},
+});
+Object.assign(MV, {capaciteit:'capaciteitsregels', competenties:'competenties', opleidingen:'opleidingen', bewustzijn:'bewustzijnsactiviteiten', complan:'communicatieregels', infoeisen:'informatie-eisen', documenten:'documenten'});
+const COMPLEV = (p,c) => +(ISO().compmat?.[p+'|'+c]||0);
+function compGaps(){ const out = []; for(const p of items('personen')) for(const c of items('competenties')) if((c.rollen||[]).some(r=>(p.rollen||[]).includes(r)) && COMPLEV(p.id,c.id) < +(c.niveau||1)) out.push([p,c]); return out; }
+const OTABS7 = [['capaciteit','Mensen & middelen','§7.1'],['matrix','Competentiematrix','§7.2'],['competenties','Competenties','§7.2'],['opleidingen','Opleidingen','§7.2'],['bewustzijn','Bewustzijn','§7.3'],['complan','Communicatieplan','§7.4'],['infoeisen','Informatie-eisen','§7.5'],['documenten','Documenten','§7.6']];
+function tIsoOndersteuning(){
+  const t = ui.i7||'capaciteit'; let body;
+  const intro = {
+    capaciteit:'Breng beschikbare mensen en middelen in kaart tegen de geplande activiteiten en stel de hiaten vast. Kan niet alles worden voorzien, prioriteer dan en herzie de AM-plannen (iteratief). Kijk intern én extern; voor middelen: leasen, huren, kopen.',
+    competenties:'Competentie op alle niveaus — niet alleen bij assetmanagers. Een vakman moet zijn taak beheersen én begrijpen wat zijn input betekent voor anderen (bijv. conditiemeting → restlevensduur).',
+    opleidingen:'Maatregelen om competentie te verwerven, met bewijs en evaluatie van de doeltreffendheid. Bewaar gedocumenteerd bewijs van competentie.',
+    bewustzijn:'Iedereen die onder gezag van de organisatie werkt — ook aannemers en serviceproviders — moet weten van het AM-beleid, zijn bijdrage, de risico\'s van zijn werk en de gevolgen van niet voldoen.',
+    complan:'Wat, wanneer, met wie en hoe communiceren (ISO 55001 §7.4). Het communicatieplan richt zich op bewustzijn, gevolgen, betrokkenheid en stakeholders met invloed (ISO 55002 §7.4.2–7.4.3).',
+    infoeisen:'Systematisch vaststellen welke informatie nodig is, met attributen, kwaliteit, verzamelwijze en beheerder. Weeg de waarde voor besluitvorming af tegen de kosten van verzamelen; geef strategisch en operationeel belangrijke gegevens voorrang. Zorg voor consistentie tussen financiële en technische gegevens.',
+    documenten:'Gedocumenteerde informatie met identificatie, format, beoordeling en goedkeuring, en beheer van distributie, toegang, opslag, versies, bewaring en vernietiging — ook van externe oorsprong en ook na afstoten van assets.',
+  };
+  if(t==='matrix'){ const ps = items('personen'), cs = items('competenties');
+    body = `<div class="note small">Huidig niveau per persoon (0 geen · 1 basis · 2 zelfstandig · 3 expert) tegenover het vereiste niveau voor diens rol(len). Rood = hiaat (ISO 55002 §7.2.2). Let op: zijn de competenties in één persoon verenigd zonder opvolging, dan is dat een risico dat dringend herstel vraagt (§7.2.3).</div>
+      ${ps.length&&cs.length?`<div class="panel" style="overflow:auto"><table style="border-collapse:collapse;font-size:13px"><tr><th style="padding:6px;text-align:left">Persoon (rollen)</th>${cs.map(c=>`<th class="small" style="padding:4px;max-width:110px;vertical-align:bottom">${esc(c.naam)}<div class="muted">vereist ${c.niveau||1}</div></th>`).join('')}</tr>
+        ${ps.map(p=>`<tr style="border-top:1px solid var(--line)"><td style="padding:6px"><b>${esc(p.naam)}</b><div class="small muted">${esc((p.rollen||[]).join(', '))}</div></td>${cs.map(c=>{ const nodig = (c.rollen||[]).some(r=>(p.rollen||[]).includes(r)); const v = COMPLEV(p.id,c.id); const gap = nodig && v < +(c.niveau||1);
+          return `<td style="text-align:center;background:${!nodig?'#f6f7f6':gap?'#fdecea':'#eaf5e6'}"><select data-cm="${p.id}|${c.id}" style="padding:2px 4px">${[0,1,2,3].map(x=>`<option ${v===x?'selected':''}>${x}</option>`).join('')}</select></td>`; }).join('')}</tr>`).join('')}</table></div>
+        <p class="small">${compGaps().length} hiaat/hiaten. ${(()=>{ const enkel = cs.filter(c=>ps.filter(p=>COMPLEV(p.id,c.id)>=+(c.niveau||1)).length===1); return enkel.length?`<b style="color:#b5651d">Kwetsbaar (maar één persoon op niveau):</b> ${enkel.map(c=>esc(c.naam)).join(', ')}`:''; })()}</p>`
+      :'<div class="panel muted small">Voeg eerst personen (Rolverdeling) en competenties toe.</div>'}`; }
+  else { let extra = '';
+    if(t==='capaciteit'){ const tek = items('capaciteit').filter(x=>num(x.nodig)>num(x.beschikbaar)); extra = tek.length?`<div class="warn small">Hiaten: ${tek.map(x=>`${esc(x.activiteit)} (tekort ${num(x.nodig)-num(x.beschikbaar)}${x.voorziening?' → '+esc(x.voorziening.toLowerCase()):' — wijze van voorzien ontbreekt'})`).join(' · ')}</div>`:''; }
+    if(t==='infoeisen'){ const gedekt = new Set(items('infoeisen').map(x=>x.terrein)); extra = `<div class="small muted" style="margin-bottom:8px">Nog niet behandelde terreinen (§7.5.2): ${INFOTERREIN.filter(x=>!gedekt.has(x)).join(' · ')||'geen'}</div>`; }
+    body = `<div class="note small">${intro[t]}</div>${extra}${renderRegister(t)}`; }
+  return `<div class="tabs" style="margin-top:0">${OTABS7.map(([id,n,r])=>`<button data-i7="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
+}
+const H7 = {h:'7', t:'Ondersteuning', art:[
+  {a:'7.1', t:'Mensen en middelen', g:'Bepaal welke mensen en middelen nodig zijn voor het AM-systeem, de doelstellingen en de AM-plannen, zet dat af tegen wat beschikbaar is en stel de hiaten vast. Gebruik de uitkomst om opties te kiezen (intern of extern; leasen, huren, kopen) en zo nodig te prioriteren en plannen te herzien. Coördineer als andere afdelingen moeten bijspringen. Beheer hulpmiddelen en apparatuur zelf als assets.',
+   e:[['a','Mensen en middelen voor inrichten, implementeren, onderhouden en verbeteren van het AM-systeem zijn vastgesteld en beschikbaar.', ()=>ev(nI('capaciteit')>0, `${nI('capaciteit')} capaciteitsregel(s); ${items('capaciteit').filter(x=>num(x.nodig)>num(x.beschikbaar)).length} met tekort`, ['iso','i7:capaciteit'])],
+      ['b','Er is voorzien in mensen en middelen voor de AM-doelstellingen en de activiteiten uit de AM-plannen.', ()=>{ const k = items('clusters').filter(c=>(c.ampMiddelen||'').trim()).length; return ev(nI('clusters')&&k===nI('clusters'), `${k} van ${nI('clusters')} AMP's met benodigde mensen en middelen · ${items('capaciteit').filter(x=>x.cluster).length} capaciteitsregel(s) per cluster`, ['iso','i7:capaciteit']); }]]},
+  {a:'7.2', t:'Competentie', g:'Stel per AM-rol vast welke kennis, inzicht, vaardigheden en ervaring nodig zijn en vergelijk met de huidige stand (hiatenanalyse). Gebruik die voor ontwikkel- en opleidingsplannen: persoonlijke programma\'s, training en begeleiding, kennisdeling, opvolgings- en kennismanagement, inhuur. Documenteer en evalueer training. Kijk ook naar de organisatie en processen eromheen (bijv. AM los van begroting). Koppel aan bestaande HR-processen. Laat externe leveranciers van personeel hun competentie aantonen en valideer dat.',
+   e:[['a','De noodzakelijke competentie van mensen die prestaties van assets en AM beïnvloeden is vastgesteld.', ()=>ev(nI('competenties')>0, `${nI('competenties')} competentie(s) met vereist niveau per rol`, ['iso','i7:competenties'])],
+      ['b','Deze personen zijn competent op basis van opleiding, training of ervaring.', ()=>{ const g = compGaps().length; return ev(nI('competenties')&&items('personen').length ? g===0 : false, `competentiematrix: ${g} hiaat/hiaten`, ['iso','i7:matrix']); }],
+      ['c','Waar nodig zijn maatregelen genomen om competentie te verwerven, en is de doeltreffendheid geëvalueerd.', ()=>{ const t = nI('opleidingen'), k = items('opleidingen').filter(o=>(o.evaluatie||'').trim()).length; return ev(t&&k===t, `${t} opleiding(en)/actie(s), ${k} geëvalueerd`, ['iso','i7:opleidingen']); }],
+      ['d','Gedocumenteerd bewijs van competentie wordt bewaard.', ()=>{ const k = items('opleidingen').filter(o=>(o.bewijs||'').trim()).length; return ev(k>0, `${k} opleiding(en) met vastgelegd bewijs`, ['iso','i7:opleidingen']); }],
+      ['e','Actuele en toekomstige competentiebehoeften worden periodiek beoordeeld.', ()=>ev(null, 'leg de periodieke beoordeling vast (bijv. jaarlijks in de directiebeoordeling)', null)]]},
+  {a:'7.3', t:'Bewustzijn', g:'Medewerkers, aannemers, serviceproviders en leveranciers moeten passend op de hoogte zijn van: waarom AM belangrijk is, gevolgen van veranderingen, hun bijdrage, de risico\'s van hun werk en gedrag, hun rol en bevoegdheden, en hoe de organisatie presteert. Stem af op de rol — soms is het alleen nodig voor een kleine groep. Middelen: raadpleging, nieuwsbrieven en introductieprogramma, intranet, werkoverleg, directiebriefings, briefings voor leveranciers.',
+   e:[['a','Betrokkenen zijn zich bewust van het AM-beleid.', ()=>ev(items('bewustzijn').some(b=>(b.thema||[]).includes('AM-beleid')), `${items('bewustzijn').filter(b=>(b.thema||[]).includes('AM-beleid')).length} activiteit(en) over het AM-beleid`, ['iso','i7:bewustzijn'])],
+      ['b','… van hun bijdrage aan de doeltreffendheid van het AM-systeem, incl. voordelen van betere prestaties.', ()=>ev(items('bewustzijn').some(b=>(b.thema||[]).includes('Bijdrage aan doeltreffendheid AM-systeem')), 'zie bewustzijnsactiviteiten', ['iso','i7:bewustzijn'])],
+      ['c','… van hun werkzaamheden, de risico\'s en kansen daarvan en hun samenhang.', ()=>ev(items('bewustzijn').some(b=>(b.thema||[]).includes('Werkzaamheden, risico\'s en kansen')), 'zie bewustzijnsactiviteiten', ['iso','i7:bewustzijn'])],
+      ['d','… van de gevolgen van niet voldoen aan de eisen van het AM-systeem.', ()=>ev(items('bewustzijn').some(b=>(b.thema||[]).includes('Gevolgen van niet voldoen')), 'zie bewustzijnsactiviteiten', ['iso','i7:bewustzijn'])]]},
+  {a:'7.4', t:'Communicatie', g:'Communiceer AM-activiteiten regelmatig en gecoördineerd. Een communicatieplan richt zich op bewustzijn, inzicht in gevolgen, betrokkenheid en het informeren en beïnvloeden van stakeholders met invloed. Inhoud kan zijn: voordelen van projecten, verbeterprogramma\'s met mijlpalen, specifieke boodschappen per groep, het wie-waarom-wanneer-wat, benodigde kennis, de beste woordvoerder, het format en de terugkoppeling.',
+   e:[['a','Vastgesteld is waarover gecommuniceerd wordt.', ()=>ev(nI('complan')>0, `${nI('complan')} regel(s) in het communicatieplan`, ['iso','i7:complan'])],
+      ['b','… wanneer.', ()=>{ const t = nI('complan'), k = items('complan').filter(c=>(c.wanneer||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met moment/frequentie`, ['iso','i7:complan']); }],
+      ['c','… met wie (intern en extern).', ()=>{ const t = nI('complan'), k = items('complan').filter(c=>(c.met||[]).length).length; return ev(t&&k===t, `${k} van ${t} gekoppeld aan stakeholders`, ['iso','i7:complan']); }],
+      ['d','… hoe.', ()=>{ const t = nI('complan'), k = items('complan').filter(c=>(c.hoe||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met middel/format`, ['iso','i7:complan']); }]]},
+  {a:'7.5', t:'Eisen aan informatie', g:'Volg een systematische aanpak: behoefteanalyse, prioriteiten, opties voor systemen en dataverzameling, opslag en planning. Denk aan terreinen als strategie, processen, technische eigenschappen, dienstverlening, onderhoud, prestaties, financiën, risico, calamiteiten en contracten. Weeg waarde tegen kosten, stem af op risico, betrek stakeholders, wijs beheerders aan, regel competenties, stem terminologie verticaal en horizontaal af en zorg dat financiële gegevens traceerbaar aansluiten op technische registraties.',
+   e:[['a','Bij het vaststellen van informatie-eisen zijn risico\'s, rollen, processen, uitwisseling met stakeholders en het effect van informatiekwaliteit op besluiten overwogen.', ()=>ev(items('infoeisen').some(x=>x.belang), `${items('infoeisen').filter(x=>x.belang).length} informatie-eis(en) met belang afgestemd op risico · informatiebehoefte per niveau in NEN 8026`, ['iso','i7:infoeisen'])],
+      ['b','Attribuuteisen, kwaliteitseisen en het hoe/wanneer van verzamelen, analyseren en evalueren zijn vastgesteld.', ()=>{ const t = nI('infoeisen'), k = items('infoeisen').filter(x=>(x.attr||'').trim()&&(x.kwal||'').trim()&&(x.verzamel||'').trim()).length; return ev(t&&k===t, `${k} van ${t} volledig beschreven (attributen, kwaliteit, verzamelwijze)`, ['iso','i7:infoeisen']); }],
+      ['c','Processen voor het beheer van informatie zijn gespecificeerd, geïmplementeerd en onderhouden.', ()=>{ const k = items('infoeisen').filter(x=>x.beheerder).length; return ev(k>0, `${k} informatie-eis(en) met beheerder · datasetversies NEN 2767: ${nI('datasets')}`, ['iso','i7:infoeisen']); }],
+      ['d','Eisen voor afstemming van financiële en niet-financiële terminologie zijn vastgesteld.', ()=>ev(null, 'begrippenlijst NEN 8026 / NEN 2767 in de tool; leg de afstemming met financiële terminologie vast', ['basis',null])],
+      ['e','Er is consistentie en naspeurbaarheid tussen financiële, technische en andere gegevens.', ()=>{ const k = items('infoeisen').filter(x=>(x.koppeling||'').trim()).length; const vw = state.data.assets.filter(a=>a.niveau===4&&num(a.vervangingswaarde)).length; return ev(k>0, `${k} informatie-eis(en) met koppeling financieel ↔ technisch · ${vw} bouwdelen met vervangingswaarde`, ['iso','i7:infoeisen']); }]]},
+  {a:'7.6', t:'Gedocumenteerde informatie', g:'Bepaal welke documenten over de levenscyclus worden beheerd, ook ná afstoten van assets. Zorg dat medewerkers de goedgekeurde, juiste en meest actuele versie gebruiken: identificatie (titel, datum, auteur, referentie), format en medium, beoordeling en goedkeuring; en beheer van distributie, toegang, terugvinden, opslag, leesbaarheid, versies, bewaring en vernietiging — ook voor externe documenten.',
+   e:[['a','Het AM-systeem bevat de door ISO 55001, door wet- en regelgeving en door de organisatie vereiste gedocumenteerde informatie.', ()=>{ const g = new Set(items('documenten').flatMap(d=>d.grond||[])); return ev(g.size===3, `documentregister: ${nI('documenten')} document(en); dekking: ${[...g].join(', ')||'–'}`, ['iso','i7:documenten']); }],
+      ['b','Bij creëren en actualiseren is gezorgd voor identificatie, format en beoordeling/goedkeuring.', ()=>{ const t = nI('documenten'), k = items('documenten').filter(d=>d.ref&&d.versie&&d.status==='Goedgekeurd').length; return ev(t&&k===t, `${k} van ${t} met referentie, versie en goedkeuring`, ['iso','i7:documenten']); }],
+      ['c','De informatie is beschikbaar en geschikt waar en wanneer nodig.', ()=>{ const t = nI('documenten'), k = items('documenten').filter(d=>(d.opslag||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met vastgelegde vindplaats`, ['iso','i7:documenten']); }],
+      ['d','De informatie is adequaat beveiligd.', ()=>{ const t = nI('documenten'), k = items('documenten').filter(d=>(d.toegang||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met toegang/beveiliging. Let op: gegevens in deze tool staan lokaal in de browser — regel back-ups via Exporteren`, ['iso','i7:documenten']); }],
+      ['e','Distributie, opslag, versiebeheer, bewaring en vernietiging zijn geregeld, ook voor externe documenten.', ()=>{ const t = nI('documenten'), k = items('documenten').filter(d=>(d.bewaar||'').trim()).length; return ev(t&&k===t, `${k} van ${t} met bewaartermijn · ${items('documenten').filter(d=>d.oorsprong==='Extern').length} extern`, ['iso','i7:documenten']); }]]},
+]};
+
 const ISO_HFST = [
   {h:'4', t:'Context van de organisatie', art:[
     {a:'4.1', t:'Inzicht in de organisatie en haar context',
@@ -2631,7 +2763,7 @@ const ISO_HFST = [
       ['l','AM-risico\'s zijn opgenomen in het organisatiebrede risicomanagement, incl. planning voor noodsituaties.', ()=>{ const k = items('risicos').filter(r=>r.escalatie==='Ja').length; return ev(k>0 && !!ISO().scope.risico, `${k} risico('s) geëscaleerd naar organisatieregister · afstemming ${ISO().scope.risico?'beschreven':'niet beschreven'} · noodplannen: ${items('maatregelen').filter(m=>m.plan==='Noodplan').length}`, ['iso','scope']); }],
      ]},
   ]},
-  {h:'7', t:'Ondersteuning', art:[{a:'7.1',t:'Mensen en middelen',todo:1},{a:'7.2',t:'Competentie',todo:1},{a:'7.3',t:'Bewustzijn',todo:1},{a:'7.4',t:'Communicatie',todo:1},{a:'7.5',t:'Eisen aan informatie',todo:1},{a:'7.6',t:'Gedocumenteerde informatie',todo:1}]},
+  H7,
   {h:'8', t:'Uitvoering', art:[{a:'8.1',t:'Operationele planning en beheersing',todo:1},{a:'8.2',t:'Management van wijzigingen',todo:1},{a:'8.3',t:'Uitbesteden',todo:1}]},
   {h:'9', t:'Evaluatie van de prestaties', art:[{a:'9.1',t:'Monitoren, meten, analyseren en evalueren',todo:1},{a:'9.2',t:'Interne audit',todo:1},{a:'9.3',t:'Directiebeoordeling',todo:1}]},
   {h:'10', t:'Verbetering', art:[{a:'10.1',t:'Afwijkingen en corrigerende maatregelen',todo:1},{a:'10.2',t:'Preventieve maatregelen',todo:1},{a:'10.3',t:'Continue verbetering',todo:1}]},
@@ -2648,7 +2780,7 @@ function tIsoOverzicht(){
   const arts = isoArts(); const sc = arts.map(artScore);
   const alle = arts.flatMap(a=>a.e.map(([k])=>ISO().eval[isoKey(a.a,k)]?.st||''));
   const tel = s => alle.filter(x=>x===s).length;
-  const KORT = {'4.1':'Context','4.2':'Stakeholders','4.3':'Toepassingsgebied','4.4':'AM-systeem','5.1':'Leiderschap','5.2':'Beleid','5.3':'Rollen','6.1':'Risico AM-syst.','6.2.1':'AM-doelen','6.2.2':'Planning'}; const axes = arts.map(a=>a.a+' '+(KORT[a.a]||a.t.split(' ')[0]));
+  const KORT = {'4.1':'Context','4.2':'Stakeholders','4.3':'Toepassingsgebied','4.4':'AM-systeem','5.1':'Leiderschap','5.2':'Beleid','5.3':'Rollen','6.1':'Risico AM-syst.','6.2.1':'AM-doelen','6.2.2':'Planning','7.1':'Middelen','7.2':'Competentie','7.3':'Bewustzijn','7.4':'Communicatie','7.5':'Informatie','7.6':'Documentatie'}; const axes = arts.map(a=>a.a+' '+(KORT[a.a]||a.t.split(' ')[0]));
   const vals = sc.map(s=>s.pct===null?0:s.pct*3);
   const ev0 = arts.flatMap(a=>a.e.map(e=>e[2]())); const evOk = ev0.filter(x=>x.ok).length;
   return `<div class="note small">ISO 55000 geeft overzicht, principes en begrippen; <b>ISO 55001</b> bevat de eisen aan het assetmanagementsysteem; <b>ISO 55002</b> geeft toelichting. In deze tool: per eis een <b>eigen samenvatting</b> met artikelnummer, de toelichting uit 55002 in eigen woorden, het <b>bewijs dat al in de tool ligt</b> (NEN 8026, NEN 2767) en jouw zelfevaluatie. Versie: NEN-ISO 55001:2014 en 55002:2014 — de 2014-edities zijn inmiddels vervangen door ISO 55001:2024; eisen dragen een versielabel zodat 2024 later kan worden toegevoegd.</div>
@@ -2718,7 +2850,7 @@ function tIsoGap(){
       ${rows.map(([a,k,t,E])=>{ const st = ISTAT.find(z=>z[0]===E.st); const late = E.dl && E.dl < new Date().toISOString().slice(0,10);
         return `<tr style="border-top:1px solid var(--line);vertical-align:top"><td style="padding:6px"><b>${a.a}${k!=='0'?' '+k:''}</b> <span class="small">${t}</span></td><td><span class="cb" style="background:${st[2]}">${st[1]}</span></td><td class="small">${esc(E.actie)||'<span style="color:#b5651d">geen actie</span>'}</td><td class="small">${esc(items('personen').find(p=>p.id===E.eig)?.naam||'–')}</td><td class="small" style="${late?'color:#c0392b;font-weight:600':''}">${esc(E.dl||'–')}</td></tr>`; }).join('')}</table>`:'<p class="muted">Geen openstaande gaps.</p>'}</div>`;
 }
-const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['gap','Gap-analyse','']];
+const ITABS = [['overzicht','Overzicht',''],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['gap','Gap-analyse','']];
 function tIsoRisico(){
   const R = items('risicos'); const ev2 = R.map(risicoEval);
   const ams = R.filter(r=>r.niveauR==='Assetmanagementsysteem'), kans = R.filter(r=>r.soortR==='Kans');
@@ -2748,7 +2880,7 @@ function tIsoRisico(){
 }
 function renderIso(){
   const t = ui.itab||'overzicht'; let body;
-  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='risico') body = tIsoRisico(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
+  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
   else body = `<div class="note small">ISO 55001 §4.1 met toelichting 55002 §4.1.2: externe en interne onderwerpen die het vermogen beïnvloeden om de beoogde resultaten te behalen. Gebruik de categorieën als checklist; koppel onderwerpen aan waardeaspecten zodat ze doorwerken in doelstellingen en waardekompassen.</div>
     <div class="small muted" style="margin-bottom:8px">Nog niet behandelde categorieën: ${[...CTX_EXT,...CTX_INT].filter(c=>!items('context').some(x=>x.cat===c)).map(esc).join(' · ')||'geen'}</div>${renderRegister('context')}`;
   return `<h2>Assetmanagementsysteem — ISO 55001</h2><div class="ref">NEN-ISO 55000/55001/55002:2014 · eigen samenvattingen met artikelnummer, geen normtekst</div>
@@ -2776,13 +2908,14 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.i7){ ui.i7 = d.i7; rerender(); return; }
     if(d.itab){ ui.itab = d.itab; window.scrollTo(0,0); route(); return; }
     if(d.isof!==undefined){ ui.isof = d.isof; rerender(); return; }
     if(d.isoopen){ ui.isoopen = ui.isoopen===d.isoopen ? null : d.isoopen; rerender(); return; }
-    if(d.isogo){ const [h,tb] = d.isogo.split('|'); if(tb){ if(h==='iso') ui.itab = tb; if(h==='bestuurlijk') ui.btab = tb; if(h==='strategisch') ui.stab = tb; if(h==='tactisch') ui.ttab = tb; } location.hash = h; route(); window.scrollTo(0,0); return; }
+    if(d.isogo){ const [h,tb] = d.isogo.split('|'); if(tb){ if(h==='iso'){ if(tb.startsWith('i7:')){ ui.itab='onderst'; ui.i7 = tb.slice(3); } else ui.itab = tb; } if(h==='bestuurlijk') ui.btab = tb; if(h==='strategisch') ui.stab = tb; if(h==='tactisch') ui.ttab = tb; } location.hash = h; route(); window.scrollTo(0,0); return; }
     if(d.e1){ ui.e1 = d.e1; rerender(); return; }
     if(d.e1go!==undefined){ const [h,tb] = d.e1go.split('|'); if(h==='conditie'&&tb) ui.ctab = tb; if(h==='tactisch'&&tb) ui.ttab = tb; location.hash = h; route(); window.scrollTo(0,0); return; }
     if(d.mjover){ const n = mjopOvernemen(); r.textContent = `✓ ${n} nieuwe activiteit(en) overgenomen`; return; }
@@ -2889,6 +3022,7 @@ main.addEventListener('input', e=>{
   if(d.ost){ opnames()[ui.oinsp][ui.obd].status = el.value; save(); rerender(); return; }
   if(d.ovo){ opnames()[ui.oinsp][ui.obd].vervalOmv = el.value; save(); refreshCalc(); return; }
   if(d.iev){ const [a,k] = d.iev.split('|'); const E = (ISO().eval[isoKey(a,k)] ||= {}); E[d.iek] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(d.cm){ (ISO().compmat ||= {})[d.cm] = el.value; save(); rerender(); return; }
   if(d.iscope){ ISO().scope[d.iscope] = el.value; save(); return; }
   if(d.iraci){ ISO().raci[d.iraci] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.gh){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gid); const h = (g.herstel ||= {}); h[d.gh] = el.type==='checkbox' ? el.checked : el.value; save(); if(el.type==='checkbox') rerender(); return; }

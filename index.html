@@ -129,6 +129,12 @@
   .pick{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fafbfa}
   .pick label{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink);margin:0;cursor:pointer}
   .pick input{width:auto;margin:0}
+  #samp h3{margin-top:16px} #samp ul{margin:4px 0;padding-left:20px;font-size:14px}
+  @media print{
+    header,nav,.tabs,footer,.noprint,main>h2,main>.ref{display:none!important}
+    .layout{display:block} main{padding:0;max-width:none} body{background:#fff}
+    #samp{border:none;padding:0}
+  }
   footer{color:var(--muted);font-size:12px;padding:30px 0 10px}
 
   @media (max-width:860px){
@@ -142,7 +148,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.3</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.4</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -191,8 +197,8 @@ const MODULES = [
     parts:[['Werkzaamheden instandhouding','§8.2.1'],['Observaties','§8.2.2'],['Assetportfolio inventariseren','§8.2.3'],
       ['Vastlegging','§8.2.4'],['Assessment','§8.3'],['Informatiebehoefte','§8.4']]},
   { id:'assets', group:'Inrichting', title:'Assetstructuur', ref:'§3.10–3.14, §4.4', color:'var(--muted)' },
-  { id:'waardeaspecten', group:'Inrichting', title:'Waardeaspectentabel', ref:'Bijlage A', color:'var(--muted)',
-    parts:[['Waardeaspecten beheren','Bijlage A']] },
+  { id:'waardeaspecten', group:'Inrichting', title:'Waardeaspectentabel', ref:'§6.3.1, Bijlage A', color:'var(--muted)' },
+  { id:'rollen', group:'Inrichting', title:'Rolverdeling', ref:'§4.7', color:'var(--muted)' },
 ];
 
 /* ---------------- Sectoren (doelgroepen uit §4.2) ---------------- */
@@ -319,7 +325,7 @@ function load(){
 }
 function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 let state = load();
-let ui = {step:'g1', tab:'begrippen', phase:'gebruik', schil:'instandhouding', tier:'tactisch', glq:'', glb:'', node:null, armed:false, btab:'overzicht', sel:{}, rarmed:null};
+let ui = {step:'g1', tab:'begrippen', phase:'gebruik', schil:'instandhouding', tier:'tactisch', glq:'', glb:'', node:null, armed:false, btab:'overzicht', stab:'overzicht', sel:{}, rarmed:null};
 
 const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sector = () => SECTOREN.find(s=>s.id===state.sector) || SECTOREN[0];
@@ -480,7 +486,7 @@ function tabOrganisatie(){
       <div class="prod" style="background:${t.s};color:${t.c}">${t.prod}</div>`).join('')}
   </div>
   <p class="small muted" style="margin:12px 0 0">Eigen weergave · zie NEN 8026 §4.7. Dit zijn <b>rollen</b>, geen functies: één persoon kan meerdere rollen hebben, en taken kunnen (deels) worden uitbesteed. In vastgoed vullen bijv. vastgoed- of facilitymanagers de rol van assetmanager in.</p></div>
-  <div class="warn small"><b>Let op, voor jouw controle:</b> in deze verdeling ligt het strategisch niveau bij de (gemandateerd) asset owner, terwijl de stappenfiguur in §4.8 op strategisch niveau de <i>assetmanager</i> noemt. De tool laat beide rollen het strategisch niveau zien. Wil je dat anders?</div>`;
+  <div class="note small"><b>Strategisch niveau:</b> de (gemandateerd) asset owner geeft het mandaat; de <b>assetmanager</b> is verantwoordelijk voor de strategische activiteiten (§6.1). Eén persoon kan beide rollen hebben — leg dat vast in de <a href="#rollen">Rolverdeling</a>. De assetmanager neemt geen besluiten die op bestuurlijk niveau horen (§6.3.3).</div>`;
 }
 
 /* ---------------- Assetstructuur ---------------- */
@@ -563,6 +569,65 @@ const REG = {
     {k:'uitvoering',l:'Verwachte uitvoering',type:'date'},
     {k:'uitstel',l:'Consequenties van (nog) niet besluiten — voorgelegd door AM',type:'textarea',if:x=>(x.soort||'').startsWith('Perspectief'),
       hint:'De assetmanager sorteert niet voor op een transitie, maar legt de (meestal financiële) gevolgen van uitstel voor aan de asset owner.'},
+    {k:'door',l:'Genomen door',type:'refsel',ref:'personen'},
+    {k:'inRol',l:'In de rol van',type:'select',opts:['Asset owner','Gemandateerd asset owner'],if:x=>gecombineerd(x.door),
+      hint:'Deze persoon is ook assetmanager. Een portfoliobesluit hoort op bestuurlijk niveau en moet in de rol van (gemandateerd) asset owner genomen worden (§6.3.3).'},
+  ]},
+  personen:{ t:'persoon of afdeling', label:x=>x.naam, meta:x=>(x.rollen||[]).join(', '), fields:[
+    {k:'naam',l:'Naam, functie of afdeling',type:'text',ph:'bijv. Directeur Vastgoed, afd. Beheer & Onderhoud, aannemer X'},
+    {k:'rollen',l:'Rol(len) binnen assetmanagement',type:'checks',opts:['Asset owner','Gemandateerd asset owner','Assetmanager','Serviceprovider'],
+      hint:'Rollen zijn geen functies: één persoon kan meerdere rollen hebben, en een rol kan over meerdere personen verdeeld zijn (§4.7).'},
+    {k:'positie',l:'Positie',type:'select',opts:['Intern','Extern (uitbesteed)']},
+    {k:'mandaat',l:'Mandaat / bevoegdheden',type:'textarea',ph:'bijv. gemandateerd door RvB voor besluiten tot € 1 mln'},
+  ]},
+  waardeaspecten:{ t:'waardeaspect', label:x=>x.naam, meta:x=>[x.thema, x.relevant==='Nee'?'niet van toepassing':''].filter(Boolean).join(' · '), fields:[
+    {k:'naam',l:'Waardeaspect',type:'text',ph:'Bijlage A volgt; voorlopig zelf invullen'},
+    {k:'thema',l:'Hoofdthema',type:'select',opts:['Functionaliteit','Leefomgeving en maatschappij','Organisatiespecifiek']},
+    {k:'omschrijving',l:'Omschrijving',type:'textarea'},
+    {k:'relevant',l:'Van toepassing op ons portfolio?',type:'select',opts:['Ja','Nee']},
+    {k:'systemen',l:'Relevant voor assetsystemen',type:'assets',max:1,if:x=>x.relevant!=='Nee'},
+  ]},
+  amdoelen:{ t:'assetmanagementdoelstelling', label:x=>x.titel, meta:x=>[labelOf('waardeaspecten',x.aspect), x.status].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Assetmanagementdoelstelling',type:'text',ph:'bijv. De beschikbaarheid van het wegennet bedraagt 95 %'},
+    {k:'aspect',l:'Waardeaspect',type:'refsel',ref:'waardeaspecten',hint:'Achter elk relevant waardeaspect wordt een AM-doelstelling geformuleerd (§6.3.1).'},
+    {k:'orgdoelen',l:'Afgeleid van organisatiedoelstelling(en)',type:'ref',ref:'doelen'},
+    {k:'systemen',l:'Geldt voor assetsysteem / portfolio',type:'assets',max:1},
+    {k:'meetbaar',l:'Meetbaar criterium / streefwaarde',type:'text',ph:'bijv. ≥ 95 % beschikbaarheid per jaar'},
+    {k:'toelichting',l:'Toelichting',type:'textarea'},
+    {k:'status',l:'Status',type:'select',opts:['Concept','Vastgesteld','Bijstellen','Vervallen']},
+  ]},
+  criteria:{ t:'beslissingscriterium', label:x=>x.titel, meta:x=>x.toepassing||'', fields:[
+    {k:'titel',l:'Beslissingscriterium',type:'text',ph:'bijv. Veiligheid gaat altijd voor esthetica'},
+    {k:'toepassing',l:'Toepassing',type:'select',opts:['Dilemma\'s','Prioritering','Beide']},
+    {k:'toelichting',l:'Toelichting',type:'textarea',hint:'Beslissingscriteria worden binnen het assetmanagementproces bepaald (buiten de methode, §4.6) en vastgelegd in het SAMP (§6.3.5).'},
+  ]},
+  consequenties:{ t:'consequentie', label:x=>x.titel, meta:x=>x.gemeld?('gemeld '+x.gemeld):'nog niet gemeld', fields:[
+    {k:'titel',l:'Consequentie',type:'text',ph:'bijv. Doel 95 % beschikbaarheid niet haalbaar door budgetkorting'},
+    {k:'soort',l:'Aanleiding',type:'select',opts:['Gevolg van een genomen besluit','Gebrek aan sturing (geen besluit genomen)']},
+    {k:'besluit',l:'Betreft besluit / perspectief',type:'refsel',ref:'besluiten',if:x=>x.soort!=='Gebrek aan sturing (geen besluit genomen)'},
+    {k:'amdoelen',l:'Geraakte AM-doelstellingen',type:'ref',ref:'amdoelen'},
+    {k:'omschrijving',l:'Omschrijving van de gevolgen',type:'textarea'},
+    {k:'gemeld',l:'Gemeld aan asset owner op',type:'date'},
+    {k:'reactie',l:'Reactie asset owner',type:'textarea',hint:'Kan een doel door een bestuurlijk besluit niet gehaald worden, dan ligt de verantwoordelijkheid bij de asset owner (§6.3.3).'},
+  ]},
+  sdilemmas:{ t:'dilemma', label:x=>x.titel, meta:x=>[x.datum, x.besluit?'besloten':'open'].filter(Boolean).join(' · '), fields:[
+    {k:'titel',l:'Dilemma op assetsysteemniveau',type:'text'},
+    {k:'systemen',l:'Assetsysteem',type:'assets',max:1},
+    {k:'omschrijving',l:'Omschrijving',type:'textarea'},
+    {k:'opties',l:'Opties',type:'textarea'},
+    {k:'criteria',l:'Toegepaste beslissingscriteria',type:'ref',ref:'criteria'},
+    {k:'besluit',l:'Besluit assetmanager',type:'textarea'},
+    {k:'datum',l:'Datum',type:'date'},
+  ]},
+  sassessments:{ t:'assessment', label:x=>'Assessment '+(x.jaar||'(jaar?)'), meta:x=>x.balans||'', fields:[
+    {k:'jaar',l:'Jaar',type:'text',ph:'bijv. 2026'},
+    {k:'wat',l:'Validatie waardeaspectentabel: correct en volledig?',type:'select',opts:['Ja','Bijstelling nodig']},
+    {k:'watBij',l:'Bijstelling waardeaspectentabel',type:'textarea',if:x=>x.wat==='Bijstelling nodig'},
+    {k:'doelenOk',l:'Validatie AM-doelstellingen',type:'checks',opts:['Juist','Haalbaar','Actueel']},
+    {k:'doelenBij',l:'Bijstelling AM-doelstellingen',type:'textarea'},
+    {k:'invulling',l:'Mate waarin invulling wordt gegeven aan de AM-doelstellingen en waarde wordt gerealiseerd',type:'textarea'},
+    {k:'balans',l:'Balans kosten, prestaties en risico\'s',type:'select',opts:['In balans','Aandachtspunten','Uit balans']},
+    {k:'bijsturing',l:'Bijsturing door assetmanager',type:'textarea'},
   ]},
   dilemmas:{ t:'dilemma', label:x=>x.titel, meta:x=>[x.datum, x.besluit?'besloten':'open'].filter(Boolean).join(' · '), fields:[
     {k:'titel',l:'Dilemma',type:'text',ph:'bijv. Verduurzamen vs. betaalbaarheid huur'},
@@ -594,9 +659,14 @@ const REG = {
   ]},
 };
 const items = key => (state.data.reg[key] ||= []);
+const labelOf = (key,id) => { const x = items(key).find(i=>i.id===id); return x ? REG[key].label(x) : ''; };
+function gecombineerd(persoonId){
+  const p = items('personen').find(x=>x.id===persoonId); const r = p?.rollen||[];
+  return r.includes('Assetmanager') && (r.includes('Asset owner')||r.includes('Gemandateerd asset owner'));
+}
 
-function assetPicker(sel, name){
-  const rows = []; const walk=(pid,d)=>children(pid).forEach(a=>{rows.push([a,d]);walk(a.id,d+1);}); walk(null,0);
+function assetPicker(sel, name, max){
+  const rows = []; const walk=(pid,d)=>children(pid).forEach(a=>{ if(max===undefined||a.niveau<=max){rows.push([a,d]);walk(a.id,d+1);} }); walk(null,0);
   if(!rows.length) return `<p class="small muted" style="margin:0">Nog geen objecten. Voeg ze toe in <a href="#assets">Assetstructuur</a>.</p>`;
   return `<div class="pick">${rows.map(([a,d])=>`<label style="padding-left:${d*16}px"><input type="checkbox" ${name} data-rv="${a.id}" ${(sel||[]).includes(a.id)?'checked':''}> ${esc(a.naam)||'(naamloos)'} <span class="small muted">${esc(sector().niveaus[Math.min(a.niveau,3)])}</span></label>`).join('')}</div>`;
 }
@@ -608,7 +678,10 @@ function fieldHtml(key, it, f){
   else if(f.type==='date') inp = `<input type="date" ${a} value="${esc(v)}">`;
   else if(f.type==='select') inp = `<select ${a}><option value="">— kies —</option>${f.opts.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
   else if(f.type==='checks') inp = `<div class="pick">${f.opts.map(o=>`<label><input type="checkbox" ${a} data-rv="${esc(o)}" ${(v||[]).includes(o)?'checked':''}> ${esc(o)}</label>`).join('')}</div>`;
-  else if(f.type==='assets') inp = assetPicker(v, a);
+  else if(f.type==='assets') inp = assetPicker(v, a, f.max);
+  else if(f.type==='refsel'){ const src = items(f.ref);
+    inp = `<select ${a}><option value="">— kies —</option>${src.map(o=>`<option value="${o.id}" ${v===o.id?'selected':''}>${esc(REG[f.ref].label(o)||'(naamloos)')}</option>`).join('')}</select>`
+      + (src.length?'':`<div class="small muted">Nog niets ingevoerd bij ${REG[f.ref].t}s.</div>`); }
   else if(f.type==='ref'){ const src = items(f.ref);
     inp = src.length ? `<div class="pick">${src.map(o=>`<label><input type="checkbox" ${a} data-rv="${o.id}" ${(v||[]).includes(o.id)?'checked':''}> ${esc(REG[f.ref].label(o)||'(naamloos)')}</label>`).join('')}</div>`
       : `<p class="small muted" style="margin:0">Nog niets ingevoerd bij ${REG[f.ref].t}s.</p>`; }
@@ -713,6 +786,145 @@ function bInfo(){
     </table></div>`;
 }
 
+/* ==================================================================
+   GENERIEK: informatiebehoefte-tabel
+   ================================================================== */
+function infoTable(prefix, list, hints, wie){
+  return `<div class="note small">Informatiebehoefte van de ${wie}. De lijst is niet limitatief; vul aan waar nodig.</div>
+    <div class="panel"><table style="width:100%;border-collapse:collapse;font-size:14px">
+      <tr class="small muted" style="text-align:left"><th style="padding:6px">Informatie</th><th>Status</th><th>Bron / vindplaats</th></tr>
+      ${list.map((n,i)=>{ const v = state.data.info[prefix+i]||{};
+        return `<tr style="border-top:1px solid var(--line)"><td style="padding:8px 6px">${n}${hints[i]?`<div class="small muted">In de tool: ${hints[i]}</div>`:''}</td>
+          <td><select data-info="${prefix}${i}" data-ik="status"><option value="">— kies —</option>${['Beschikbaar','Deels','Niet beschikbaar'].map(o=>`<option ${v.status===o?'selected':''}>${o}</option>`).join('')}</select></td>
+          <td><input data-info="${prefix}${i}" data-ik="bron" value="${esc(v.bron)}" style="width:100%"></td></tr>`;}).join('')}
+    </table></div>`;
+}
+
+/* ==================================================================
+   STRATEGISCH NIVEAU (H6)
+   ================================================================== */
+const STABS = [
+  ['overzicht','Overzicht',''],
+  ['waardeaspecten','Waardeaspecten','§6.3.1'],
+  ['amdoelen','AM-doelstellingen','§6.3.1'],
+  ['criteria','Beslissingscriteria','§6.3.5'],
+  ['levensfasen','Levensfasen','§6.3.2'],
+  ['consequenties','Consequenties','§6.3.3'],
+  ['sdilemmas','Dilemma\'s','§6.3.4'],
+  ['samp','SAMP','§6.3.5'],
+  ['sassessments','Assessment','§6.4'],
+  ['info','Informatiebehoefte','§6.5'],
+];
+const SINTRO = {
+  waardeaspecten:'Elke organisatie bepaalt zelf welke waardeaspecten van toepassing zijn en kan eigen aspecten toevoegen. Bijlage A geeft veelvoorkomende aspecten in twee hoofdthema\'s: <b>functionaliteit</b> en <b>leefomgeving en maatschappij</b>. Zodra je Bijlage A uploadt, maak ik er een startlijst van.',
+  amdoelen:'De assetmanager formuleert per assetsysteem de assetmanagementdoelstellingen, op basis van de organisatiedoelstellingen en het beleid. Achter elk relevant waardeaspect komt een AM-doelstelling. Zo ontstaat de verbinding tussen organisatiedoel en instandhouding.',
+  criteria:'Beslissingscriteria helpen bij dilemma\'s en prioriteringsvraagstukken. Ze worden vastgelegd in het SAMP samen met de AM-doelstellingen.',
+  consequenties:'Kan een AM-doel niet gehaald worden door een bestuurlijk besluit, dan is dat de verantwoordelijkheid van de asset owner. De assetmanager wijst de asset owner wél op de gevolgen — ook als er géén besluit genomen wordt. De assetmanager neemt geen besluiten die op bestuurlijk niveau horen.',
+  sdilemmas:'Dilemma\'s op assetsysteemniveau worden door de assetmanager besloten.',
+  sassessments:'Uitgevoerd door de assetmanager: validatie van de waardeaspectentabel en van de AM-doelstellingen, plus een analyse van de invulling van de doelen en de balans tussen kosten, prestaties en risico\'s. De assetmanager stuurt bij.',
+};
+const INFO6 = ['Organisatiedoelstellingen en beleid','Nieuwe ontwikkelingen (maatschappelijk, technologisch, organisatorisch, economisch, demografisch, gebruik, wet- en regelgeving)','Fysieke staat, prestaties, restlevensduur en compliance van de assets','Beleidsinvesteringen en ontwikkelprogramma\'s','Resultaten van het assessment op strategisch niveau','Financiële gegevens','Economische gegevens','Risico\'s en kansen'];
+const LFGROND = ['Portfoliobesluit van het bestuur (§5.3.4)','Nieuwe ontwikkelingen','Wensen en plannen van externe stakeholders','Fysieke staat, prestaties, restlevensduur of compliance','Beleidsinvesteringen en ontwikkelprogramma\'s'];
+
+function renderStrategisch(){
+  const t = ui.stab; let body;
+  if(t==='overzicht') body = sOverzicht();
+  else if(t==='levensfasen') body = sLevensfasen();
+  else if(t==='samp') body = sSamp();
+  else if(t==='info') body = infoTable('s', INFO6, [
+      `${items('doelen').length} organisatiedoelstelling(en); beleid: ${state.data.best.beleid||'onbekend'}`, '', 'Kriticiteit per object in de assetstructuur; toestand volgt op operationeel niveau',
+      '', `${items('sassessments').length} assessment(s) vastgelegd`, '', '', 'Risicoanalyse volgt op tactisch niveau'], 'assetmanager');
+  else body = `<div class="note small">${SINTRO[t]}</div>` + renderRegister(t);
+  return `<h2>Strategisch niveau</h2><div class="ref">NEN 8026 H6 · verantwoordelijk: assetmanager · scope: assetsystemen · product: <b>SAMP</b></div>
+    <div class="tabs">${STABS.map(([id,n,r])=>`<button data-stab="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
+}
+function sOverzicht(){
+  const box = (t,tab,c='') => `<div ${tab?`data-stab="${tab}"`:''} style="background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:13px;text-align:center;${tab?'cursor:pointer;':''}${c}">${t}</div>`;
+  const sys = state.data.assets.filter(a=>a.niveau===1);
+  const relevant = items('waardeaspecten').filter(w=>w.relevant!=='Nee');
+  const zonderDoel = relevant.filter(w=>!items('amdoelen').some(d=>d.aspect===w.id));
+  const persp = items('besluiten').filter(b=>(b.soort||'').startsWith('Perspectief')).length;
+  const bes = items('besluiten').filter(b=>(b.soort||'').startsWith('Besluit')).length;
+  const trans = state.data.assets.filter(a=>a.fase==='op'||a.fase==='af');
+  const zonderDuur = trans.filter(a=>!a.transEind);
+  const comb = items('personen').filter(p=>gecombineerd(p.id));
+  const checks = [
+    [relevant.length>0, `${relevant.length} relevante waardeaspecten`, 'waardeaspecten'],
+    [zonderDoel.length===0 && relevant.length>0, zonderDoel.length?`${zonderDoel.length} relevant waardeaspect(en) zonder AM-doelstelling`:'Elk relevant waardeaspect heeft een AM-doelstelling', 'amdoelen'],
+    [items('criteria').length>0, `${items('criteria').length} beslissingscriteria`, 'criteria'],
+    [zonderDuur.length===0, zonderDuur.length?`${zonderDuur.length} object(en) in transitie zonder einddatum`:`${trans.length} object(en) in transitiefase, allemaal met duur`, 'levensfasen'],
+  ];
+  return `<div class="panel" style="background:var(--l2s);border-color:transparent">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <a href="#bestuurlijk" style="text-decoration:none;color:inherit">${box(`Van bestuurlijk: <b>${persp}</b> perspectief · <b>${bes}</b> besluit`,'','background:#f7f7f7')}</a>
+        <a href="#bestuurlijk" style="text-decoration:none;color:inherit">${box(`Van bestuurlijk: <b>${items('doelen').length}</b> organisatiedoelen · <b>${items('randvoorwaarden').length}</b> randvoorwaarden`,'','background:#f7f7f7')}</a>
+      </div>
+      <div style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:6px">
+        ${box('Bijeenbrengen waardeaspecten','waardeaspecten')}<div style="text-align:center;color:var(--muted)">↓</div>
+        ${box('Formuleren assetmanagementdoelstellingen','amdoelen')}<div style="text-align:center;color:var(--muted)">↓</div>
+        ${box('Vaststellen levensfasen','levensfasen')}<div style="text-align:center;color:var(--muted)">↓</div>
+        ${box('Gebruiksfase / transitiefase → naar tactisch niveau','','background:var(--l2);color:#fff;border-color:var(--l2);font-weight:600')}
+      </div>
+      <p class="small muted" style="text-align:center;margin:8px 0 0">Eigen weergave, zie §6.1</p></div>
+    <div class="panel" style="margin-top:14px"><h3>Stand van zaken</h3>
+      ${checks.map(([ok,t,tab])=>`<div style="display:flex;gap:8px;align-items:center;padding:4px 0;cursor:pointer" data-stab="${tab}"><span style="color:${ok?'var(--accent)':'#b5651d'}">${ok?'✓':'○'}</span><span class="small">${t}</span></div>`).join('')}
+      <p class="small muted" style="margin:8px 0 0">Assetsystemen in de assetstructuur: ${sys.length?sys.map(s=>esc(s.naam)).join(', '):'nog geen — het portfolio hoeft alleen opgedeeld te worden "indien van toepassing" (§6.2).'}</p>
+      ${comb.length?`<div class="warn small" style="margin-bottom:0">Gecombineerde rollen: <b>${comb.map(p=>esc(p.naam)).join(', ')}</b> ${comb.length>1?'zijn':'is'} zowel assetmanager als (gemandateerd) asset owner. Leg bij besluiten vast in welke rol ze genomen zijn (§6.3.3).</div>`:''}
+    </div>`;
+}
+function sLevensfasen(){
+  const rows = []; const walk=(pid,d)=>children(pid).forEach(a=>{rows.push([a,d]);walk(a.id,d+1);}); walk(null,0);
+  if(!rows.length) return `<div class="panel"><p class="muted" style="margin:0">Nog geen objecten. Voeg ze toe in <a href="#assets">Assetstructuur</a>.</p></div>`;
+  const s = sector();
+  return `<div class="note small">De standaard levensfase is de <b>gebruiksfase</b>; je hoeft alleen vast te stellen welke assets naar de transitiefase gaan. Bij elke asset in transitie leg je vast hoelang de transitie duurt (§6.3.2). Bij vastgoed heet op- en afwaarderen ook investeren en desinvesteren.</div>
+    <div class="panel" style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <tr class="small muted" style="text-align:left"><th style="padding:6px">Object</th><th>Levensfase</th><th>Transitie van</th><th>tot</th><th>Grondslag</th></tr>
+      ${rows.map(([a,d])=>{ const tr = a.fase==='op'||a.fase==='af';
+        return `<tr style="border-top:1px solid var(--line);vertical-align:top">
+          <td style="padding:8px 6px;padding-left:${6+d*16}px"><b>${esc(a.naam)||'(naamloos)'}</b><div class="small muted">${esc(s.niveaus[Math.min(a.niveau,3)])}${perspectiefVoor(a.id)?' · ◷ perspectief':''}</div></td>
+          <td><select data-af="${a.id}" data-ak="fase">${FASE_OPT.map(o=>`<option value="${o[0]}" ${a.fase===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></td>
+          <td>${tr?`<input type="date" data-af="${a.id}" data-ak="transStart" value="${esc(a.transStart)}">`:''}</td>
+          <td>${tr?`<input type="date" data-af="${a.id}" data-ak="transEind" value="${esc(a.transEind)}" style="${a.transEind?'':'border-color:#e0a95c'}">`:''}</td>
+          <td>${tr?`<div class="pick" style="max-height:none;min-width:230px">${LFGROND.map(g=>`<label><input type="checkbox" data-af="${a.id}" data-ak="transGrond" data-rv="${esc(g)}" ${(a.transGrond||[]).includes(g)?'checked':''}> ${g}</label>`).join('')}</div>`:''}</td>
+        </tr>`;}).join('')}
+    </table></div>`;
+}
+function sSamp(){
+  const B = state.data.best; const s = sector();
+  const li = (arr, f) => arr.length ? `<ul>${arr.map(x=>`<li>${f(x)}</li>`).join('')}</ul>` : '<p class="muted">— nog niets vastgelegd —</p>';
+  const trans = state.data.assets.filter(a=>a.fase==='op'||a.fase==='af');
+  const asp = items('waardeaspecten').filter(w=>w.relevant!=='Nee');
+  return `<div class="note small noprint">Dit overzicht wordt automatisch samengesteld uit wat je in de tool hebt vastgelegd en bevat ten minste de onderdelen uit §6.3.5. Voor de volledige inhoud van een SAMP: zie NEN-ISO 55002. <button data-print="1" style="margin-left:8px">Afdrukken / opslaan als PDF</button></div>
+  <div class="panel" id="samp">
+    <h2 style="margin-bottom:2px">Strategisch assetmanagementplan</h2>
+    <div class="small muted">Gegenereerd op ${new Date().toLocaleDateString('nl-NL')} · sector: ${esc(s.naam)}</div>
+    ${B.missie?`<p><i>${esc(B.missie)}</i></p>`:''}
+    <h3 style="margin-top:18px">1. Assetmanagementdoelstellingen</h3>
+    ${li(items('amdoelen'), d=>`<b>${esc(d.titel)||'(naamloos)'}</b>${d.aspect?` — waardeaspect: ${esc(labelOf('waardeaspecten',d.aspect))}`:''}${d.meetbaar?` — ${esc(d.meetbaar)}`:''}${(d.orgdoelen||[]).length?`<br><span class="small muted">afgeleid van: ${d.orgdoelen.map(id=>esc(labelOf('doelen',id))).join('; ')}</span>`:''}`)}
+    <h3>2. Beslissingscriteria</h3>${li(items('criteria'), c=>`${esc(c.titel)}${c.toepassing?` <span class="small muted">(${esc(c.toepassing)})</span>`:''}`)}
+    <h3>3. Randvoorwaarden van het bestuur</h3>${li(items('randvoorwaarden'), r=>`${r.categorie?`<b>${esc(r.categorie)}:</b> `:''}${esc(r.titel)}`)}
+    <h3>4. Assetportfoliobesluiten</h3>${li(items('besluiten').filter(b=>(b.soort||'').startsWith('Besluit')), b=>`${esc(b.titel)}${b.datum?` (${esc(b.datum)})`:''}${b.richting?` — ${esc(b.richting.toLowerCase())}`:''}`)}
+    <h3>5. Waardeaspectentabel</h3>
+    ${asp.length?`<table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="text-align:left" class="muted"><th style="padding:4px">Waardeaspect</th><th>Hoofdthema</th><th>AM-doelstelling(en)</th></tr>
+      ${asp.map(w=>`<tr style="border-top:1px solid var(--line)"><td style="padding:4px">${esc(w.naam)}</td><td>${esc(w.thema||'')}</td><td>${items('amdoelen').filter(d=>d.aspect===w.id).map(d=>esc(d.titel)).join('<br>')||'<span style="color:#b5651d">ontbreekt</span>'}</td></tr>`).join('')}</table>`:'<p class="muted">— nog niets vastgelegd —</p>'}
+    <h3 style="margin-top:14px">6. Assets in transitiefase</h3>${li(trans, a=>`${esc(a.naam)} — ${a.fase==='op'?'opwaarderen':'afwaarderen'}${a.transStart||a.transEind?` (${esc(a.transStart||'?')} t/m ${esc(a.transEind||'?')})`:''}`)}
+  </div>`;
+}
+
+/* ---------------- Inrichting: waardeaspectentabel en rolverdeling ---------------- */
+function renderWaardeaspecten(){
+  return `<h2>Waardeaspectentabel</h2><div class="ref">NEN 8026 §6.3.1 en Bijlage A · ook bereikbaar via Strategisch niveau</div>
+    <div class="note small">${SINTRO.waardeaspecten}</div>${renderRegister('waardeaspecten')}`;
+}
+function renderRollen(){
+  const comb = items('personen').filter(p=>gecombineerd(p.id));
+  const rol = r => items('personen').filter(p=>(p.rollen||[]).includes(r)).map(p=>esc(p.naam)).join(', ') || '<span style="color:#b5651d">nog niet belegd</span>';
+  return `<h2>Rolverdeling</h2><div class="ref">NEN 8026 §4.7 · rollen zijn geen functies</div>
+    <div class="cards" style="margin-bottom:14px">${['Asset owner','Gemandateerd asset owner','Assetmanager','Serviceprovider'].map(r=>`<div class="card"><h3>${r}</h3><p>${rol(r)}</p></div>`).join('')}</div>
+    ${comb.length?`<div class="warn small">Gecombineerde rollen bij: <b>${comb.map(p=>esc(p.naam)).join(', ')}</b>. Dat mag, maar leg bij portfoliobesluiten vast in welke rol het besluit genomen is: de assetmanager neemt geen besluiten die op bestuurlijk niveau horen (§6.3.3).</div>`:''}
+    ${renderRegister('personen')}`;
+}
+
 /* ---------------- Overige modules (nog te bouwen) ---------------- */
 function renderModule(m){
   return `<h2>${m.title}</h2><div class="ref">NEN 8026 ${m.ref}${m.product?' · product: <b>'+m.product+'</b>':''}</div>
@@ -726,17 +938,19 @@ function route(){
   const id = location.hash.slice(1) || 'start';
   const m = MODULES.find(x=>x.id===id) || MODULES[0];
   renderNav(m.id);
-  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets, bestuurlijk:renderBestuurlijk})[m.id]?.() ?? renderModule(m);
+  main.innerHTML = ({start:renderStart, basis:renderBasis, assets:renderAssets, bestuurlijk:renderBestuurlijk, strategisch:renderStrategisch, waardeaspecten:renderWaardeaspecten, rollen:renderRollen})[m.id]?.() ?? renderModule(m);
   main.innerHTML += `<footer>Deze tool bevat geen normtekst of figuren uit NEN 8026; omschrijvingen en figuren zijn eigen samenvattingen. Raadpleeg de norm voor de officiële inhoud.</footer>`;
 }
 function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-btab],[data-rsel],[data-radd],[data-rdel],[data-apply]');
+  const r = e.target.closest('[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print]');
   if(r){
     const d = r.dataset;
     if(d.btab){ ui.btab = d.btab; window.scrollTo(0,0); route(); return; }
+    if(d.stab){ ui.stab = d.stab; window.scrollTo(0,0); route(); return; }
+    if(d.print){ window.print(); return; }
     if(d.rsel){ const [k,id] = d.rsel.split(':'); ui.sel[k]=id; ui.rarmed=null; }
     else if(d.radd){ const it = {id:uid()}; items(d.radd).push(it); ui.sel[d.radd]=it.id; ui.rarmed=null; save(); rerender();
       main.querySelector('.form input, .form select')?.focus(); return; }
@@ -785,6 +999,12 @@ main.addEventListener('input', e=>{
     if(el.tagName==='SELECT' || el.type==='checkbox' || el.type==='date') rerender();
     else { const l = main.querySelector(`[data-rsel="${d.rk}:${d.rid}"] .rl`); if(l) l.innerHTML = esc(REG[d.rk].label(it))||'<i class="muted">(naamloos)</i>'; }
     return;
+  }
+  if(d.af){
+    const a = state.data.assets.find(x=>x.id===d.af); if(!a) return;
+    if(el.type==='checkbox'){ const s = new Set(a[d.ak]||[]); el.checked?s.add(d.rv):s.delete(d.rv); a[d.ak]=[...s]; }
+    else a[d.ak] = el.value;
+    save(); if(d.ak==='fase'||d.ak==='transEind') rerender(); return;
   }
   if(d.best){ state.data.best[d.best] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.info){ (state.data.info[d.info] ||= {})[d.ik] = el.value; save(); return; }

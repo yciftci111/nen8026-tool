@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waardegestuurd in stand houden – NEN 8026 tool</title>
+<style>
+  :root{
+    --bg:#f5f6f4; --panel:#ffffff; --ink:#1d2321; --muted:#5f6b66; --line:#dde2df;
+    --accent:#1f6f5c; --accent-soft:#e3f0ec;
+    --l1:#7a4b8c; --l2:#2d5f9a; --l3:#1f6f5c; --l4:#b5651d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  header{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;font-weight:650}
+  header .sub{color:var(--muted);font-size:13px}
+  header .spacer{flex:1}
+  select,button{font:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 62px)}
+  nav{background:var(--panel);border-right:1px solid var(--line);padding:16px 0}
+  nav .group{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:14px 20px 6px}
+  nav a{display:flex;align-items:center;gap:10px;padding:8px 20px;color:var(--ink);text-decoration:none;font-size:14px;border-left:3px solid transparent}
+  nav a:hover{background:var(--bg)}
+  nav a.active{background:var(--accent-soft);border-left-color:var(--accent);font-weight:600}
+  nav .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  main{padding:28px 36px;max-width:1000px}
+  main h2{margin:0 0 4px;font-size:24px}
+  .ref{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h3{margin:0 0 6px;font-size:15px}
+  .card p{margin:0;color:var(--muted);font-size:13px}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:#eee;color:var(--muted);margin-top:10px}
+  .badge.todo{background:#fff3e0;color:#9a5b00}
+  .note{background:var(--accent-soft);border-radius:10px;padding:14px 16px;margin-bottom:22px;font-size:14px}
+  @media (max-width:760px){.layout{grid-template-columns:1fr}nav{border-right:none;border-bottom:1px solid var(--line)}main{padding:20px}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Waardegestuurd in stand houden</h1>
+    <div class="sub">Tool op basis van de methode uit NEN 8026</div>
+  </div>
+  <div class="spacer"></div>
+  <label class="sub" for="sector">Sectorsjabloon</label>
+  <select id="sector"></select>
+  <button id="btnExport">Exporteren</button>
+  <button id="btnImport">Importeren</button>
+  <input type="file" id="fileImport" accept=".json" hidden>
+</header>
+
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+
+<script>
+/* ============================================================
+   Structuur van de tool (volgt de hoofdstukindeling van NEN 8026).
+   Let op: hier staat GEEN normtekst, alleen verwijzingen naar paragrafen.
+   ============================================================ */
+const MODULES = [
+  { id:'start', group:'Basis', title:'Start', ref:'', color:'var(--accent)',
+    intro:'Overzicht van de tool en de vier niveaus van de methode.',
+    parts:[] },
+  { id:'basis', group:'Basis', title:'Begrippen & methode', ref:'H3 en H4', color:'var(--accent)',
+    parts:[
+      ['Begrippenlijst','§3'], ['Levensfasen van assets','§4.4'],
+      ['Assetmanagementorganisatie','§4.7'], ['Methode op hoofdlijnen','§4.8']
+    ]},
+  { id:'bestuurlijk', group:'Niveaus', title:'Bestuurlijk niveau', ref:'H5', color:'var(--l1)',
+    parts:[
+      ['Belangen stakeholders','§5.3.1'], ['Organisatiedoelstellingen','§5.3.2'],
+      ['Randvoorwaarden','§5.3.3'], ['Perspectief en besluit','§5.3.4'],
+      ['Dilemma\'s','§5.3.5'], ['Tijdige communicatie','§5.3.6'],
+      ['Assessment','§5.4'], ['Informatiebehoefte','§5.5']
+    ]},
+  { id:'strategisch', group:'Niveaus', title:'Strategisch niveau', ref:'H6', color:'var(--l2)',
+    parts:[
+      ['Assetmanagementdoelstellingen','§6.3.1'], ['Levensfasen vaststellen','§6.3.2'],
+      ['Consequenties inzichtelijk','§6.3.3'], ['Dilemma\'s','§6.3.4'],
+      ['Vastlegging','§6.3.5'], ['Assessment','§6.4'], ['Informatiebehoefte','§6.5']
+    ]},
+  { id:'tactisch', group:'Niveaus', title:'Tactisch niveau', ref:'H7', color:'var(--l3)',
+    parts:[
+      ['Waardekompassen opstellen','§7.3.1'], ['Waardekompassen bijstellen','§7.3.2'],
+      ['Instandhoudingseisen','§7.3.3'], ['Risicoanalyse','§7.3.4'],
+      ['Instandhoudingsconcepten opstellen','§7.3.5'], ['Instandhoudingsconcepten bijstellen','§7.3.6'],
+      ['Uitvoeringseisen','§7.3.7'], ['Plannen en begrotingen','§7.3.8'],
+      ['Advies aan asset owner','§7.3.9'], ['Dilemma\'s','§7.3.10'],
+      ['Vastlegging','§7.3.11'], ['Assessment','§7.4'], ['Informatiebehoefte','§7.5']
+    ]},
+  { id:'operationeel', group:'Niveaus', title:'Operationeel niveau', ref:'H8', color:'var(--l4)',
+    parts:[
+      ['Werkzaamheden instandhouding','§8.2.1'], ['Observaties','§8.2.2'],
+      ['Assetportfolio inventariseren','§8.2.3'], ['Vastlegging','§8.2.4'],
+      ['Assessment','§8.3'], ['Informatiebehoefte','§8.4']
+    ]},
+  { id:'waardeaspecten', group:'Instellingen', title:'Waardeaspectentabel', ref:'Bijlage A', color:'var(--muted)',
+    parts:[['Waardeaspecten beheren','Bijlage A']] },
+];
+
+/* Sectorsjablonen: worden later gevuld (Bijlage B en C als eerste voorbeelden). */
+const SECTOREN = [
+  {id:'leeg', naam:'Leeg (zelf inrichten)'},
+  {id:'onderwijs', naam:'Vastgoed – onderwijs (Bijlage B)'},
+  {id:'infra', naam:'Infrastructuur (Bijlage C)'},
+];
+
+/* ---------- Opslag in de browser (met back-up via export) ---------- */
+const STORE_KEY = 'nen8026-tool-v1';
+function load(){
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {sector:'leeg', data:{}}; }
+  catch(e){ return {sector:'leeg', data:{}}; }
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+let state = load();
+
+/* ---------- Weergave ---------- */
+const nav = document.getElementById('nav');
+const main = document.getElementById('main');
+
+function renderNav(active){
+  let html = '', group = '';
+  for(const m of MODULES){
+    if(m.group !== group){ group = m.group; html += `<div class="group">${group}</div>`; }
+    html += `<a href="#${m.id}" class="${m.id===active?'active':''}">
+      <span class="dot" style="background:${m.color}"></span>${m.title}</a>`;
+  }
+  nav.innerHTML = html;
+}
+
+function renderStart(){
+  const levels = MODULES.filter(m=>m.group==='Niveaus');
+  return `<h2>Welkom</h2>
+    <div class="ref">Versie 0.1 – basisstructuur</div>
+    <div class="note">Deze tool ondersteunt de methode voor het waardegestuurd in stand houden
+    van assets in de gebouwde omgeving. Kies rechtsboven een sectorsjabloon en werk de vier
+    niveaus van boven naar beneden uit.</div>
+    <div class="cards">${levels.map(m=>`
+      <a href="#${m.id}" style="text-decoration:none;color:inherit">
+      <div class="card" style="border-top:4px solid ${m.color}">
+        <h3>${m.title}</h3><p>${m.ref} · ${m.parts.length} onderdelen</p>
+      </div></a>`).join('')}
+    </div>`;
+}
+
+function renderModule(m){
+  return `<h2>${m.title}</h2>
+    <div class="ref">NEN 8026 ${m.ref}</div>
+    <div class="cards">${m.parts.map(([t,ref])=>`
+      <div class="card" style="border-left:4px solid ${m.color}">
+        <h3>${t}</h3><p>${ref}</p>
+        <span class="badge todo">Nog te bouwen</span>
+      </div>`).join('')}
+    </div>`;
+}
+
+function route(){
+  const id = location.hash.slice(1) || 'start';
+  const m = MODULES.find(x=>x.id===id) || MODULES[0];
+  renderNav(m.id);
+  main.innerHTML = m.id==='start' ? renderStart() : renderModule(m);
+}
+
+/* ---------- Sectorkeuze ---------- */
+const sel = document.getElementById('sector');
+sel.innerHTML = SECTOREN.map(s=>`<option value="${s.id}">${s.naam}</option>`).join('');
+sel.value = state.sector;
+sel.onchange = ()=>{ state.sector = sel.value; save(); };
+
+/* ---------- Export / import ---------- */
+document.getElementById('btnExport').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `nen8026-gegevens-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+};
+const fileInput = document.getElementById('fileImport');
+document.getElementById('btnImport').onclick = ()=>fileInput.click();
+fileInput.onchange = async ()=>{
+  const f = fileInput.files[0]; if(!f) return;
+  try{ state = JSON.parse(await f.text()); save(); sel.value = state.sector; route(); }
+  catch(e){ console.log('Ongeldig bestand'); }
+};
+
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>

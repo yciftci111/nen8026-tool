@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.23</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.24</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -536,6 +536,7 @@ function renderTree(pid, depth){
   }).join('');
 }
 function renderAssets(){
+  { const m = herstelNiveaus(); if(m) ui.wizKlaar = m; }
   if(ui.wiz && dbib()) return renderWizard();
   const s = sector();
   const a = state.data.assets.find(x=>x.id===ui.node);
@@ -1652,7 +1653,7 @@ Object.assign(REG, {
   ]},
 });
 Object.assign(MV, {inspecties:'inspecties', datasets:'gebrekendatasets'});
-const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['prioriteit','Gevolgen & prioriteit','Bijlage D'],['mjop','MJOP','Bijlage E'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['decbib','Decompositiebibliotheek','RWS'],['gevolgen','⚙ Gevolgen-aspecten','Bijlage D'],['tabellen','⚙ Rekentabellen','']];
+const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['prioriteit','Gevolgen & prioriteit','Bijlage D'],['mjop','MJOP','Bijlage E'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['decbib','Decompositiebibliotheek','NEN 2767-4'],['gevolgen','⚙ Gevolgen-aspecten','Bijlage D'],['tabellen','⚙ Rekentabellen','']];
 const lvName = a => sector().niveaus[Math.min(a.niveau,5)];
 
 function renderConditie(){
@@ -2038,7 +2039,7 @@ function exportDbib(){
 }
 function tDecBib(){
   const D = dbib();
-  const head = `<div class="note small">De decompositiebibliotheek bevat de standaardopbouw <b>beheerobject → elementgroep → element → bouwdeel</b> met de <b>gebreken</b> per bouwdeel. Ze is de basis voor het snel opbouwen van een assetstructuur en straks voor FMEA (EN 60812) en foutenbomen (IEC 61025). De bibliotheek staat niet in de tool: je importeert je eigen bestand (bijv. de RWS-deltatabellen). Het wordt alleen in je browser bewaard.</div>
+  const head = `<div class="note small">De decompositiebibliotheek bevat de standaardopbouw <b>beheerobject → elementgroep → element → bouwdeel</b> met de <b>gebreken</b> per bouwdeel. Ze is de basis voor het snel opbouwen van een assetstructuur en straks voor FMEA (EN 60812) en foutenbomen (IEC 61025). De bibliotheek staat niet in de tool: je importeert je eigen bestand (bijv. de dataset van NEN 2767-4, opgebouwd uit de deltarapportages). Het wordt alleen in je browser bewaard.</div>
     ${ui.dbwarn?`<div class="warn small">${esc(ui.dbwarn)}</div>`:''}
     <div class="${D?'note':'warn'} small" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${D?`✓ Geladen: ${esc(D.naam||'bibliotheek')}${D.versie?' · versie '+esc(D.versie):''} — ${D.bo.length} beheerobjecten, ${D.el.length} elementen, ${D.bd.length} bouwdelen, ${D.gb.length} gebreken`:'Nog geen decompositiebibliotheek geladen.'}</b><span style="flex:1"></span>
       <button data-dbimp="1">Bibliotheek importeren (JSON)</button>${D?'<button data-dbexp="1">Exporteren (JSON, met jouw elementgroepen)</button><button class="danger" data-dbdel="1">Verwijderen</button>':''}<input type="file" id="dbfile" accept=".json" hidden></div>`;
@@ -2096,7 +2097,7 @@ function tDecBib(){
     const f = ui.dbegf ?? 'met'; const cnt = {}; D.el.forEach(e=>{ const g = dbEgOf(e); cnt[g] = (cnt[g]||0)+1; });
     const nAang = D.el.filter(e=>e.c in dbEg() && dbEg()[e.c]!==(e.g||'')).length;
     const lijst = D.el.map((e,i)=>[i,e]).filter(([,e])=>f==='alle' || (f==='met'?dbEgOf(e):f==='zonder'?!dbEgOf(e):dbEgOf(e)===f));
-    body = `<div class="note small">De RWS-bron koppelt elementen niet aan elementgroepen. De bibliotheek bevat daarom een <b>voorstel</b> voor de installatie-elementen. Pas het hier aan; je keuzes blijven bewaard, ook als je de bibliotheek opnieuw importeert.${nAang?` <b>${nAang} element(en) aangepast.</b>`:''}</div>
+    body = `<div class="note small">De NEN 2767-4-deltarapportages koppelen elementen niet aan elementgroepen. De bibliotheek bevat daarom een <b>voorstel</b> voor de installatie-elementen. Pas het hier aan; je keuzes blijven bewaard, ook als je de bibliotheek opnieuw importeert.${nAang?` <b>${nAang} element(en) aangepast.</b>`:''}</div>
       <div style="display:grid;grid-template-columns:minmax(220px,280px) 1fr;gap:14px;align-items:start">
         <div class="tree">${[['met','Alle met elementgroep'],['zonder','Zonder elementgroep'],['alle','Alle elementen']].map(([k,l])=>`<div class="node ${f===k?'sel':''}" data-dbegf="${k}" style="cursor:pointer"><span style="flex:1">${l}</span><span class="small muted">${k==='alle'?D.el.length:k==='zonder'?(cnt['']||0):D.el.length-(cnt['']||0)}</span></div>`).join('')}
           <div class="small muted" style="margin:8px 0 2px;font-weight:600">Elementgroepen</div>
@@ -2141,6 +2142,22 @@ function tDecBib(){
 }
 
 
+
+/* Herstel: onderdelen uit de bibliotheek staan altijd op hun vaste NEN 2767-niveau (beheerobject 2, element 3, bouwdeel 4). */
+function herstelNiveaus(){
+  const A = state.data.assets, doel = {bo:2, el:3, bd:4}; const meld = [];
+  const shift = (id, dlt) => { const a = A.find(x=>x.id===id); a.niveau = Math.min(5, Math.max(0, a.niveau+dlt)); children(id).forEach(c=>shift(c.id, dlt)); };
+  A.filter(a=>a.lib?.t==='bo' && a.niveau!==2).forEach(bo=>{
+    const dlt = 2 - bo.niveau;
+    if(dlt>0){ let par = bo.parent; const pa = A.find(x=>x.id===par); let lv = pa ? pa.niveau+1 : 0;
+      while(lv<2){ const n = {id:uid(), parent:par, niveau:lv, naam:'Nieuw '+sector().niveaus[lv].toLowerCase()+' (naam invullen)', assettype:'', fase:bo.fase||'gebruik', krit:null}; A.push(n); par = n.id; lv++; }
+      bo.parent = par; }
+    shift(bo.id, dlt); meld.push(bo.naam||'(naamloos)'); });
+  A.filter(a=>a.lib && doel[a.lib.t]!==undefined && a.niveau!==doel[a.lib.t]).forEach(a=>{ shift(a.id, doel[a.lib.t]-a.niveau); });
+  const D = state.data.dbib; if(D && /^RWS/.test(D.naam||'')){ D.naam = 'NEN 2767-4 – deltarapportages v1.6 (actueel)'; D.bron = (D.bron||'').replace(/RWS/g,'NEN 2767-4 (nen2767-4.nl)'); save(); }
+  if(meld.length){ save(); return `Structuur hersteld volgens NEN 2767: ${meld.map(esc).join(', ')} staat nu op het niveau ${esc(sector().niveaus[2])}; de elementen en bouwdelen zijn mee verschoven. Geef een eventueel nieuw tussenniveau nog een naam.`; }
+  return '';
+}
 /* ---------- Wizard: assetstructuur opbouwen uit de decompositiebibliotheek ---------- */
 function wizStart(target){
   const D = dbib(); const W = {stap:1, parent:'', nieuwP:'', nieuwS:'', bo:null, naam:'', q:'', el:[], bd:{}, open:null, mat:{}, target:null, bestaand:{el:{}, bd:{}}};
@@ -2159,13 +2176,14 @@ function wizMaak(){
   if(!boId){
     let par = W.parent;
     if(par==='nieuw'){ const p0 = mk(null, 0, W.nieuwP||'Nieuw '+sector().niveaus[0].toLowerCase()); par = mk(p0, 1, W.nieuwS||'Nieuw '+sector().niveaus[1].toLowerCase()); }
-    boId = mk(par||null, par ? A.find(x=>x.id===par).niveau+1 : 2, W.naam || D.bo[W.bo].n, {assettype:D.bo[W.bo].n, lib:{t:'bo', c:D.bo[W.bo].c}});
+    else if(par.startsWith('S:')){ par = mk(par.slice(2), 1, W.nieuwS||'Nieuw '+sector().niveaus[1].toLowerCase()); }
+    boId = mk(par, 2, W.naam || D.bo[W.bo].n, {assettype:D.bo[W.bo].n, lib:{t:'bo', c:D.bo[W.bo].c}});
   }
   let nEl = 0, nBd = 0;
   W.el.forEach(ei=>{ const e = D.el[ei]; let eId = W.bestaand.el[ei];
-    if(!eId){ eId = mk(boId, A.find(x=>x.id===boId).niveau+1, e.n, {lib:{t:'el', c:e.c, eg:dbEgOf(e)}}); nEl++; }
+    if(!eId){ eId = mk(boId, 3, e.n, {lib:{t:'el', c:e.c, eg:dbEgOf(e)}}); nEl++; }
     (W.bd[ei]||[]).forEach(bi=>{ if((W.bestaand.bd[ei]||[]).includes(bi)) return; const b = D.bd[bi]; const m = W.mat[ei+':'+bi];
-      mk(eId, A.find(x=>x.id===eId).niveau+1, b.n, {lib:{t:'bd', nr:b.nr, c:b.c}, materiaal: m!=null && m!=='' ? D.mat[+m] : (b.m.length===1 ? D.mat[b.m[0]] : '')}); nBd++; }); });
+      mk(eId, 4, b.n, {lib:{t:'bd', nr:b.nr, c:b.c}, materiaal: m!=null && m!=='' ? D.mat[+m] : (b.m.length===1 ? D.mat[b.m[0]] : '')}); nBd++; }); });
   ui.node = boId; ui.wizKlaar = `${W.target?'Aangevuld':'Aangemaakt'}: ${W.target?'':'1 '+sector().niveaus[2].toLowerCase()+', '}${nEl} element(en) en ${nBd} bouwdeel/bouwdelen.`; ui.wiz = null; save();
 }
 function renderWizard(){
@@ -2175,13 +2193,19 @@ function renderWizard(){
   const nav = (ok, label='Volgende') => `<div style="display:flex;gap:8px;margin-top:12px">${W.stap>(W.target?3:1)?'<button data-wz="back">← Terug</button>':''}<button class="primary" data-wz="next" ${ok?'':'disabled'}>${label} →</button></div>`;
   let body = '';
   if(W.stap===1){
-    const ouders = state.data.assets.filter(a=>a.niveau<2);
+    const sys = state.data.assets.filter(a=>a.niveau===1), port = state.data.assets.filter(a=>a.niveau===0);
+    const naamOuder = id => state.data.assets.find(a=>a.id===id)?.naam || '';
+    const isNieuwS = W.parent.startsWith('S:');
+    const ok = !!W.parent;
     body = `<div class="panel form"><h3>Waar komt het ${esc(s.niveaus[2].toLowerCase())}?</h3>
-      <div><label>Onder</label><select data-wzf="parent"><option value="">— bovenaan, zonder ${esc(s.niveaus[0].toLowerCase())} —</option>
-        ${ouders.map(a=>`<option value="${a.id}" ${W.parent===a.id?'selected':''}>${'  '.repeat(a.niveau)}${esc(s.niveaus[a.niveau])}: ${esc(a.naam||'(naamloos)')}</option>`).join('')}
-        <option value="nieuw" ${W.parent==='nieuw'?'selected':''}>+ nieuw ${esc(s.niveaus[0].toLowerCase())} en ${esc(s.niveaus[1].toLowerCase())}…</option></select></div>
-      ${W.parent==='nieuw'?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>${esc(s.niveaus[0])}</label><input data-wzf="nieuwP" value="${esc(W.nieuwP)}" placeholder="bijv. Natte infra"></div><div><label>${esc(s.niveaus[1])}</label><input data-wzf="nieuwS" value="${esc(W.nieuwS)}" placeholder="bijv. Vaarweg Twentekanaal"></div></div>`:''}
-      <p class="small muted" style="margin:0">Een beheerobject hoort op het derde niveau (${esc(s.niveaus[2])}). Kies daarom bij voorkeur een ${esc(s.niveaus[1].toLowerCase())} als plaats.</p></div>` + nav(true);
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center" class="small">${s.niveaus.map((n,i)=>`<span class="badge" style="${i===2?'background:#8e44ad;color:#fff':i>=3&&i<=4?'background:#f4ecf7':''}">${esc(n)}${i===2?' = beheerobject':''}</span>`).join('<span class="muted">›</span>')}</div>
+      <p class="small muted" style="margin:0">Volgens NEN 2767 (figuur 1: areaal/portefeuille → complex → beheerobject → element → bouwdeel → component) komt een beheerobject altijd op het derde niveau, onder een ${esc(s.niveaus[1].toLowerCase())}. De elementen en bouwdelen komen daar automatisch onder.</p>
+      <div><label>Onder welk ${esc(s.niveaus[1].toLowerCase())}?</label><select data-wzf="parent"><option value="">— kies —</option>
+        ${sys.length?`<optgroup label="Bestaand ${esc(s.niveaus[1].toLowerCase())}">${sys.map(a=>`<option value="${a.id}" ${W.parent===a.id?'selected':''}>${esc(a.naam||'(naamloos)')}${a.parent?' — '+esc(naamOuder(a.parent)):''}</option>`).join('')}</optgroup>`:''}
+        ${port.length?`<optgroup label="Nieuw ${esc(s.niveaus[1].toLowerCase())} onder bestaand ${esc(s.niveaus[0].toLowerCase())}">${port.map(a=>`<option value="S:${a.id}" ${W.parent==='S:'+a.id?'selected':''}>+ nieuw ${esc(s.niveaus[1].toLowerCase())} onder ${esc(a.naam||'(naamloos)')}</option>`).join('')}</optgroup>`:''}
+        <option value="nieuw" ${W.parent==='nieuw'?'selected':''}>+ nieuw ${esc(s.niveaus[0].toLowerCase())} én nieuw ${esc(s.niveaus[1].toLowerCase())}</option></select></div>
+      ${W.parent==='nieuw'||isNieuwS?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${W.parent==='nieuw'?`<div><label>Naam ${esc(s.niveaus[0].toLowerCase())}</label><input data-wzf="nieuwP" value="${esc(W.nieuwP)}" placeholder="bijv. Waterschap AGV"></div>`:''}<div><label>Naam ${esc(s.niveaus[1].toLowerCase())}</label><input data-wzf="nieuwS" value="${esc(W.nieuwS)}" placeholder="bijv. Stuwgebied AGV"></div></div>`:''}
+      </div>` + nav(ok);
   }
   else if(W.stap===2){
     const q = W.q.toLowerCase(); const l = D.bo.map((b,i)=>[i,b]).filter(([,b])=>!q || (b.n+' '+b.c).toLowerCase().includes(q));

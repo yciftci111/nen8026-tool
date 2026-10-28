@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.21</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.22</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -1647,7 +1647,7 @@ Object.assign(REG, {
   ]},
 });
 Object.assign(MV, {inspecties:'inspecties', datasets:'gebrekendatasets'});
-const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['prioriteit','Gevolgen & prioriteit','Bijlage D'],['mjop','MJOP','Bijlage E'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['gevolgen','⚙ Gevolgen-aspecten','Bijlage D'],['tabellen','⚙ Rekentabellen','']];
+const CTABS = [['overzicht','Overzicht',''],['decompositie','Decompositie','§1.2'],['schaal','Conditieschaal','H4'],['inspecties','Inspecties','§1.3'],['gebreken','Gebrekenregistratie','§5.2–5.4'],['condities','Condities','§5.5'],['aanvullend','Aanvullende inspecties','Bijlage C'],['prioriteit','Gevolgen & prioriteit','Bijlage D'],['mjop','MJOP','Bijlage E'],['kromme','Verouderingskromme','§5.4'],['rekenhulp','Rekenhulp 7 stappen','Bijlage B'],['datasets','Gebrekenbibliotheek','Bijlage A, deel 2'],['decbib','Decompositiebibliotheek','RWS'],['gevolgen','⚙ Gevolgen-aspecten','Bijlage D'],['tabellen','⚙ Rekentabellen','']];
 const lvName = a => sector().niveaus[Math.min(a.niveau,5)];
 
 function renderConditie(){
@@ -1678,6 +1678,7 @@ function renderConditie(){
       <div class="card" data-ctab="decompositie" style="cursor:pointer"><h3>Bouwdelen</h3><p>${cnt(4)} bouwdelen, ${cnt(5)} componenten · ${A.filter(a=>a.niveau>=4&&a.materiaal).length} met materiaalsoort</p></div>
       <div class="card" data-ctab="inspecties" style="cursor:pointer"><h3>Inspecties</h3><p>${items('inspecties').length} vastgelegd</p></div>
       <div class="card" data-ctab="datasets" style="cursor:pointer;${items('datasets').some(d=>d.actief==='Ja')?'':'border-left:4px solid #b5651d'}"><h3>Gebrekendataset</h3><p>${items('datasets').find(d=>d.actief==='Ja')?.naam||'nog geen actieve dataset'}</p></div>
+      <div class="card" data-ctab="decbib" style="cursor:pointer"><h3>Decompositiebibliotheek</h3><p>${dbib()?`${dbib().bo.length} beheerobjecten · ${dbib().el.length} elementen · ${dbib().bd.length} bouwdelen`:'nog niet geladen (optioneel)'}</p></div>
     </div>`;
   }
   else if(t==='decompositie'){
@@ -1707,6 +1708,7 @@ function renderConditie(){
     <p class="small muted">Koppeling met NEN 8026: in de <a href="#tactisch" data-ttab="instellingen">niveautabel</a> stelt de tool per bijdrage een maximaal toegestane conditiescore voor (standaard 4 / 3 / 2 bij bijdrage 1 / 2 / 3).</p>`;
   else if(t==='inspecties') body = `<div class="note small">Leg per inspectie vast wie, wanneer, wat en met welke gebrekendataset is geïnspecteerd. De inspecteur kan gebruikmaken van klachten, storingen, onderhoudshistorie en logboeken (§1.3). De gebrekenregistratie per bouwdeel volgt na hoofdstuk 5.</div>${renderRegister('inspecties')}`;
   else if(t==='datasets') body = tBibliotheek();
+  else if(t==='decbib') body = tDecBib();
   else if(t==='gebreken') body = tGebreken();
   else if(t==='condities') body = tCondities();
   else if(t==='aanvullend') body = tAanvullend();
@@ -2002,6 +2004,135 @@ function exportBibCSV(){
   bib().secties.forEach(s=>s.gebreken.forEach(g=>rows.push([s.code,s.disc,s.titel,g.code,g.ernst,g.soort,g.naam,g.int,g.omvang,g.oms])));
   const csv = '﻿'+rows.map(r=>r.map(v=>/[;"\n]/.test(String(v))?'"'+String(v).replace(/"/g,'')+'"':v).join(';')).join('\r\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download = 'gebrekenbibliotheek.csv'; a.click();
+}
+
+
+/* ---------- Decompositiebibliotheek (beheerobject → elementgroep → element → bouwdeel → gebrek) ---------- */
+const dbib = () => state.data.dbib || null;
+const dbEg = () => (state.data.dbibEg ||= {});
+let dbIdx = null;
+function dbIndex(){ const D = dbib(); if(!D) return null; if(dbIdx) return dbIdx;
+  const gsBy = Object.fromEntries(D.gs.map(s=>[s.n,s]));
+  const elBo = D.el.map(()=>[]); D.bo.forEach((b,bi)=>b.el.forEach(e=>elBo[e].push(bi)));
+  const bdEl = D.bd.map(()=>[]); D.el.forEach((e,ei)=>e.bd.forEach(b=>bdEl[b].push(ei)));
+  const gbBd = D.bd.map(b=>{ const m = new Set(b.m); return D.gb.map((g,gi)=>g.m.some(x=>m.has(x))?gi:-1).filter(x=>x>=0); });
+  const bdGb = D.gb.map(()=>0); gbBd.forEach(l=>l.forEach(g=>bdGb[g]++));
+  return dbIdx = {gsBy, elBo, bdEl, gbBd, bdGb};
+}
+const dbEgOf = e => (e.c in dbEg()) ? dbEg()[e.c] : (e.g||'');
+const dbBelang = g => dbIndex().gsBy[g.gs]?.b || '';
+const dbKleur = b => ckleur(b==='ernstig'?6:b==='serieus'?4:2);
+function importDbib(txt){
+  const D = JSON.parse(txt); if(D.type!=='decompositiebibliotheek' || !D.bo || !D.el || !D.bd || !D.gb) throw new Error('Geen decompositiebibliotheek');
+  state.data.dbib = D; dbIdx = null; ui.dbsel = {}; ui.dbwarn = '';
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(err){ ui.dbwarn = 'De browseropslag is vol: de bibliotheek is wel geladen, maar wordt niet bewaard na herladen. Maak ruimte (bijv. de gebrekenbibliotheek verwijderen) en importeer opnieuw.'; }
+}
+function exportDbib(){
+  const D = JSON.parse(JSON.stringify(dbib())); D.el.forEach(e=>{ e.g = dbEgOf(e); });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'})); a.download = 'decompositiebibliotheek.json'; a.click();
+}
+function tDecBib(){
+  const D = dbib();
+  const head = `<div class="note small">De decompositiebibliotheek bevat de standaardopbouw <b>beheerobject → elementgroep → element → bouwdeel</b> met de <b>gebreken</b> per bouwdeel. Ze is de basis voor het snel opbouwen van een assetstructuur en straks voor FMEA (EN 60812) en foutenbomen (IEC 61025). De bibliotheek staat niet in de tool: je importeert je eigen bestand (bijv. de RWS-deltatabellen). Het wordt alleen in je browser bewaard.</div>
+    ${ui.dbwarn?`<div class="warn small">${esc(ui.dbwarn)}</div>`:''}
+    <div class="${D?'note':'warn'} small" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${D?`✓ Geladen: ${esc(D.naam||'bibliotheek')}${D.versie?' · versie '+esc(D.versie):''} — ${D.bo.length} beheerobjecten, ${D.el.length} elementen, ${D.bd.length} bouwdelen, ${D.gb.length} gebreken`:'Nog geen decompositiebibliotheek geladen.'}</b><span style="flex:1"></span>
+      <button data-dbimp="1">Bibliotheek importeren (JSON)</button>${D?'<button data-dbexp="1">Exporteren (JSON, met jouw elementgroepen)</button><button class="danger" data-dbdel="1">Verwijderen</button>':''}<input type="file" id="dbfile" accept=".json" hidden></div>`;
+  if(!D) return head + `<div class="panel"><h3>Opbouw van de bibliotheek</h3>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0">${['Beheerobject','Elementgroep','Element','Bouwdeel','Materiaal','Gebrek'].map((n,i)=>`<span class="badge" style="padding:6px 10px;${i===1||i===4?'background:#fff;border:1px dashed var(--line)':''}">${n}</span>${i<5?'→':''}`).join('')}</div>
+    <ul class="small" style="margin:0;padding-left:18px"><li>Een <b>beheerobject</b> (bijv. sluis, viaduct) bestaat uit elementen; een element komt bij veel beheerobjecten voor.</li>
+      <li>Een <b>elementgroep</b> is een label voor installatie-elementen (bijv. Energievoorzieningen); civiele en groenelementen hebben er geen.</li>
+      <li>Een <b>element</b> bestaat uit bouwdelen. Elk bouwdeel heeft een of meer <b>materialen</b>.</li>
+      <li>Een <b>gebrek</b> hoort bij een gebrekgroep en een gebreksoort (met belang ernstig / serieus / gering) en geldt voor materiaalsoorten. Via het materiaal krijgt elk bouwdeel zijn kandidaat-gebreken.</li></ul></div>`;
+  const I = dbIndex(); const v = ui.dbview||'keten';
+  const chips = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${[['keten','Keten bladeren'],['groepen','Elementgroepen'],['gebreken','Gebreken'],['controles','Controles']].map(([k,l])=>`<button class="chip ${v===k?'on':''}" data-dbview="${k}">${l}</button>`).join('')}</div>`;
+  let body = '';
+  if(v==='keten'){
+    const S = ui.dbsel ||= {}; const q = (ui.dbq||'').trim().toLowerCase();
+    if(S.bo==null) S.bo = 0;
+    const B = D.bo[S.bo]; const els = B.el.map(i=>[i,D.el[i]]);
+    if(S.el!=null && !B.el.includes(S.el)) S.el = null;
+    const E = S.el!=null ? D.el[S.el] : null;
+    if(S.bd!=null && (!E || !E.bd.includes(S.bd))) S.bd = null;
+    const Bd = S.bd!=null ? D.bd[S.bd] : null;
+    const mats = Bd ? Bd.m : []; const actief = new Set((ui.dbmat && ui.dbmatBd===S.bd) ? ui.dbmat : mats);
+    const gbs = Bd ? I.gbBd[S.bd].filter(g=>D.gb[g].m.some(m=>actief.has(m))) : [];
+    const hits = q ? [...D.bo.map((x,i)=>['bo',i,x]),...D.el.map((x,i)=>['el',i,x]),...D.bd.map((x,i)=>['bd',i,x])].filter(([,,x])=>(x.n+' '+x.c).toLowerCase().includes(q)) : [];
+    const LV = {bo:'Beheerobject',el:'Element',bd:'Bouwdeel'};
+    const zoek = `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input id="dbq" placeholder="Zoek een beheerobject, element of bouwdeel…" value="${esc(ui.dbq||'')}" style="flex:1;min-width:220px"></div>
+      ${q?`<div class="panel" style="max-height:260px;overflow:auto;margin-bottom:12px">${hits.length?hits.slice(0,80).map(([l,i,x])=>`<div class="node" data-dbhit="${l}:${i}" style="cursor:pointer"><span class="badge" style="width:96px;text-align:center">${LV[l]}</span><span class="small muted" style="width:52px">${esc(x.c)}</span><span style="flex:1">${esc(x.n)}</span></div>`).join('')+(hits.length>80?`<div class="small muted">… en nog ${hits.length-80}</div>`:''):'<span class="muted small">Niets gevonden.</span>'}</div>`:''}`;
+    const col = (titel, n, inner) => `<div class="panel" style="padding:8px;min-width:0"><div class="small" style="font-weight:600;margin-bottom:6px">${titel} <span class="muted">(${n})</span></div><div class="tree" style="max-height:520px;overflow:auto">${inner}</div></div>`;
+    const node = (attr, i, x, sel, extra='') => `<div class="node ${sel?'sel':''}" ${attr}="${i}" style="cursor:pointer;font-size:13px;padding:4px 6px;gap:6px"><span class="small muted" style="width:${attr==='data-dbbo'?24:44}px;flex:none;white-space:nowrap">${esc(x.c)}</span><span style="flex:1;min-width:0;overflow-wrap:break-word;hyphens:auto">${esc(x.n)}</span>${extra?`<span style="flex:none;padding-left:8px">${extra}</span>`:''}</div>`;
+    const grp = {}; els.forEach(([i,e])=>{ (grp[dbEgOf(e)||''] ||= []).push([i,e]); });
+    const grpKeys = Object.keys(grp).sort((a,b)=>(a===''?1:b===''?-1:a.localeCompare(b)));
+    const c1 = D.bo.map((x,i)=>node('data-dbbo',i,x,i===S.bo,`<span class="small muted">${x.el.length}</span>`)).join('');
+    const c2 = grpKeys.map(k=>`<div class="small muted" style="margin:8px 0 2px;font-weight:600">${k?esc(k):(grpKeys.length>1?'Overige elementen':'')}</div>`+grp[k].map(([i,e])=>node('data-dbel',i,e,i===S.el,`<span class="small muted">${e.bd.length}</span>`)).join('')).join('');
+    const c3 = E ? E.bd.map(i=>node('data-dbbd',i,D.bd[i],i===S.bd,`<span class="small muted">${I.gbBd[i].length}</span>`)).join('') || '<span class="small muted">Geen bouwdelen.</span>' : '<span class="small muted">Kies een element.</span>';
+    const c4 = Bd ? (mats.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${mats.map(m=>`<button class="chip ${actief.has(m)?'on':''}" data-dbmat="${m}" style="font-size:11px;padding:2px 8px">${esc(D.mat[m])}</button>`).join('')}</div>
+        <div class="small muted" style="margin-bottom:6px">Filter op materiaal: klik een materiaal aan of uit.</div>` : '<div class="warn small">Dit bouwdeel heeft geen materiaal; er zijn geen kandidaat-gebreken.</div>')
+        + ['ernstig','serieus','gering'].map(b=>{ const l = gbs.filter(g=>dbBelang(D.gb[g])===b); if(!l.length) return '';
+          return `<div style="border-left:4px solid ${dbKleur(b)};padding-left:6px;margin:8px 0"><div class="small" style="font-weight:600">${b[0].toUpperCase()+b.slice(1)} <span class="muted">(${l.length})</span></div>
+          ${[...new Set(l.map(g=>D.gb[g].gs))].map(s=>`<div class="small muted" style="margin-top:4px">${esc(s)}</div>`+l.filter(g=>D.gb[g].gs===s).map(g=>node('data-dbgb',g,D.gb[g],g===ui.dbgb)).join('')).join('')}</div>`; }).join('')
+      : '<span class="small muted">Kies een bouwdeel.</span>';
+    const G = ui.dbgb!=null ? D.gb[ui.dbgb] : null;
+    const det = G && Bd && gbs.includes(ui.dbgb) ? ['gb',G] : Bd ? ['bd',Bd] : E ? ['el',E] : ['bo',B];
+    const [dl,dx] = det;
+    const extra = dl==='gb' ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0"><span class="badge" style="background:${dbKleur(dbBelang(dx))};color:#fff">${esc(dbBelang(dx))}</span><span class="badge">gebrekgroep: ${esc(dx.gg)}</span><span class="badge">gebreksoort: ${esc(dx.gs)}</span>${dx.t?`<span class="badge">${esc(dx.t)}</span>`:''}${dx.e?`<span class="badge">eenheid: ${esc(dx.e)}</span>`:''}${dx.i?`<span class="badge">intensiteit: ${esc(dx.i)}</span>`:''}</div>${dx.o?`<div class="small muted">${esc(dx.o)}</div>`:''}<div class="small muted">Materialen: ${dx.m.map(m=>esc(D.mat[m])).join(', ')||'—'}</div>`
+      : dl==='bd' ? `<div class="small muted">Materialen: ${dx.m.map(m=>esc(D.mat[m])).join(', ')||'—'} · komt voor in ${I.bdEl[S.bd].length} element(en) · ${I.gbBd[S.bd].length} kandidaat-gebreken</div>`
+      : dl==='el' ? `<div class="small muted">${dbEgOf(dx)?'Elementgroep: <b>'+esc(dbEgOf(dx))+'</b> · ':''}${dx.w?'Werkgroep: '+esc(dx.w)+' · ':''}komt voor in ${I.elBo[S.el].length} beheerobject(en) · ${dx.bd.length} bouwdelen</div>`
+      : `<div class="small muted">${dx.w?'Werkgroep(en): '+esc(dx.w)+' · ':''}${dx.el.length} elementen</div>`;
+    body = zoek + `<div class="small" style="margin-bottom:8px">${[B.n, E?.n, Bd?.n, (dl==='gb'?G.n:null)].filter(Boolean).map(esc).join(' <span class="muted">›</span> ')}</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1.3fr);gap:10px;align-items:start">
+        ${col('Beheerobjecten', D.bo.length, c1)}${col('Elementen', els.length, c2)}${col('Bouwdelen', E?E.bd.length:0, c3)}${col('Kandidaat-gebreken', gbs.length, c4)}</div>
+      <div class="panel" style="margin-top:12px"><h3 style="margin-bottom:4px">${{bo:'Beheerobject',el:'Element',bd:'Bouwdeel',gb:'Gebrek'}[dl]}: ${esc(dx.n)} <span class="small muted">· code ${esc(dx.c)}</span></h3>${extra}
+        ${dx.d?`<p class="small" style="margin:8px 0 0;white-space:pre-line">${esc(dx.d)}</p>`:'<p class="small muted" style="margin:8px 0 0">Geen werkdefinitie in de bibliotheek.</p>'}</div>
+      <p class="small muted">Kandidaat-gebreken zijn afgeleid via het materiaal: een gebrek komt in de lijst als het voor minstens één materiaal van het bouwdeel geldt. Het is een keuzelijst, geen voorschrift. In de stap hierna (assetstructuur) kies je per bouwdeel het materiaal, waardoor de lijst korter wordt.</p>`;
+  }
+  else if(v==='groepen'){
+    const f = ui.dbegf ?? 'met'; const cnt = {}; D.el.forEach(e=>{ const g = dbEgOf(e); cnt[g] = (cnt[g]||0)+1; });
+    const nAang = D.el.filter(e=>e.c in dbEg() && dbEg()[e.c]!==(e.g||'')).length;
+    const lijst = D.el.map((e,i)=>[i,e]).filter(([,e])=>f==='alle' || (f==='met'?dbEgOf(e):f==='zonder'?!dbEgOf(e):dbEgOf(e)===f));
+    body = `<div class="note small">De RWS-bron koppelt elementen niet aan elementgroepen. De bibliotheek bevat daarom een <b>voorstel</b> voor de installatie-elementen. Pas het hier aan; je keuzes blijven bewaard, ook als je de bibliotheek opnieuw importeert.${nAang?` <b>${nAang} element(en) aangepast.</b>`:''}</div>
+      <div style="display:grid;grid-template-columns:minmax(220px,280px) 1fr;gap:14px;align-items:start">
+        <div class="tree">${[['met','Alle met elementgroep'],['zonder','Zonder elementgroep'],['alle','Alle elementen']].map(([k,l])=>`<div class="node ${f===k?'sel':''}" data-dbegf="${k}" style="cursor:pointer"><span style="flex:1">${l}</span><span class="small muted">${k==='alle'?D.el.length:k==='zonder'?(cnt['']||0):D.el.length-(cnt['']||0)}</span></div>`).join('')}
+          <div class="small muted" style="margin:8px 0 2px;font-weight:600">Elementgroepen</div>
+          ${D.eg.map(g=>`<div class="node ${f===g?'sel':''}" data-dbegf="${esc(g)}" style="cursor:pointer"><span style="flex:1">${esc(g)}</span><span class="small muted">${cnt[g]||0}</span></div>`).join('')}</div>
+        <div class="panel" style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr class="small muted" style="text-align:left"><th style="padding:4px">Code</th><th>Element</th><th>Elementgroep</th><th>Beheerobjecten</th><th>Bouwdelen</th></tr>
+          ${lijst.map(([i,e])=>{ const aang = e.c in dbEg() && dbEg()[e.c]!==(e.g||'');
+            return `<tr style="border-top:1px solid var(--line)"><td style="padding:4px" class="muted">${esc(e.c)}</td><td>${esc(e.n)}</td>
+            <td><select data-dbeg="${esc(e.c)}" style="max-width:240px;${aang?'border-color:#e0a95c':''}"><option value="">— geen —</option>${D.eg.map(g=>`<option ${dbEgOf(e)===g?'selected':''}>${esc(g)}</option>`).join('')}</select>${aang?`<div class="small" style="color:#b5651d">aangepast · voorstel: ${esc(e.g||'geen')}</div>`:''}</td>
+            <td class="small">${I.elBo[i].length}</td><td class="small">${e.bd.length}</td></tr>`; }).join('')}</table>${lijst.length?'':'<p class="muted small">Geen elementen in deze selectie.</p>'}</div></div>`;
+  }
+  else if(v==='gebreken'){
+    const q = (ui.dbgq||'').toLowerCase(); const lijst = D.gb.map((g,i)=>[i,g]).filter(([,g])=>!q || (g.n+' '+g.c+' '+g.gg+' '+g.gs).toLowerCase().includes(q));
+    const perGg = {}; D.gb.forEach(g=>perGg[g.gg]=(perGg[g.gg]||0)+1);
+    body = `<div class="note small">Elk gebrek hoort bij een <b>gebreksoort</b> (die het belang bepaalt: ernstig, serieus of gering) en een <b>gebrekgroep</b> (het soort verschijnsel, zoals beschadiging of corrosie). Dit sluit aan op het raamwerk van NEN 2767-1 Bijlage A.</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${Object.entries(perGg).sort().map(([k,n])=>`<span class="badge">${esc(k)} · ${n}</span>`).join('')}</div>
+      <input id="dbgq" placeholder="Zoek een gebrek, gebrekgroep of gebreksoort…" value="${esc(ui.dbgq||'')}" style="width:100%;margin-bottom:10px">
+      ${['ernstig','serieus','gering'].map(b=>{ const soorten = D.gs.filter(s=>s.b===b); const l = lijst.filter(([,g])=>dbBelang(g)===b); if(!l.length) return '';
+        return `<div class="panel" style="margin-top:10px;border-left:5px solid ${dbKleur(b)}"><h3>${b[0].toUpperCase()+b.slice(1)}e gebreken <span class="small muted">(${l.length})</span></h3>
+        ${soorten.map(s=>{ const ll = l.filter(([,g])=>g.gs===s.n); if(!ll.length) return '';
+          return `<div class="small" style="margin-top:8px;font-weight:600">${esc(s.n)} <span class="muted" style="font-weight:400">· ${esc(s.t)}</span></div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">${ll.map(([i,g])=>`<tr style="border-top:1px solid var(--line)"><td style="padding:3px;width:64px" class="muted">${esc(g.c)}</td><td>${esc(g.n)}</td><td style="width:170px" class="small muted">${esc(g.gg)}</td><td style="width:150px" class="small muted">${esc(g.t)}</td><td style="width:130px" class="small muted">${esc(g.e)}</td><td style="width:90px" class="small muted" title="Aantal bouwdelen waarvoor dit gebrek kandidaat is">${I.bdGb[i]} bd</td></tr>`).join('')}</table>`; }).join('')}</div>`; }).join('')}`;
+  }
+  else {
+    const noBd = D.el.filter(e=>!e.bd.length), noM = D.bd.filter(b=>!b.m.length), gNoM = D.gb.filter(g=>!g.m.length), noEg = D.el.filter(e=>!dbEgOf(e));
+    const losEl = D.el.filter((e,i)=>!I.elBo[i].length), losBd = D.bd.filter((b,i)=>!I.bdEl[i].length), gbLos = D.gb.filter((g,i)=>!I.bdGb[i]);
+    const onbSoort = D.gb.filter(g=>!I.gsBy[g.gs]);
+    const rij = (ok, wat, res, lijst) => `<tr style="border-top:1px solid var(--line)"><td style="padding:6px;width:28px">${ok?'<span style="color:#27ae60">✓</span>':'<span style="color:#b5651d">!</span>'}</td><td><b>${wat}</b>${lijst&&lijst.length?`<div class="small muted">${lijst.slice(0,12).map(x=>esc(x.n)).join(', ')}${lijst.length>12?' …':''}</div>`:''}</td><td class="small">${res}</td></tr>`;
+    body = `<div class="panel"><h3>Controles op de geladen bibliotheek</h3><table style="width:100%;border-collapse:collapse;font-size:13px">
+      ${rij(!onbSoort.length,'Elk gebrek heeft een bekende gebreksoort', onbSoort.length?onbSoort.length+' onbekend':'in orde', onbSoort)}
+      ${rij(!noBd.length,'Elk element heeft bouwdelen', noBd.length+' zonder bouwdeel', noBd)}
+      ${rij(!losEl.length,'Elk element hoort bij een beheerobject', losEl.length+' los', losEl)}
+      ${rij(!losBd.length,'Elk bouwdeel hoort bij een element', losBd.length+' los', losBd)}
+      ${rij(!noM.length,'Elk bouwdeel heeft een materiaal', noM.length+' zonder materiaal (krijgen geen kandidaat-gebreken)', noM)}
+      ${rij(!gNoM.length,'Elk gebrek heeft een materiaalsoort', gNoM.length+' zonder materiaalsoort (niet via materiaal te koppelen)', gNoM)}
+      ${rij(!gbLos.length,'Elk gebrek is kandidaat bij minstens één bouwdeel', gbLos.length+' nergens kandidaat', gbLos)}
+      ${rij(true,'Elementen met elementgroep', (D.el.length-noEg.length)+' van '+D.el.length+' (alleen installaties hebben een groep)')}
+      </table></div>
+      <div class="panel" style="margin-top:12px"><h3>Herkomst</h3><p class="small" style="margin:0">${esc(D.bron||'—')}</p>
+      ${D.vervallen?.length?`<details class="small" style="margin-top:8px"><summary>${D.vervallen.length} vervallen onderdelen (niet opgenomen)</summary><table style="width:100%;border-collapse:collapse;margin-top:6px">${D.vervallen.map(r=>`<tr style="border-top:1px solid var(--line)"><td style="padding:3px;width:90px" class="muted">${esc(r[0])}</td><td style="width:70px" class="muted">${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</table></details>`:''}</div>`;
+  }
+  return head + chips + body;
 }
 
 /* ---------- Tab: gebrekenregistratie ---------- */
@@ -3375,7 +3506,7 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-pr],[data-b1],[data-b1art],[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-pr],[data-b1],[data-b1art],[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-dbimp],[data-dbexp],[data-dbdel],[data-dbview],[data-dbbo],[data-dbel],[data-dbbd],[data-dbgb],[data-dbmat],[data-dbhit],[data-dbegf],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
     if(d.pr){ ui.pr = d.pr; rerender(); return; }
@@ -3411,6 +3542,21 @@ main.addEventListener('click', e=>{
     if(d.vdel){ const V = opnames()[ui.oinsp][ui.obd].extra.verz; V.gebreken = V.gebreken.filter(g=>g.id!==d.vdel); save(); rerender(); return; }
     if(d.obdgo){ ui.obd = d.obdgo; ui.ctab = 'gebreken'; window.scrollTo(0,0); route(); return; }
     if(d.bibimp){ const f = document.getElementById('bibfile'); f.onchange = async ()=>{ try{ importBib(await f.files[0].text(), f.files[0].name); rerender(); }catch(err){ console.log('Ongeldig bibliotheekbestand', err); } }; f.click(); return; }
+    if(d.dbimp){ const f = document.getElementById('dbfile'); f.onchange = async ()=>{ try{ importDbib(await f.files[0].text()); }catch(err){ ui.dbwarn = 'Ongeldig bestand: dit is geen decompositiebibliotheek (JSON).'; } rerender(); }; f.click(); return; }
+    if(d.dbexp){ exportDbib(); return; }
+    if(d.dbdel){ if(ui.dbarmed){ delete state.data.dbib; dbIdx = null; ui.dbarmed = false; ui.dbsel = {}; save(); } else { ui.dbarmed = true; r.textContent = 'Klik nogmaals om te verwijderen'; return; } rerender(); return; }
+    if(d.dbview){ ui.dbview = d.dbview; rerender(); return; }
+    if(d.dbbo!==undefined){ ui.dbsel = {bo:+d.dbbo}; ui.dbgb = null; rerender(); return; }
+    if(d.dbel!==undefined){ ui.dbsel = {...ui.dbsel, el:+d.dbel, bd:null}; ui.dbgb = null; rerender(); return; }
+    if(d.dbbd!==undefined){ ui.dbsel = {...ui.dbsel, bd:+d.dbbd}; ui.dbgb = null; ui.dbmat = null; rerender(); return; }
+    if(d.dbgb!==undefined){ ui.dbgb = +d.dbgb; rerender(); return; }
+    if(d.dbmat!==undefined){ const D = dbib(), bd = ui.dbsel.bd; const cur = new Set((ui.dbmat && ui.dbmatBd===bd) ? ui.dbmat : D.bd[bd].m); const m = +d.dbmat; cur.has(m) ? cur.delete(m) : cur.add(m); ui.dbmat = [...cur]; ui.dbmatBd = bd; rerender(); return; }
+    if(d.dbhit){ const [l,i] = d.dbhit.split(':'); const D = dbib(), I = dbIndex(); const n = +i;
+      if(l==='bo') ui.dbsel = {bo:n};
+      else if(l==='el') ui.dbsel = {bo:I.elBo[n][0] ?? 0, el:n};
+      else { const e = I.bdEl[n][0]; ui.dbsel = {bo:e!=null ? (I.elBo[e][0] ?? 0) : 0, el:e ?? null, bd:e!=null ? n : null}; }
+      ui.dbgb = null; ui.dbq = ''; rerender(); return; }
+    if(d.dbegf!==undefined){ ui.dbegf = d.dbegf; rerender(); return; }
     if(d.bibcsv){ exportBibCSV(); return; }
     if(d.bibdel){ if(ui.bibarmed){ delete state.data.bib; bibIndex = null; ui.bibarmed = false; save(); } else { ui.bibarmed = true; r.textContent = 'Klik nogmaals om te verwijderen'; return; } rerender(); return; }
     if(d.bsec){ ui.bsec = d.bsec; rerender(); return; }
@@ -3523,6 +3669,8 @@ main.addEventListener('input', e=>{
   if(d.exs){ const E = opnames()[ui.oinsp][ui.obd].extra; (E.spec ||= {})[d.exs] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.exv){ opnames()[ui.oinsp][ui.obd].extra.verz[d.exv] = el.value; save(); rerender(); return; }
   if(d.vg){ const g = opnames()[ui.oinsp][ui.obd].extra.verz.gebreken.find(x=>x.id===d.vid); g[d.vg] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(el.id==='dbq' || el.id==='dbgq'){ const k = el.id; ui[k] = el.value; const pos = el.selectionStart; rerender(); const i2 = document.getElementById(k); i2.focus(); i2.setSelectionRange(pos,pos); return; }
+  if(d.dbeg!==undefined){ const e = dbib().el.find(x=>x.c===d.dbeg); if(el.value===(e.g||'')) delete dbEg()[d.dbeg]; else dbEg()[d.dbeg] = el.value; save(); rerender(); return; }
   if(el.id==='bq'){ ui.bq = el.value; const pos = el.selectionStart; rerender(); const i2 = document.getElementById('bq'); i2.focus(); i2.setSelectionRange(pos,pos); return; }
   if(d.gpick){ const g = opnames()[ui.oinsp][ui.obd].gebreken.find(x=>x.id===d.gpick); const bd = state.data.assets.find(a=>a.id===ui.obd); const sec = bibSectie(bd.code);
     const x = el.value===''?null:sec.gebreken[+el.value];

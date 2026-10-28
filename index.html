@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.20</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.21</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -202,7 +202,7 @@ const MODULES = [
   { id:'waardeaspecten', group:'Inrichting', title:'Waardeaspectentabel', ref:'§6.3.1, Bijlage A', color:'var(--muted)' },
   { id:'rollen', group:'Inrichting', title:'Rolverdeling', ref:'§4.7', color:'var(--muted)' },
   { id:'conditie', group:'Conditiemeting', title:'NEN 2767', ref:'NEN 2767-1', color:'#8e44ad' },
-  { id:'iso', group:'Assetmanagementsysteem', title:'ISO 55001', ref:'ISO 55000-reeks', color:'#2c3e50' },
+  { id:'iso', group:'Assetmanagementsysteem', title:'ISO 55000 / 55001', ref:'ISO 55000-reeks', color:'#2c3e50' },
 ];
 
 /* ---------------- Sectoren (doelgroepen uit §4.2) ---------------- */
@@ -268,7 +268,7 @@ const STAPPEN = {
 };
 
 /* ---------------- Begrippen: eigen korte omschrijvingen ---------------- */
-const BOUWSTENEN = ['Rollen','Assetstructuur','Sturing en doelen','Eisen en concepten','Levensfasen','Risico','Uitvoering en meting','Toetsen en verbeteren','NEN 2767 – conditiemeting'];
+const BOUWSTENEN = ['Rollen','Assetstructuur','Sturing en doelen','Eisen en concepten','Levensfasen','Risico','Uitvoering en meting','Toetsen en verbeteren','NEN 2767 – conditiemeting','ISO 55000 – assetmanagement'];
 const BEGRIPPEN = [
   ['3.1','afschrijven','','Levensfasen','Jaarlijkse boekhoudkundige waardevermindering omdat een asset een beperkte levensduur heeft.'],
   ['3.2','afwaarderen','','Levensfasen','Bewust verlagen van de verwachte waarde van een asset, bijv. door functie te verminderen, levensduur niet te verlengen of risico\'s te accepteren (leegstand, afstoten, slopen).'],
@@ -429,7 +429,7 @@ function renderStart(){
 const TABS = [['begrippen','Begrippen'],['levensfasen','Levensfasen'],['schillen','AM · instandhouding · onderhoud'],['waarde','Waarde & scope'],['organisatie','Rollen & producten']];
 function renderBasis(){
   const body = {begrippen:tabBegrippen, levensfasen:tabLevensfasen, schillen:tabSchillen, waarde:tabWaarde, organisatie:tabOrganisatie}[ui.tab]();
-  return `<h2>Begrippen & methode</h2><div class="ref">NEN 8026 H3 en H4 · omschrijvingen in eigen woorden, raadpleeg de norm voor de officiële tekst</div>
+  return `<h2>Begrippen & methode</h2><div class="ref">NEN 8026 H3 en H4, NEN 2767-1 H3 en ISO 55000 H3 · omschrijvingen in eigen woorden, raadpleeg de normen voor de officiële tekst</div>
     <div class="tabs">${TABS.map(([id,t])=>`<button data-tab="${id}" class="${ui.tab===id?'on':''}">${t}</button>`).join('')}</div>${body}`;
 }
 function tabBegrippen(){
@@ -438,7 +438,7 @@ function tabBegrippen(){
   return `<div class="gl-tools"><input id="glq" placeholder="Zoek een begrip…" value="${esc(ui.glq)}"></div>
     <div class="gl-tools"><button class="chip ${!ui.glb?'on':''}" data-glb="">Alle (${BEGRIPPEN.length})</button>
     ${BOUWSTENEN.map(b=>`<button class="chip ${ui.glb===b?'on':''}" data-glb="${b}">${b}</button>`).join('')}</div>
-    <div class="gl" id="glist">${list.map(b=>`<div class="term"><span class="tag">${b[0].startsWith('2767')?'NEN 2767-1 §'+b[0].slice(5):'NEN 8026 §'+b[0]}</span><b>${b[1]}</b>${b[2]?` <span class="muted">(${b[2]})</span>`:''}
+    <div class="gl" id="glist">${list.map(b=>`<div class="term"><span class="tag">${b[0].startsWith('2767')?'NEN 2767-1 §'+b[0].slice(5):b[0].startsWith('55000')?'ISO 55000 §'+b[0].slice(6):'NEN 8026 §'+b[0]}</span><b>${b[1]}</b>${b[2]?` <span class="muted">(${b[2]})</span>`:''}
       <p>${b[4]}</p><div style="margin-top:6px"><span class="badge">${b[3]}</span></div></div>`).join('') || '<p class="muted">Geen begrippen gevonden.</p>'}</div>`;
 }
 const FASEN = {
@@ -3177,7 +3177,7 @@ function tIsoGap(){
       ${rows.map(([a,k,t,E])=>{ const st = ISTAT.find(z=>z[0]===E.st); const late = E.dl && E.dl < new Date().toISOString().slice(0,10);
         return `<tr style="border-top:1px solid var(--line);vertical-align:top"><td style="padding:6px"><b>${a.a}${k!=='0'?' '+k:''}</b> <span class="small">${t}</span></td><td><span class="cb" style="background:${st[2]}">${st[1]}</span></td><td class="small">${esc(E.actie)||'<span style="color:#b5651d">geen actie</span>'}</td><td class="small">${esc(items('personen').find(p=>p.id===E.eig)?.naam||'–')}</td><td class="small" style="${late?'color:#c0392b;font-weight:600':''}">${esc(E.dl||'–')}</td></tr>`; }).join('')}</table>`:'<p class="muted">Geen openstaande gaps.</p>'}</div>`;
 }
-const ITABS = [['overzicht','Overzicht',''],['model','Model (fig. B.1)','55002 Bijlage B'],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['uitv','Uitvoering','§8'],['evalu','Evaluatie','§9'],['verb','Verbetering','§10'],['normen','Aanverwante normen','Bijlage A'],['gap','Gap-analyse','']];
+const ITABS = [['overzicht','Overzicht',''],['i55000','ISO 55000: beginselen','ISO 55000 §2'],['model','Model (fig. B.1)','55002 Bijlage B'],['eisen','Eisen & zelfevaluatie','ISO 55001 H4–10'],['context','Contextregister','§4.1'],['scope','Toepassingsgebied','§4.3'],['raci','Verantwoordelijkheden','§5.3'],['risico','Risicoproces','§6.1, §6.2.2'],['onderst','Ondersteuning','§7'],['uitv','Uitvoering','§8'],['evalu','Evaluatie','§9'],['verb','Verbetering','§10'],['normen','Aanverwante normen','Bijlage A'],['gap','Gap-analyse','']];
 function tIsoRisico(){
   const R = items('risicos'); const ev2 = R.map(risicoEval);
   const ams = R.filter(r=>r.niveauR==='Assetmanagementsysteem'), kans = R.filter(r=>r.soortR==='Kans');
@@ -3270,12 +3270,87 @@ function tIsoNormen(){
         <td>${tl(l)}</td></tr>`; }).join('')}</table></div>`;
 }
 
+/* ---------- ISO 55000: begrippen (eigen woorden) ---------- */
+const BEGRIP_55000 = [
+  ['3.1.1','audit','','Systematisch, onafhankelijk en gedocumenteerd proces om bewijs te verzamelen en objectief te toetsen aan de auditcriteria.',''],
+  ['3.1.2','capabiliteit','','Mate waarin een systeem, persoon of organisatie in staat is haar doelen te bereiken (capaciteit én vermogen).',''],
+  ['3.1.3','competentie','','Vermogen om kennis en vaardigheden toe te passen om resultaten te behalen.',''],
+  ['3.1.4','conformiteit','','Voldoen aan een eis.','NEN 8026: verificatie (§3.46)'],
+  ['3.1.5','continue verbetering','','Terugkerende activiteit om prestaties te verbeteren.','NEN 8026: PDCA (§3.35)'],
+  ['3.1.6','gedocumenteerde informatie','','Informatie die de organisatie moet beheren, plus het medium waarop die staat — elk format, elke bron.',''],
+  ['3.1.7','doeltreffendheid','','Mate waarin geplande activiteiten worden uitgevoerd en geplande resultaten worden gehaald.',''],
+  ['3.1.8','incident','','Niet-geplande gebeurtenis die tot schade of verlies leidt.',''],
+  ['3.1.9','monitoren','','Vaststellen van de status van een systeem, proces of activiteit.','NEN 8026: observatie (§3.30)'],
+  ['3.1.10','meting','','Proces om een waarde vast te stellen.','NEN 2767: conditiemeting'],
+  ['3.1.11','afwijking','','Het niet voldoen aan een eis — van het AM-systeem, procedures, wetgeving e.d.',''],
+  ['3.1.12','doelstelling','','Te behalen resultaat; strategisch, tactisch of operationeel, voor verschillende disciplines.','NEN 8026: doelstelling (§3.18)'],
+  ['3.1.13','organisatie','','Persoon of groep met eigen functies, verantwoordelijkheden en bevoegdheden om haar doelen te bereiken.','NEN 8026: §3.34'],
+  ['3.1.14','organisatiedoelstelling','','Overkoepelend doel dat context en richting geeft aan alle activiteiten; volgt uit de strategische planning.','NEN 8026: bestuurlijk niveau (§5.3.2)'],
+  ['3.1.15','organisatieplan','','Gedocumenteerde programma\'s om de organisatiedoelstellingen te bereiken.',''],
+  ['3.1.16','uitbesteden','','Een externe organisatie een deel van een functie of proces laten uitvoeren.','NEN 8026: serviceprovider (§3.38)'],
+  ['3.1.17','prestatie','','Meetbaar resultaat, kwantitatief of kwalitatief.','NEN 8026: prestatie (§3.36)'],
+  ['3.1.18','beleid','','Bedoelingen en richting van de organisatie, formeel kenbaar gemaakt door de directie.','NEN 8026: beleid (§3.13)'],
+  ['3.1.19','proces','','Samenhangende activiteiten die input omzetten in output.',''],
+  ['3.1.20','eis','','Behoefte of verwachting die kenbaar is gemaakt, vanzelfsprekend is of verplicht.','NEN 8026: instandhoudingseisen (§3.26)'],
+  ['3.1.21','risico','','Effect van onzekerheid op doelstellingen; positief (kans) of negatief.','NEN 8026: risico (§3.37) — ISO omvat uitdrukkelijk ook kansen'],
+  ['3.1.22','stakeholder','','Wie een besluit kan beïnvloeden, erdoor geraakt wordt of zich zo voelt.','NEN 8026: stakeholder (§3.39)'],
+  ['3.1.23','directie','','Wie de organisatie op het hoogste niveau bestuurt; kan bevoegdheden delegeren.','NEN 8026: asset owner (§3.9)'],
+  ['3.2.1','asset','','Zaak, ding of entiteit met mogelijke of werkelijke waarde voor de organisatie; waarde kan materieel of immaterieel zijn.','NEN 8026: asset (§3.4) — richt zich op fysieke assets'],
+  ['3.2.2','levensduur van een asset','','Periode van realisatie tot einde van de levensduur.','NEN 2767: technische levensduur (§3.20)'],
+  ['3.2.3','levenscyclus','','De fasen in het leven van een asset; naam en aantal fasen bepaalt de organisatie.','NEN 8026: levensfasen (§4.4)'],
+  ['3.2.4','assetportfolio','','De assets binnen het toepassingsgebied van het AM-systeem.','NEN 8026: assetportfolio (§3.10)'],
+  ['3.2.5','assetsysteem','','Stelsel van assets met onderlinge interacties.','NEN 8026: assetsysteem (§3.11)'],
+  ['3.2.6','assettype','','Groep assets met gemeenschappelijke kenmerken (bijv. fysiek, informatie, kritiek).','NEN 8026: assettype (§3.12)'],
+  ['3.2.7','kritieke asset','','Asset die significante gevolgen kan hebben voor het bereiken van de doelstellingen.','NEN 8026: kritieke asset (§3.29)'],
+  ['3.3.1','assetmanagement','','Gecoördineerde activiteiten om waarde te realiseren uit assets, in evenwicht tussen kosten, risico\'s, kansen en prestaties.','NEN 8026: §3.5'],
+  ['3.3.2','strategisch assetmanagementplan','SAMP','Gedocumenteerde vertaling van organisatiedoelen naar AM-doelstellingen, de aanpak voor de AM-plannen en de rol van het AM-systeem.','NEN 8026: SAMP (§3.41)'],
+  ['3.3.3','assetmanagementplan','AMP','Gedocumenteerde activiteiten, middelen en termijnen voor een asset of groep om de AM-doelstellingen te halen.','NEN 8026: AMP (§3.6)'],
+  ['3.3.4','preventieve maatregel','','Maatregel tegen de oorzaak van een mogelijke afwijking of ongewenste situatie.',''],
+  ['3.3.5','predictieve maatregel','','Monitoren van de conditie om de noodzaak van preventieve of corrigerende maatregelen te voorspellen.','NEN 8026: TAO (§3.42); NEN 2767: verouderingskromme'],
+  ['3.3.6','niveau van dienstverlening','','Parameters die de maatschappelijke, politieke, milieu- en economische resultaten van de organisatie weergeven.','NEN 8026: prestatie-eisen (§7.3.3)'],
+  ['3.4.1','corrigerende maatregel','','Maatregel om de oorzaak van een afwijking weg te nemen en herhaling te voorkomen.',''],
+  ['3.4.2','managementsysteem','','Samenhangende elementen om beleid en doelen vast te stellen en de processen om ze te bereiken.',''],
+  ['3.4.3','assetmanagementsysteem','','Managementsysteem voor assetmanagement, dat AM-beleid en AM-doelstellingen vaststelt.','NEN 8026: §3.7'],
+];
+BEGRIPPEN.push(...BEGRIP_55000.map(([n,t,a,o,v])=>['55000·'+n,t,a,'ISO 55000 – assetmanagement',o+(v?` <span class="muted">· vgl. ${v}</span>`:'')]));
+const PRINCIPES = [
+  {id:'waarde', t:'Waarde', k:'Assets bestaan om waarde te leveren voor organisatie en stakeholders.', u:'Niet de asset zelf staat centraal, maar de waarde die hij levert — materieel of immaterieel, financieel of niet-financieel, bepaald door organisatie en stakeholders.', p:['AM-doelstellingen sluiten aantoonbaar aan op de organisatiedoelen','Een levenscyclusbenadering om waarde te realiseren','Besluitvorming die stakeholderbehoeften weerspiegelt en waarde definieert'],
+    l:[['Waardeaspectentabel','waardeaspecten',null],['Waardekompassen','tactisch','kompas'],['AM-doelstellingen','strategisch','amdoelen'],['Stakeholders','bestuurlijk','stakeholders']]},
+  {id:'afstemming', t:'Afstemming', k:'AM vertaalt organisatiedoelen in technische en financiële beslissingen, plannen en activiteiten.', u:'Technische, financiële en operationele besluiten maken samen het bereiken van de organisatiedoelen mogelijk.', p:['Risicogestuurde, informatiegedreven planning van organisatiedoel naar AM-plan','AM-processen geïntegreerd in financiën, HR, informatie, logistiek en operatie','Een ondersteunend AM-systeem specificeren, ontwerpen en implementeren'],
+    l:[['SAMP','strategisch','samp'],['AMP per cluster','tactisch','amp'],['Risicoanalyse','tactisch','risicos'],['Model B.1','iso','model']]},
+  {id:'leiderschap', t:'Leiderschap', k:'Leiderschap en werkcultuur bepalen of waarde wordt gerealiseerd.', u:'Betrokkenheid van alle managementniveaus is essentieel om AM in te richten, uit te voeren en te verbeteren.', p:['Duidelijke rollen, verantwoordelijkheden en bevoegdheden','Medewerkers met het juiste bewustzijn, competentie en bevoegdheid','Raadpleging van medewerkers en stakeholders'],
+    l:[['Rolverdeling','rollen',null],['Verantwoordelijkheden 5.3','iso','raci'],['Competentiematrix','iso','i7:matrix'],['Bewustzijn','iso','i7:bewustzijn']]},
+  {id:'waarborging', t:'Waarborging', k:'AM waarborgt dat assets hun vereiste doel vervullen.', u:'Nodig voor goed bestuur; geldt voor assets, assetmanagement én het AM-systeem.', p:['Processen die vereiste prestaties van assets verbinden met de organisatiedoelen','Capabiliteit waarborgen in alle fasen van de levenscyclus','Processen voor monitoring en continue verbetering','Middelen en competente mensen om waarborging aan te tonen'],
+    l:[['Instandhoudingseisen','tactisch','eisen'],['Conditiemeting NEN 2767','conditie','condities'],['Prestatie-indicatoren','iso','i9:kpis'],['Verbetering','iso','i10:verbeter']]},
+];
+const VOORDELEN = ['Betere financiële prestaties','Onderbouwde investeringsbesluiten','Beheerst risico','Betere diensten en resultaten','Aantoonbare maatschappelijke verantwoordelijkheid','Aangetoonde compliance','Betere reputatie','Duurzamere organisatie','Meer doelmatigheid en doeltreffendheid'];
+function tIso55000(){
+  const sel = PRINCIPES.find(p=>p.id===ui.pr) || PRINCIPES[0]; const V = (ISO().voordelen ||= {});
+  const W = 640;
+  const kaart = (p,i) => { const x = 20 + (i%2)*310, y = 70 + Math.floor(i/2)*120, on = p===sel;
+    return `<g data-pr="${p.id}" style="cursor:pointer"><rect x="${x}" y="${y}" width="290" height="100" rx="12" fill="${on?'#e3f0ec':'#fff'}" stroke="${on?'#1f6f5c':'#9aa5a0'}" stroke-width="${on?3:1.3}"/>
+      <text x="${x+16}" y="${y+30}" font-size="17" font-weight="700" fill="#1d2321" pointer-events="none">${p.t}</text>
+      ${p.k.match(/.{1,40}(\s|$)/g).map((t,j)=>`<text x="${x+16}" y="${y+54+j*16}" font-size="12" fill="#3b4642" pointer-events="none">${esc(t.trim())}</text>`).join('')}</g>`; };
+  return `<div class="note small">ISO 55000 geeft het overzicht, de basisbeginselen en de begrippen van de reeks (versie NEN-ISO 55000:2014, eigen samenvatting). Assetmanagement draait om het evenwicht tussen kosten, kansen en risico's enerzijds en de gewenste prestaties anderzijds, over de hele levenscyclus. Klik een basisbeginsel aan.</div>
+    <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,1fr);gap:16px;align-items:start">
+      <div class="panel"><svg viewBox="0 0 ${W} 320" style="width:100%;max-width:${W}px"><text x="${W/2}" y="38" text-anchor="middle" font-size="15" font-weight="600" fill="#1d2321">Vier basisbeginselen van assetmanagement (§2.4.2)</text>${PRINCIPES.map(kaart).join('')}</svg></div>
+      <div class="panel" style="border-left:5px solid #1f6f5c"><h3 style="margin-top:0">${sel.t}</h3><p class="small">${sel.u}</p>
+        <div class="small"><b>Dit omvat</b><ul style="margin:4px 0;padding-left:18px">${sel.p.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+        <div class="small" style="margin-top:8px"><b>In de tool</b><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${sel.l.map(([n,h,t])=>`<button data-isogo="${h}|${t||''}" style="font-size:12px;padding:3px 8px">${esc(n)} →</button>`).join('')}</div></div></div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:14px">
+      <div class="panel"><h3>Assetmanagement en het AM-systeem (§2.4.3, figuur 1)</h3>
+        ${[['Management van de organisatie','alles wat de organisatie doet','#eef1ef'],['Assetmanagement','gecoördineerde activiteiten om waarde te realiseren uit assets — ook leiderschap, cultuur en gedrag','#e3f0ec'],['Assetmanagementsysteem','de samenhangende elementen waarmee AM-beleid, -doelen en processen worden vastgesteld','#d4e8e1'],['Assetportfolio','de assets binnen het toepassingsgebied','#c3dfd5']].map(([t,u,c],i)=>`<div style="margin-left:${i*18}px;background:${c};border-radius:8px;padding:8px 10px;margin-top:6px"><b class="small">${t}</b><div class="small muted">${u}</div></div>`).join('')}
+        <p class="small muted" style="margin:8px 0 0">Eigen weergave. Niet alles in AM laat zich formaliseren in het systeem: leiderschap, cultuur en motivatie stuur je deels via andere wegen.</p></div>
+      <div class="panel"><h3>Voordelen (§2.2) — wat willen wij bereiken?</h3><p class="small muted" style="margin-top:0">Vink aan welke voordelen jullie nastreven en noteer hoe je ze meet. Handig voor de business case en de directiebeoordeling.</p>
+        ${VOORDELEN.map(v=>`<div style="display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1.2fr);gap:6px;align-items:center;margin-top:4px"><input type="checkbox" data-vd="${esc(v)}" data-vk="on" ${V[v]?.on?'checked':''}><span class="small">${v}</span><input data-vd="${esc(v)}" data-vk="hoe" value="${esc(V[v]?.hoe)}" placeholder="meten via…" style="font-size:12px"></div>`).join('')}</div></div>`;
+}
+
 function renderIso(){
   const t = ui.itab||'overzicht'; let body;
-  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='model') body = tIsoModel(); else if(t==='normen') body = tIsoNormen(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='uitv') body = tIsoUitvoering(); else if(t==='evalu') body = tIsoEvaluatie(); else if(t==='verb') body = tIsoVerbetering(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
+  if(t==='overzicht') body = tIsoOverzicht(); else if(t==='i55000') body = tIso55000(); else if(t==='model') body = tIsoModel(); else if(t==='normen') body = tIsoNormen(); else if(t==='risico') body = tIsoRisico(); else if(t==='onderst') body = tIsoOndersteuning(); else if(t==='uitv') body = tIsoUitvoering(); else if(t==='evalu') body = tIsoEvaluatie(); else if(t==='verb') body = tIsoVerbetering(); else if(t==='eisen') body = tIsoEisen(); else if(t==='scope') body = tIsoScope(); else if(t==='raci') body = tIsoRaci(); else if(t==='gap') body = tIsoGap();
   else body = `<div class="note small">ISO 55001 §4.1 met toelichting 55002 §4.1.2: externe en interne onderwerpen die het vermogen beïnvloeden om de beoogde resultaten te behalen. Gebruik de categorieën als checklist; koppel onderwerpen aan waardeaspecten zodat ze doorwerken in doelstellingen en waardekompassen.</div>
     <div class="small muted" style="margin-bottom:8px">Nog niet behandelde categorieën: ${[...CTX_EXT,...CTX_INT].filter(c=>!items('context').some(x=>x.cat===c)).map(esc).join(' · ')||'geen'}</div>${renderRegister('context')}`;
-  return `<h2>Assetmanagementsysteem — ISO 55001</h2><div class="ref">NEN-ISO 55000/55001/55002:2014 · eigen samenvattingen met artikelnummer, geen normtekst</div>
+  return `<h2>Assetmanagementsysteem — ISO 55000-reeks</h2><div class="ref">NEN-ISO 55000/55001/55002:2014 · eigen samenvattingen met artikelnummer, geen normtekst</div>
     <div class="tabs">${ITABS.map(([id,n,r])=>`<button data-itab="${id}" class="${t===id?'on':''}" title="${r}">${n}${REG[id]&&items(id).length?` <span class="badge">${items(id).length}</span>`:''}</button>`).join('')}</div>${body}`;
 }
 
@@ -3300,9 +3375,10 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-b1],[data-b1art],[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-pr],[data-b1],[data-b1art],[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
+    if(d.pr){ ui.pr = d.pr; rerender(); return; }
     if(d.b1){ ui.b1 = d.b1; rerender(); return; }
     if(d.b1art){ ui.itab = 'eisen'; ui.isoopen = d.b1art; ui.isof = ''; window.scrollTo(0,0); route(); return; }
     if(d.i10){ ui.i10 = d.i10; rerender(); return; }
@@ -3427,6 +3503,7 @@ main.addEventListener('input', e=>{
   if(d.ost){ opnames()[ui.oinsp][ui.obd].status = el.value; save(); rerender(); return; }
   if(d.ovo){ opnames()[ui.oinsp][ui.obd].vervalOmv = el.value; save(); refreshCalc(); return; }
   if(d.iev){ const [a,k] = d.iev.split('|'); const E = (ISO().eval[isoKey(a,k)] ||= {}); E[d.iek] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(d.vd){ const V = (ISO().voordelen ||= {}); const o = (V[d.vd] ||= {}); o[d.vk] = el.type==='checkbox'?el.checked:el.value; save(); return; }
   if(d.inorm){ const N = (ISO().normen ||= {}); (N[d.inorm] ||= {})[d.ink] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.cm){ (ISO().compmat ||= {})[d.cm] = el.value; save(); rerender(); return; }
   if(d.iscope){ ISO().scope[d.iscope] = el.value; save(); return; }

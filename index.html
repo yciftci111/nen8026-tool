@@ -150,7 +150,7 @@
 <header>
   <div>
     <h1>Waardegestuurd in stand houden</h1>
-    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.22</div>
+    <div class="sub">Tool op basis van de methode uit NEN 8026 · v0.23</div>
   </div>
   <div class="spacer"></div>
   <div class="ctl"><label for="rol">Ik werk als</label><select id="rol"></select></div>
@@ -536,6 +536,7 @@ function renderTree(pid, depth){
   }).join('');
 }
 function renderAssets(){
+  if(ui.wiz && dbib()) return renderWizard();
   const s = sector();
   const a = state.data.assets.find(x=>x.id===ui.node);
   const form = a ? `<div class="panel form">
@@ -555,16 +556,20 @@ function renderAssets(){
         <div><label>Technische levensduur (jaar)</label><input data-f="levensduur" value="${esc(a.levensduur||'')}"></div>
         <div class="muted" style="align-self:end">Gebreken worden vastgelegd per bouwdeel (NEN 2767-1 §1.2).</div></div>`:''}
       <div><label>Kriticiteit (§3.28) – 1 laag … 5 zeer kritiek</label><div class="krit">${[1,2,3,4,5].map(k=>`<button data-krit="${k}" class="${a.krit===k?'on':''}">${k}</button>`).join('')}</div></div>
+      ${a.lib&&dbib()?`<div class="small muted">Uit de bibliotheek: ${{bo:'beheerobjecttype',el:'element',bd:'bouwdeel'}[a.lib.t]} <b>${esc(a.lib.c)}</b>${a.lib.t==='bo'?' '+esc(dbib().bo.find(b=>b.c===a.lib.c)?.n||''):''}${a.lib.eg?' · elementgroep '+esc(a.lib.eg):''}</div>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${a.niveau<5?`<button class="primary" data-add="${a.id}">+ ${esc(s.niveaus[a.niveau+1])} toevoegen</button>`:''}
+        ${dbib()&&(a.lib?.t==='bo'||(a.lib?.t==='el'&&state.data.assets.find(x=>x.id===a.parent)?.lib?.t==='bo'))?`<button data-wzaanvul="${a.id}">+ ${a.lib.t==='bo'?'elementen/bouwdelen':'bouwdelen'} uit bibliotheek</button>`:''}
         <button class="danger ${ui.armed?'armed':''}" data-del="${a.id}">${ui.armed?'Klik nogmaals om te verwijderen (incl. onderliggend)':'Verwijderen'}</button>
       </div></div>`
     : `<div class="panel"><p class="muted" style="margin:0">Selecteer links een object, of begin met een nieuw ${esc(s.niveaus[0].toLowerCase())}.</p></div>`;
-  return `<h2>Assetstructuur</h2>
+  const klaar = ui.wizKlaar ? `<div class="note small">✓ ${esc(ui.wizKlaar)}</div>` : ''; ui.wizKlaar = '';
+  return `<h2>Assetstructuur</h2>${klaar}
     <div class="ref">Portfolio → systeem → beheerobject → onderdeel · zie NEN 8026 §3.10–3.14 · sector: ${esc(s.naam)} (${esc(s.vb)})</div>
     <div class="tree-wrap">
       <div><div class="tree">${renderTree(null,0) || '<p class="muted small" style="padding:8px">Nog geen objecten.</p>'}</div>
-        <div style="margin-top:8px"><button data-add="">+ ${esc(s.niveaus[0])} toevoegen</button></div></div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button data-add="">+ ${esc(s.niveaus[0])} toevoegen</button>
+          ${dbib()?`<button class="primary" data-wz="open">⚙ ${esc(s.niveaus[2])} uit bibliotheek</button>`:`<a class="small" href="#conditie" data-ctab="decbib" style="align-self:center">Bibliotheek laden om snel op te bouwen</a>`}</div></div>
       <div>${form}</div>
     </div>
     <p class="small muted">De benaming van de niveaus past zich aan aan de gekozen sector. Kriticiteit en levensfase worden later gebruikt in het waardekompas en de risicoanalyse.</p>`;
@@ -2135,6 +2140,91 @@ function tDecBib(){
   return head + chips + body;
 }
 
+
+/* ---------- Wizard: assetstructuur opbouwen uit de decompositiebibliotheek ---------- */
+function wizStart(target){
+  const D = dbib(); const W = {stap:1, parent:'', nieuwP:'', nieuwS:'', bo:null, naam:'', q:'', el:[], bd:{}, open:null, mat:{}, target:null, bestaand:{el:{}, bd:{}}};
+  if(target){ const t = state.data.assets.find(a=>a.id===target);
+    const boA = t.lib?.t==='bo' ? t : state.data.assets.find(a=>a.id===t.parent && a.lib?.t==='bo');
+    W.target = boA.id; W.bo = D.bo.findIndex(b=>b.c===boA.lib.c); W.naam = boA.naam; W.stap = 3;
+    children(boA.id).filter(a=>a.lib?.t==='el').forEach(ea=>{ const ei = D.el.findIndex(e=>e.c===ea.lib.c); if(ei<0) return;
+      W.bestaand.el[ei] = ea.id; W.bestaand.bd[ei] = children(ea.id).filter(b=>b.lib?.t==='bd').map(b=>D.bd.findIndex(x=>x.nr===b.lib.nr)).filter(x=>x>=0); });
+    if(t.lib?.t==='el'){ const ei = D.el.findIndex(e=>e.c===t.lib.c); W.open = ei; }
+  }
+  ui.wiz = W;
+}
+function wizMaak(){
+  const D = dbib(), W = ui.wiz, A = state.data.assets; let boId = W.target;
+  const mk = (parent, niveau, naam, extra={}) => { const p = A.find(x=>x.id===parent); const a = {id:uid(), parent, niveau, naam, assettype:'', fase:p?p.fase:'gebruik', krit:null, ...extra}; A.push(a); return a.id; };
+  if(!boId){
+    let par = W.parent;
+    if(par==='nieuw'){ const p0 = mk(null, 0, W.nieuwP||'Nieuw '+sector().niveaus[0].toLowerCase()); par = mk(p0, 1, W.nieuwS||'Nieuw '+sector().niveaus[1].toLowerCase()); }
+    boId = mk(par||null, par ? A.find(x=>x.id===par).niveau+1 : 2, W.naam || D.bo[W.bo].n, {assettype:D.bo[W.bo].n, lib:{t:'bo', c:D.bo[W.bo].c}});
+  }
+  let nEl = 0, nBd = 0;
+  W.el.forEach(ei=>{ const e = D.el[ei]; let eId = W.bestaand.el[ei];
+    if(!eId){ eId = mk(boId, A.find(x=>x.id===boId).niveau+1, e.n, {lib:{t:'el', c:e.c, eg:dbEgOf(e)}}); nEl++; }
+    (W.bd[ei]||[]).forEach(bi=>{ if((W.bestaand.bd[ei]||[]).includes(bi)) return; const b = D.bd[bi]; const m = W.mat[ei+':'+bi];
+      mk(eId, A.find(x=>x.id===eId).niveau+1, b.n, {lib:{t:'bd', nr:b.nr, c:b.c}, materiaal: m!=null && m!=='' ? D.mat[+m] : (b.m.length===1 ? D.mat[b.m[0]] : '')}); nBd++; }); });
+  ui.node = boId; ui.wizKlaar = `${W.target?'Aangevuld':'Aangemaakt'}: ${W.target?'':'1 '+sector().niveaus[2].toLowerCase()+', '}${nEl} element(en) en ${nBd} bouwdeel/bouwdelen.`; ui.wiz = null; save();
+}
+function renderWizard(){
+  const D = dbib(), W = ui.wiz, s = sector(), I = dbIndex();
+  const stappen = ['Plaats','Type','Elementen & bouwdelen','Controleren'];
+  const kop = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px">${stappen.map((n,i)=>`<span class="badge" style="padding:6px 10px;${W.stap===i+1?'background:var(--ink);color:#fff':W.stap>i+1?'':'opacity:.55'}">${i+1}. ${n}</span>`).join('<span class="muted">›</span>')}<span style="flex:1"></span><button data-wz="close">Annuleren</button></div>`;
+  const nav = (ok, label='Volgende') => `<div style="display:flex;gap:8px;margin-top:12px">${W.stap>(W.target?3:1)?'<button data-wz="back">← Terug</button>':''}<button class="primary" data-wz="next" ${ok?'':'disabled'}>${label} →</button></div>`;
+  let body = '';
+  if(W.stap===1){
+    const ouders = state.data.assets.filter(a=>a.niveau<2);
+    body = `<div class="panel form"><h3>Waar komt het ${esc(s.niveaus[2].toLowerCase())}?</h3>
+      <div><label>Onder</label><select data-wzf="parent"><option value="">— bovenaan, zonder ${esc(s.niveaus[0].toLowerCase())} —</option>
+        ${ouders.map(a=>`<option value="${a.id}" ${W.parent===a.id?'selected':''}>${'  '.repeat(a.niveau)}${esc(s.niveaus[a.niveau])}: ${esc(a.naam||'(naamloos)')}</option>`).join('')}
+        <option value="nieuw" ${W.parent==='nieuw'?'selected':''}>+ nieuw ${esc(s.niveaus[0].toLowerCase())} en ${esc(s.niveaus[1].toLowerCase())}…</option></select></div>
+      ${W.parent==='nieuw'?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>${esc(s.niveaus[0])}</label><input data-wzf="nieuwP" value="${esc(W.nieuwP)}" placeholder="bijv. Natte infra"></div><div><label>${esc(s.niveaus[1])}</label><input data-wzf="nieuwS" value="${esc(W.nieuwS)}" placeholder="bijv. Vaarweg Twentekanaal"></div></div>`:''}
+      <p class="small muted" style="margin:0">Een beheerobject hoort op het derde niveau (${esc(s.niveaus[2])}). Kies daarom bij voorkeur een ${esc(s.niveaus[1].toLowerCase())} als plaats.</p></div>` + nav(true);
+  }
+  else if(W.stap===2){
+    const q = W.q.toLowerCase(); const l = D.bo.map((b,i)=>[i,b]).filter(([,b])=>!q || (b.n+' '+b.c).toLowerCase().includes(q));
+    body = `<div class="panel"><h3>Welk type beheerobject?</h3>
+      <input id="wzq" placeholder="Zoek, bijv. sluis, gemaal, brug…" value="${esc(W.q)}" style="width:100%;margin-bottom:8px">
+      <div class="tree" style="max-height:340px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:2px">${l.map(([i,b])=>`<div class="node ${W.bo===i?'sel':''}" data-wzbo="${i}" style="cursor:pointer;font-size:13px;padding:4px 6px"><span class="small muted" style="width:26px;flex:none">${esc(b.c)}</span><span style="flex:1">${esc(b.n)}</span><span class="small muted">${b.el.length}</span></div>`).join('')}</div>
+      ${W.bo!=null?`<div class="form" style="margin-top:10px"><div><label>Naam van dit ${esc(s.niveaus[2].toLowerCase())}</label><input data-wzf="naam" value="${esc(W.naam)}" placeholder="bijv. ${esc(D.bo[W.bo].n)} Eefde"></div>
+        ${D.bo[W.bo].d?`<p class="small muted" style="margin:0">${esc(D.bo[W.bo].d)}</p>`:''}</div>`:''}</div>` + nav(W.bo!=null);
+  }
+  else if(W.stap===3){
+    const B = D.bo[W.bo]; const grp = {}; B.el.forEach(ei=>{ (grp[dbEgOf(D.el[ei])||''] ||= []).push(ei); });
+    const keys = Object.keys(grp).sort((a,b)=>(a===''?1:b===''?-1:a.localeCompare(b)));
+    const sel = new Set(W.el); const nBd = W.el.reduce((t,ei)=>t+(W.bd[ei]||[]).filter(b=>!(W.bestaand.bd[ei]||[]).includes(b)).length,0);
+    const nNieuwEl = W.el.filter(ei=>!W.bestaand.el[ei]).length;
+    const E = W.open!=null ? D.el[W.open] : null;
+    const bdLijst = E ? (()=>{ const ch = new Set(W.bd[W.open]||[]); const best = new Set(W.bestaand.bd[W.open]||[]);
+      return `<div class="panel" style="padding:10px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b style="flex:1">${esc(E.n)}</b>
+          <button data-wzbdall="${W.open}" class="small">alles</button><button data-wzbdnone="${W.open}" class="small">niets</button></div>
+        <div class="small muted" style="margin-bottom:6px">${E.bd.length} bouwdelen in de bibliotheek · vink aan wat er bij dit object echt is${best.size?` · ${best.size} al aanwezig`:''}</div>
+        <div style="max-height:430px;overflow:auto">${E.bd.map(bi=>{ const b = D.bd[bi]; const isB = best.has(bi);
+          return `<label class="small" style="display:flex;gap:6px;align-items:flex-start;padding:3px 2px;border-top:1px solid var(--line);${isB?'opacity:.6':''}"><input type="checkbox" data-wzbd="${W.open}:${bi}" ${ch.has(bi)||isB?'checked':''} ${isB?'disabled':''}>
+            <span style="width:40px;flex:none" class="muted">${esc(b.c)}</span><span style="flex:1">${esc(b.n)}${isB?' <i>(al aanwezig)</i>':''}</span><span class="muted" style="flex:none">${b.m.map(m=>D.mat[m]).slice(0,3).join(', ')}${b.m.length>3?'…':''}</span></label>`; }).join('')}</div></div>`; })()
+      : `<div class="panel"><p class="muted small" style="margin:0">Klik op een elementnaam om de bouwdelen te kiezen.</p></div>`;
+    body = `<div class="note small"><b>${esc(W.naam||B.n)}</b> (${esc(B.n)}) · ${B.el.length} mogelijke elementen. Vink de elementen aan die er zijn en kies per element de bouwdelen. Gekozen: <b>${nNieuwEl}</b> nieuwe element(en), <b>${nBd}</b> nieuwe bouwdelen.</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:12px;align-items:start">
+        <div class="panel" style="padding:10px"><div style="display:flex;gap:8px;margin-bottom:6px"><b style="flex:1">Elementen</b><button data-wz="alle" class="small">alles</button><button data-wz="geen" class="small">niets</button></div>
+          <div style="max-height:470px;overflow:auto">${keys.map(k=>`<div class="small muted" style="margin:8px 0 2px;font-weight:600">${k?esc(k):(keys.length>1?'Overige elementen':'')}</div>`+grp[k].map(ei=>{ const e = D.el[ei]; const isB = !!W.bestaand.el[ei]; const n = (W.bd[ei]||[]).length + (W.bestaand.bd[ei]||[]).filter(b=>!(W.bd[ei]||[]).includes(b)).length;
+            return `<div class="node ${W.open===ei?'sel':''}" style="font-size:13px;padding:3px 6px;gap:6px"><input type="checkbox" data-wzel="${ei}" ${sel.has(ei)||isB?'checked':''} ${isB?'disabled':''}>
+              <span style="flex:1;cursor:pointer" data-wzopen="${ei}">${esc(e.n)}${isB?' <i class="muted">(aanwezig)</i>':''}</span><span class="small ${n?'':'muted'}" style="flex:none">${n}/${e.bd.length}</span></div>`; }).join('')).join('')}</div></div>
+        <div>${bdLijst}</div></div>` + nav(nNieuwEl+nBd>0);
+  }
+  else {
+    const rows = W.el.map(ei=>[ei, D.el[ei], (W.bd[ei]||[]).filter(b=>!(W.bestaand.bd[ei]||[]).includes(b))]).filter(([ei,,bds])=>!W.bestaand.el[ei] || bds.length);
+    const nB = rows.reduce((t,r)=>t+r[2].length,0);
+    body = `<div class="panel"><h3>Controleren en aanmaken</h3>
+      <p class="small" style="margin-top:0">${W.target?'Aanvullen':'Nieuw'}: <b>${esc(W.naam||D.bo[W.bo].n)}</b> (${esc(D.bo[W.bo].n)}) — ${rows.filter(r=>!W.bestaand.el[r[0]]).length} nieuwe element(en), ${nB} nieuwe bouwdelen. Kies waar nodig het <b>materiaal</b> per bouwdeel: dat bepaalt straks de kandidaat-gebreken bij inspectie en FMEA. Bij één materiaal wordt dat automatisch gekozen.</p>
+      <div style="max-height:480px;overflow:auto">${rows.map(([ei,e,bds])=>`<div style="margin-top:8px"><b class="small">${esc(e.n)}</b>${W.bestaand.el[ei]?' <span class="small muted">(bestaand element)</span>':''}${!bds.length?' <span class="small" style="color:#b5651d">· geen bouwdelen gekozen</span>':''}
+        <table style="width:100%;border-collapse:collapse;font-size:13px">${bds.map(bi=>{ const b = D.bd[bi]; const k = ei+':'+bi; const v = W.mat[k] ?? (b.m.length===1 ? String(b.m[0]) : '');
+          return `<tr style="border-top:1px solid var(--line)"><td style="padding:3px;width:50px" class="muted">${esc(b.c)}</td><td>${esc(b.n)}</td><td style="width:230px"><select data-wzmat="${k}" style="width:100%"><option value="">— materiaal later kiezen —</option>${b.m.map(m=>`<option value="${m}" ${String(v)===String(m)?'selected':''}>${esc(D.mat[m])}</option>`).join('')}</select></td></tr>`; }).join('')}</table></div>`).join('')}</div></div>` + nav(true, W.target?'Aanvullen':'Aanmaken');
+  }
+  return `<h2>Assetstructuur opbouwen uit de bibliotheek</h2><div class="ref">Decompositiebibliotheek: ${esc(D.naam)} · NEN 2767-1 §1.2 (beheerobject – element – bouwdeel)</div>` + kop + body;
+}
+
 /* ---------- Tab: gebrekenregistratie ---------- */
 function tGebreken(){
   const ins = items('inspecties');
@@ -3506,7 +3596,7 @@ function rerender(){ const y = window.scrollY; route(); window.scrollTo(0,y); }
 
 /* ---------------- Interactie (event delegation) ---------------- */
 main.addEventListener('click', e=>{
-  const r = e.target.closest('[data-pr],[data-b1],[data-b1art],[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-dbimp],[data-dbexp],[data-dbdel],[data-dbview],[data-dbbo],[data-dbel],[data-dbbd],[data-dbgb],[data-dbmat],[data-dbhit],[data-dbegf],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
+  const r = e.target.closest('[data-pr],[data-b1],[data-b1art],[data-i10],[data-prevactie],[data-mkinc],[data-incactie],[data-i9],[data-dbactie],[data-bevactie],[data-i8],[data-wijzvan],[data-i7],[data-itab],[data-isof],[data-isoopen],[data-isogo],[data-e1],[data-e1go],[data-mjover],[data-cyadd],[data-cydel],[data-mkm],[data-mkr],[data-gvset],[data-gvadd],[data-gvdel],[data-vadd],[data-vdel],[data-obdgo],[data-wz],[data-wzbo],[data-wzopen],[data-wzbdall],[data-wzbdnone],[data-wzaanvul],[data-dbimp],[data-dbexp],[data-dbdel],[data-dbview],[data-dbbo],[data-dbel],[data-dbbd],[data-dbgb],[data-dbmat],[data-dbhit],[data-dbegf],[data-bibimp],[data-bibcsv],[data-bibdel],[data-bsec],[data-bdisc],[data-obd],[data-gadd],[data-gdel],[data-sbadd],[data-sbdel],[data-sbclear],[data-t27imp],[data-t27exp],[data-ctab],[data-otab],[data-cvoorstel],[data-ttab],[data-kopen],[data-kfase],[data-kmaak],[data-kw],[data-kvast],[data-eisvoorstel],[data-nvadd],[data-nvdel],[data-voorbeeld],[data-btab],[data-stab],[data-rsel],[data-radd],[data-rdel],[data-apply],[data-print],[data-loada],[data-wview],[data-newdoel],[data-gotodoel],[data-signal]');
   if(r){
     const d = r.dataset;
     if(d.pr){ ui.pr = d.pr; rerender(); return; }
@@ -3542,6 +3632,19 @@ main.addEventListener('click', e=>{
     if(d.vdel){ const V = opnames()[ui.oinsp][ui.obd].extra.verz; V.gebreken = V.gebreken.filter(g=>g.id!==d.vdel); save(); rerender(); return; }
     if(d.obdgo){ ui.obd = d.obdgo; ui.ctab = 'gebreken'; window.scrollTo(0,0); route(); return; }
     if(d.bibimp){ const f = document.getElementById('bibfile'); f.onchange = async ()=>{ try{ importBib(await f.files[0].text(), f.files[0].name); rerender(); }catch(err){ console.log('Ongeldig bibliotheekbestand', err); } }; f.click(); return; }
+    if(d.wz){ const W = ui.wiz;
+      if(d.wz==='open'){ wizStart(null); }
+      else if(d.wz==='close'){ ui.wiz = null; }
+      else if(d.wz==='back'){ W.stap--; }
+      else if(d.wz==='next'){ if(W.stap===4){ wizMaak(); } else { if(W.stap===2 && !W.naam) W.naam = dbib().bo[W.bo].n; W.stap++; } }
+      else if(d.wz==='alle'){ W.el = [...dbib().bo[W.bo].el]; }
+      else if(d.wz==='geen'){ W.el = []; W.bd = {}; }
+      rerender(); window.scrollTo(0,0); return; }
+    if(d.wzbo!==undefined){ const W = ui.wiz; if(W.bo!==+d.wzbo){ W.bo = +d.wzbo; W.el = []; W.bd = {}; W.open = null; W.naam = ''; } rerender(); return; }
+    if(d.wzopen!==undefined){ ui.wiz.open = +d.wzopen; rerender(); return; }
+    if(d.wzbdall!==undefined){ const W = ui.wiz, ei = +d.wzbdall; W.bd[ei] = [...dbib().el[ei].bd]; if(!W.el.includes(ei)) W.el.push(ei); rerender(); return; }
+    if(d.wzbdnone!==undefined){ ui.wiz.bd[+d.wzbdnone] = []; rerender(); return; }
+    if(d.wzaanvul){ wizStart(d.wzaanvul); rerender(); window.scrollTo(0,0); return; }
     if(d.dbimp){ const f = document.getElementById('dbfile'); f.onchange = async ()=>{ try{ importDbib(await f.files[0].text()); }catch(err){ ui.dbwarn = 'Ongeldig bestand: dit is geen decompositiebibliotheek (JSON).'; } rerender(); }; f.click(); return; }
     if(d.dbexp){ exportDbib(); return; }
     if(d.dbdel){ if(ui.dbarmed){ delete state.data.dbib; dbIdx = null; ui.dbarmed = false; ui.dbsel = {}; save(); } else { ui.dbarmed = true; r.textContent = 'Klik nogmaals om te verwijderen'; return; } rerender(); return; }
@@ -3669,6 +3772,11 @@ main.addEventListener('input', e=>{
   if(d.exs){ const E = opnames()[ui.oinsp][ui.obd].extra; (E.spec ||= {})[d.exs] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
   if(d.exv){ opnames()[ui.oinsp][ui.obd].extra.verz[d.exv] = el.value; save(); rerender(); return; }
   if(d.vg){ const g = opnames()[ui.oinsp][ui.obd].extra.verz.gebreken.find(x=>x.id===d.vid); g[d.vg] = el.value; save(); if(el.tagName==='SELECT') rerender(); return; }
+  if(d.wzel!==undefined){ const W = ui.wiz, ei = +d.wzel; if(el.checked){ if(!W.el.includes(ei)) W.el.push(ei); W.open = ei; } else { W.el = W.el.filter(x=>x!==ei); delete W.bd[ei]; } rerender(); return; }
+  if(d.wzbd!==undefined){ const W = ui.wiz; const [ei,bi] = d.wzbd.split(':').map(Number); const l = new Set(W.bd[ei]||[]); el.checked ? l.add(bi) : l.delete(bi); W.bd[ei] = [...l]; if(el.checked && !W.el.includes(ei)) W.el.push(ei); rerender(); return; }
+  if(d.wzmat!==undefined){ ui.wiz.mat[d.wzmat] = el.value; return; }
+  if(d.wzf){ ui.wiz[d.wzf] = el.value; if(el.tagName==='SELECT') rerender(); return; }
+  if(el.id==='wzq'){ ui.wiz.q = el.value; const pos = el.selectionStart; rerender(); const i2 = document.getElementById('wzq'); i2.focus(); i2.setSelectionRange(pos,pos); return; }
   if(el.id==='dbq' || el.id==='dbgq'){ const k = el.id; ui[k] = el.value; const pos = el.selectionStart; rerender(); const i2 = document.getElementById(k); i2.focus(); i2.setSelectionRange(pos,pos); return; }
   if(d.dbeg!==undefined){ const e = dbib().el.find(x=>x.c===d.dbeg); if(el.value===(e.g||'')) delete dbEg()[d.dbeg]; else dbEg()[d.dbeg] = el.value; save(); rerender(); return; }
   if(el.id==='bq'){ ui.bq = el.value; const pos = el.selectionStart; rerender(); const i2 = document.getElementById('bq'); i2.focus(); i2.setSelectionRange(pos,pos); return; }
